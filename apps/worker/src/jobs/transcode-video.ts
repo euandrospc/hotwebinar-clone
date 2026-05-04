@@ -14,8 +14,8 @@ function publicUrl(key: string): string {
 
 async function reportProgress(job: Job, p: JobProgress) {
   await job.updateProgress(p);
-  await prisma.video.update({
-    where: { id: (job.data as TranscodePayload).videoId },
+  await prisma.video.updateMany({
+    where: { id: (job.data as TranscodePayload).videoId, status: "PROCESSING" },
     data: { progress: Math.min(100, Math.max(0, Math.round(p.pct))) }
   });
 }
