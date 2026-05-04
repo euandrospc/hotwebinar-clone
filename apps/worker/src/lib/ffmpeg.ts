@@ -60,7 +60,13 @@ export function runFfmpeg(opts: FfmpegOptions): Promise<FfmpegResult> {
         if (stderrLines.length > MAX_TAIL_LINES) stderrLines.shift();
         if (opts.onProgressLine) {
           const elapsed = parseFfmpegProgressLine(line);
-          if (elapsed !== null) opts.onProgressLine(elapsed);
+          if (elapsed !== null) {
+            try {
+              opts.onProgressLine(elapsed);
+            } catch {
+              // ignore — caller-provided callback throwing must not break stderr processing
+            }
+          }
         }
       }
     });
