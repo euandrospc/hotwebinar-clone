@@ -15,7 +15,10 @@ export function Sidebar({ pathname }: { pathname: string }) {
       <div className="px-6 py-5 text-2xl font-bold text-destructive">HotWebinar</div>
       <nav className="grid gap-1 px-3">
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active =
+            href === "/dashboard"
+              ? pathname === href
+              : pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}

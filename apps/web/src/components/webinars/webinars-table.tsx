@@ -1,3 +1,4 @@
+import type { Webinar } from "db";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -10,16 +11,7 @@ import {
 import { format } from "date-fns";
 import { RowActions } from "./row-actions";
 
-interface Row {
-  id: string;
-  name: string;
-  title: string;
-  slug: string | null;
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-  mode: "UNICO" | "JIT";
-  startDate: Date | null;
-  endDate: Date | null;
-}
+type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate">;
 
 const STATUS_LABEL: Record<Row["status"], string> = {
   DRAFT: "Rascunho",

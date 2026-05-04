@@ -21,7 +21,12 @@ export function middleware(request: NextRequest) {
     loginUrl.searchParams.set("from", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
-  return NextResponse.next();
+  // Forward the current pathname to RSC layouts via header so they can compute
+  // active sidebar items / wizard steps without using usePathname (which would
+  // require client components).
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

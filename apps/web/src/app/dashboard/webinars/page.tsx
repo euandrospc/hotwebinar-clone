@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Prisma } from "db";
@@ -73,8 +74,8 @@ export default async function WebinarsPage({
       <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
         <span>Total: {total} · Página {page} de {lastPage}</span>
         <div className="flex gap-2">
-          {page > 1 && <a href={buildHref(page - 1)} className="rounded-md border px-3 py-1">Anterior</a>}
-          {page < lastPage && <a href={buildHref(page + 1)} className="rounded-md border px-3 py-1">Próximo</a>}
+          {page > 1 && <Link href={buildHref(page - 1)} className="rounded-md border px-3 py-1">Anterior</Link>}
+          {page < lastPage && <Link href={buildHref(page + 1)} className="rounded-md border px-3 py-1">Próximo</Link>}
         </div>
       </div>
     </div>
