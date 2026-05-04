@@ -1,15 +1,16 @@
 import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 import path from "node:path";
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     globals: true,
     environment: "node",
-    include: ["src/test/**/*.test.ts"],
-    // Default env values for tests. Tests can still override or delete these
-    // in beforeEach (e.g. auth.test.ts deletes BETTER_AUTH_SECRET to test
-    // the negative path). These defaults exist so module-load-time env
-    // validation (Prisma, Better Auth) doesn't fail before beforeEach runs.
+    environmentMatchGlobs: [
+      ["src/test/components/**", "jsdom"]
+    ],
+    include: ["src/test/**/*.test.ts", "src/test/**/*.test.tsx"],
     env: {
       DATABASE_URL: "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public",
       BETTER_AUTH_SECRET: "test-secret-at-least-32-chars-long-okay",
