@@ -33,6 +33,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "raw_not_found" }, { status: 400 });
   }
 
+  if (typeof head.size === "number") {
+    await prisma.video.update({
+      where: { id: video.id },
+      data: { bytes: BigInt(head.size) }
+    });
+  }
+
   await getVideoQueue().add(
     JOB_TRANSCODE,
     { videoId: video.id },
