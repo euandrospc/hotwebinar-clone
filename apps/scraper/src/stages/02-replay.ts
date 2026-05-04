@@ -1,6 +1,7 @@
 import { chromium, type Response } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { config, newRunId } from "../config.js";
 import { capturedFromResponse, type Captured } from "../lib/network.js";
 
@@ -30,31 +31,36 @@ async function captureRoute(targetUrl: string, runDir: string): Promise<void> {
 
   const startedAt = Date.now();
   const captured: Captured[] = [];
-  page.on("response", async (resp: Response) => {
-    try {
-      const c = await capturedFromResponse(resp, {
+  const pending: Promise<void>[] = [];
+  page.on("response", (resp: Response) => {
+    pending.push(
+      capturedFromResponse(resp, {
         startedAt,
         now: () => Date.now(),
         bodyMaxChars: config.bodyMaxChars,
-      });
-      captured.push(c);
-    } catch {
-      // ignore individual failures
-    }
+      })
+        .then((c) => {
+          captured.push(c);
+        })
+        .catch(() => undefined),
+    );
   });
 
   console.log(" ->", targetUrl);
   let status = 0;
+  let navError: string | null = null;
   try {
     const resp = await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 30_000 });
     status = resp?.status() ?? 0;
   } catch (e) {
-    console.warn("   nav error:", (e as Error).message);
+    navError = (e as Error).message;
+    console.warn("   nav error:", navError);
   }
 
   const html = await page.content();
   await fs.writeFile(path.join(dir, "page.html"), html);
   await page.screenshot({ path: path.join(dir, "screenshot.png"), fullPage: true });
+  await Promise.all(pending);
   await fs.writeFile(path.join(dir, "requests.json"), JSON.stringify(captured, null, 2));
   await fs.writeFile(
     path.join(dir, "meta.json"),
@@ -63,6 +69,8 @@ async function captureRoute(targetUrl: string, runDir: string): Promise<void> {
         route: pathFromUrl(targetUrl),
         url: targetUrl,
         status,
+        ok: navError === null && status >= 200 && status < 400,
+        error: navError,
         requestCount: captured.length,
         capturedAt: new Date().toISOString(),
       },
@@ -78,7 +86,8 @@ async function captureRoute(targetUrl: string, runDir: string): Promise<void> {
 async function loadVisitedUrls(): Promise<string[]> {
   try {
     // Dynamic import so missing file fails at runtime with a clear message instead of breaking typecheck.
-    const mod = (await import(config.flowSpecPath)) as { visitedUrls?: string[] };
+    // pathToFileURL avoids ERR_UNSUPPORTED_ESM_URL_SCHEME on Windows for absolute paths.
+    const mod = (await import(pathToFileURL(config.flowSpecPath).href)) as { visitedUrls?: string[] };
     return mod.visitedUrls ?? [];
   } catch (e) {
     throw new Error(
