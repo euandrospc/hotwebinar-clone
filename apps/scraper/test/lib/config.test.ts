@@ -6,7 +6,7 @@ const REQUIRED = ["TARGET_BASE_URL", "TARGET_LOGIN_EMAIL", "TARGET_LOGIN_PASSWOR
 
 async function isolatedImport() {
   vi.resetModules();
-  return import("../../src/config.ts");
+  return import("../../src/config.js");
 }
 
 describe("config", () => {
