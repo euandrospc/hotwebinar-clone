@@ -11,7 +11,7 @@
     "scrape:replay": "tsx src/stages/02-replay.ts",
     "scrape:crawl": "tsx src/stages/03-crawl.ts",
     "scrape:analyze": "tsx src/stages/04-analyze.ts",
-    "scrape:all": "pnpm scrape:replay && pnpm scrape:crawl && pnpm scrape:analyze"
+    "scrape:all": "node scripts/run-all.mjs"
   },
   "dependencies": {
     "playwright": "1.48.0",

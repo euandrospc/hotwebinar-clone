@@ -103,14 +103,19 @@ export async function analyze(opts: AnalyzeOptions): Promise<Analysis> {
         groups.set(key, g);
       }
       g.statusCodes.add(c.status);
-      if (c.requestBody) {
-        try { g.reqBodies.push(JSON.parse(c.requestBody)); } catch { /* ignore non-JSON */ }
-      }
-      if (c.responseBody) {
-        if (c.truncated) {
-          g.truncatedResCount += 1;
-        } else {
-          try { g.resBodies.push(JSON.parse(c.responseBody)); } catch { /* ignore non-JSON */ }
+
+      // Only collect bodies for successful responses to avoid polluting schemas with error shapes.
+      const isSuccess = c.status >= 200 && c.status < 300;
+      if (isSuccess) {
+        if (c.requestBody) {
+          try { g.reqBodies.push(JSON.parse(c.requestBody)); } catch { /* ignore non-JSON */ }
+        }
+        if (c.responseBody) {
+          if (c.truncated) {
+            g.truncatedResCount += 1;
+          } else {
+            try { g.resBodies.push(JSON.parse(c.responseBody)); } catch { /* ignore non-JSON */ }
+          }
         }
       }
     }
@@ -165,11 +170,21 @@ export async function analyze(opts: AnalyzeOptions): Promise<Analysis> {
 }
 
 async function main() {
-  const { config, newRunId } = await import("../config.js");
-  const latest = path.join(config.captureDir, "latest");
-  const runDir = (await fs.stat(latest).then(() => true).catch(() => false))
-    ? latest
-    : path.join(config.captureDir, newRunId());
+  const { config } = await import("../config.js");
+  // Prefer RUN_ID env (set by scrape:all wrapper), then latest/, then explicit error.
+  let runDir: string;
+  if (process.env.RUN_ID) {
+    runDir = path.join(config.captureDir, process.env.RUN_ID);
+  } else {
+    const latest = path.join(config.captureDir, "latest");
+    const exists = await fs.stat(latest).then(() => true).catch(() => false);
+    if (!exists) {
+      console.error(`No run to analyze. Looked at ${latest}.`);
+      console.error("Run `pnpm scrape:replay` and/or `pnpm scrape:crawl` first, or set RUN_ID env.");
+      process.exit(1);
+    }
+    runDir = latest;
+  }
   const runId = path.basename(runDir);
   console.log("Analyzing:", runDir);
   const a = await analyze({ runDir, runId });

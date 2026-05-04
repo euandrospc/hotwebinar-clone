@@ -2,7 +2,7 @@ import { chromium, type Response } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { config, newRunId } from "../config.js";
+import { config, currentRunId } from "../config.js";
 import { capturedFromResponse, type Captured } from "../lib/network.js";
 
 function safeName(p: string): string {
@@ -103,7 +103,7 @@ async function main() {
     process.exit(1);
   }
 
-  const runId = newRunId();
+  const runId = currentRunId();
   const runDir = path.join(config.captureDir, runId);
   await fs.mkdir(runDir, { recursive: true });
   console.log("Run:", runDir);

@@ -161,9 +161,9 @@ export async function crawl(opts: CrawlOptions): Promise<CrawlResult> {
 
 async function main() {
   // Lazy-load config so importing this module from tests doesn't trigger env validation.
-  const { config, newRunId } = await import("../config.js");
+  const { config, currentRunId } = await import("../config.js");
 
-  const runId = newRunId();
+  const runId = currentRunId();
   const outDir = path.join(config.captureDir, runId);
   await fs.mkdir(outDir, { recursive: true });
   console.log("Run:", outDir);

@@ -123,3 +123,36 @@ describe("analyze stage — additional coverage", () => {
     expect(ep!.samples).toBe(1); // only the non-truncated body parsed
   });
 });
+
+describe("analyze stage — status code filtering", () => {
+  let dir: string;
+  beforeAll(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "analyze-status-"));
+    const c = path.join(dir, "replay", "api_secret_1");
+    await fs.mkdir(c, { recursive: true });
+    await fs.writeFile(
+      path.join(c, "requests.json"),
+      JSON.stringify([
+        // 401 JSON error: must be tracked in statusCodes but NOT polluting schema samples
+        {
+          url: "https://x/api/secret/1", method: "GET", status: 401, resourceType: "fetch",
+          requestHeaders: {}, requestBody: null,
+          responseHeaders: { "content-type": "application/json" },
+          responseBody: JSON.stringify({ error: "Unauthorized" }),
+          timing: 1, truncated: false,
+        },
+      ]),
+    );
+    await fs.writeFile(path.join(c, "meta.json"), JSON.stringify({ route: "/api/secret/1", url: "x", status: 401, requestCount: 1 }));
+  });
+  afterAll(async () => { await fs.rm(dir, { recursive: true, force: true }); });
+
+  it("records non-2xx status codes but skips schema sample collection", async () => {
+    const a = await analyze({ runDir: dir, runId: "status-filter" });
+    const ep = a.endpoints.find((e) => e.pathPattern === "/api/secret/:id");
+    expect(ep).toBeDefined();
+    expect(ep!.statusCodes).toContain(401);
+    expect(ep!.responseSchema.kind).toBe("unknown");
+    expect(ep!.samples).toBe(0);
+  });
+});

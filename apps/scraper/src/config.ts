@@ -46,4 +46,11 @@ export function newRunId(): string {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 }
 
+let cachedRunId: string | null = null;
+export function currentRunId(): string {
+  if (cachedRunId) return cachedRunId;
+  cachedRunId = process.env.RUN_ID ?? newRunId();
+  return cachedRunId;
+}
+
 export type Config = typeof config;
