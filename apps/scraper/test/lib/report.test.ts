@@ -54,4 +54,84 @@ describe("report builder", () => {
     expect(md).toContain("| Route | Status | Requests | Screenshot |");
     expect(md).toContain("| `/dashboard` | 200 | 12 | `dashboard/screenshot.png` |");
   });
+
+  it("renders empty arrays as sentinel lines", () => {
+    const md = buildReport({ runId: "x", endpoints: [], entities: {}, pages: [] });
+    expect(md).toContain("_No endpoints captured._");
+    expect(md).toContain("_No entities captured._");
+    expect(md).toContain("_No pages captured._");
+    expect(md).not.toContain("| Method |");
+  });
+
+  it("escapes pipe characters in path pattern", () => {
+    const md = buildReport({
+      runId: "x",
+      endpoints: [{
+        method: "GET",
+        pathPattern: "/api/items?filter=a|b",
+        samples: 1,
+        statusCodes: [200],
+        requestBodySchema: { kind: "unknown" },
+        responseSchema: { kind: "unknown" },
+      }],
+      entities: {},
+      pages: [],
+    });
+    expect(md).toContain("/api/items?filter=a\\|b");
+  });
+
+  it("renders nullable primitive with proper spacing", () => {
+    const md = buildReport({
+      runId: "x",
+      endpoints: [],
+      entities: {
+        Webinar: {
+          kind: "object",
+          fields: {
+            title: { kind: "primitive", type: "string", optional: false, nullable: true },
+          },
+        },
+      },
+      pages: [],
+    });
+    expect(md).toContain("title: string | null");
+  });
+
+  it("renders nullable object schema", () => {
+    const md = buildReport({
+      runId: "x",
+      endpoints: [],
+      entities: {
+        Wrapper: {
+          kind: "object",
+          fields: {
+            inner: {
+              kind: "object",
+              fields: { id: { kind: "primitive", type: "string", optional: false, nullable: false } },
+              nullable: true,
+            },
+          },
+        },
+      },
+      pages: [],
+    });
+    expect(md).toMatch(/inner:[\s\S]+\}\s*\| null/);
+  });
+
+  it("sorts status codes ascending", () => {
+    const md = buildReport({
+      runId: "x",
+      endpoints: [{
+        method: "GET",
+        pathPattern: "/api/x",
+        samples: 1,
+        statusCodes: [500, 200, 404],
+        requestBodySchema: { kind: "unknown" },
+        responseSchema: { kind: "unknown" },
+      }],
+      entities: {},
+      pages: [],
+    });
+    expect(md).toContain("200, 404, 500");
+  });
 });
