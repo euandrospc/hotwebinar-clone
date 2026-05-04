@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 
+vi.mock("dotenv/config", () => ({}));
+
 const REQUIRED = ["TARGET_BASE_URL", "TARGET_LOGIN_EMAIL", "TARGET_LOGIN_PASSWORD"];
 
 async function isolatedImport() {
@@ -50,5 +52,10 @@ describe("config", () => {
   it("throws on missing required env", async () => {
     delete process.env.TARGET_BASE_URL;
     await expect(isolatedImport()).rejects.toThrow(/TARGET_BASE_URL/);
+  });
+
+  it("throws on non-numeric MAX_PAGES", async () => {
+    process.env.MAX_PAGES = "abc";
+    await expect(isolatedImport()).rejects.toThrow(/MAX_PAGES/);
   });
 });
