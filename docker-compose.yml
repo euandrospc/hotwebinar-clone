@@ -33,6 +33,27 @@ services:
     volumes:
       - miniodata:/data
 
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    environment:
+      DATABASE_URL: postgresql://hotwebinar:hotwebinar@postgres:5432/hotwebinar?schema=public
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: hotwebinar
+      S3_SECRET_KEY: hotwebinar-min-12chars
+      S3_BUCKET_ORIGINALS: originals-private
+      S3_BUCKET_HLS: hls-public
+      S3_PUBLIC_BASE_URL: http://localhost:9000
+      WORKER_CONCURRENCY: "1"
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redisdata:
