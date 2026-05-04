@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 
 vi.mock("dotenv/config", () => ({}));
+vi.mock("dotenv", () => ({ default: { config: () => ({ parsed: {} }) }, config: () => ({ parsed: {} }) }));
 
 const REQUIRED = ["TARGET_BASE_URL", "TARGET_LOGIN_EMAIL", "TARGET_LOGIN_PASSWORD"];
 

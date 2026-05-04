@@ -89,7 +89,7 @@ export async function crawl(opts: CrawlOptions): Promise<CrawlResult> {
     let status = 0;
     let navError: string | null = null;
     try {
-      const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      const resp = await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
       status = resp?.status() ?? 0;
     } catch (e) {
       navError = (e as Error).message;
