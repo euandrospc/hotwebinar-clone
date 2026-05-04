@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { capturedFromResponse, type FakeRequest, type FakeResponse } from "../../src/lib/network.js";
+import { capturedFromResponse, type RequestLike, type ResponseLike } from "../../src/lib/network.js";
 
-function fakeReq(over: Partial<FakeRequest> = {}): FakeRequest {
+function fakeReq(over: Partial<RequestLike> = {}): RequestLike {
   return {
     url: () => "https://api.example.com/items/1",
     method: () => "GET",
@@ -12,7 +12,7 @@ function fakeReq(over: Partial<FakeRequest> = {}): FakeRequest {
   };
 }
 
-function fakeResp(over: Partial<FakeResponse> = {}, req: FakeRequest = fakeReq()): FakeResponse {
+function fakeResp(over: Partial<ResponseLike> = {}, req: RequestLike = fakeReq()): ResponseLike {
   return {
     request: () => req,
     status: () => 200,
@@ -24,7 +24,7 @@ function fakeResp(over: Partial<FakeResponse> = {}, req: FakeRequest = fakeReq()
 
 describe("network capture", () => {
   it("builds a Captured entry from a JSON response", async () => {
-    const c = await capturedFromResponse(fakeResp(), { startedAt: 1000, now: () => 1234, bodyMaxBytes: 200_000 });
+    const c = await capturedFromResponse(fakeResp(), { startedAt: 1000, now: () => 1234, bodyMaxChars: 200_000 });
     expect(c.url).toBe("https://api.example.com/items/1");
     expect(c.method).toBe("GET");
     expect(c.status).toBe(200);
@@ -37,7 +37,7 @@ describe("network capture", () => {
   it("truncates oversized bodies and flags them", async () => {
     const big = "x".repeat(500);
     const resp = fakeResp({ body: async () => Buffer.from(big) });
-    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxBytes: 100 });
+    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxChars: 100 });
     expect(c.responseBody!.length).toBe(100);
     expect(c.truncated).toBe(true);
   });
@@ -47,7 +47,7 @@ describe("network capture", () => {
       headers: () => ({ "content-type": "video/mp4" }),
       body: async () => Buffer.from([0, 1, 2, 3]),
     });
-    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxBytes: 100 });
+    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxChars: 100 });
     expect(c.responseBody).toBeNull();
     expect(c.truncated).toBe(false);
   });
@@ -58,13 +58,13 @@ describe("network capture", () => {
         throw new Error("no body");
       },
     });
-    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxBytes: 100 });
+    const c = await capturedFromResponse(resp, { startedAt: 0, now: () => 0, bodyMaxChars: 100 });
     expect(c.responseBody).toBeNull();
   });
 
   it("captures POST request body", async () => {
     const req = fakeReq({ method: () => "POST", postData: () => '{"a":1}' });
-    const c = await capturedFromResponse(fakeResp({}, req), { startedAt: 0, now: () => 0, bodyMaxBytes: 100 });
+    const c = await capturedFromResponse(fakeResp({}, req), { startedAt: 0, now: () => 0, bodyMaxChars: 100 });
     expect(c.method).toBe("POST");
     expect(c.requestBody).toBe('{"a":1}');
   });

@@ -33,7 +33,7 @@ export const config = {
   maxPages: num("MAX_PAGES", 200),
   maxDepth: num("MAX_DEPTH", 3),
   crawlDelayMs: num("CRAWL_DELAY_MS", 500),
-  bodyMaxBytes: num("BODY_MAX_BYTES", 200_000),
+  bodyMaxChars: num("BODY_MAX_CHARS", 200_000),
 
   recordedDir: path.resolve(root, "recorded"),
   captureDir: path.resolve(root, "capture"),

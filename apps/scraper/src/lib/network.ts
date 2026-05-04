@@ -1,4 +1,4 @@
-export type FakeRequest = {
+export type RequestLike = {
   url(): string;
   method(): string;
   resourceType(): string;
@@ -6,8 +6,8 @@ export type FakeRequest = {
   postData(): string | null;
 };
 
-export type FakeResponse = {
-  request(): FakeRequest;
+export type ResponseLike = {
+  request(): RequestLike;
   status(): number;
   headers(): Record<string, string>;
   body(): Promise<Buffer>;
@@ -29,10 +29,22 @@ export type Captured = {
 export type CaptureOptions = {
   startedAt: number;
   now: () => number;
-  bodyMaxBytes: number;
+  bodyMaxChars: number;
 };
 
-const BINARY_TYPES = ["video/", "image/", "font/", "audio/", "application/octet-stream"];
+const BINARY_TYPES = [
+  "video/",
+  "image/",
+  "font/",
+  "audio/",
+  "application/octet-stream",
+  "application/pdf",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/wasm",
+  "application/vnd.ms-",
+  "application/vnd.openxmlformats-",
+];
 
 function isBinary(contentType: string | undefined): boolean {
   if (!contentType) return false;
@@ -40,7 +52,7 @@ function isBinary(contentType: string | undefined): boolean {
   return BINARY_TYPES.some((p) => lower.startsWith(p));
 }
 
-export async function capturedFromResponse(resp: FakeResponse, opts: CaptureOptions): Promise<Captured> {
+export async function capturedFromResponse(resp: ResponseLike, opts: CaptureOptions): Promise<Captured> {
   const req = resp.request();
   const responseHeaders = resp.headers();
   let body: string | null = null;
@@ -50,8 +62,8 @@ export async function capturedFromResponse(resp: FakeResponse, opts: CaptureOpti
     try {
       const buf = await resp.body();
       const str = buf.toString("utf8");
-      if (str.length > opts.bodyMaxBytes) {
-        body = str.slice(0, opts.bodyMaxBytes);
+      if (str.length > opts.bodyMaxChars) {
+        body = str.slice(0, opts.bodyMaxChars);
         truncated = true;
       } else {
         body = str;
@@ -75,15 +87,3 @@ export async function capturedFromResponse(resp: FakeResponse, opts: CaptureOpti
   };
 }
 
-export type CaptureSink = {
-  push(c: Captured): void;
-  drain(): Captured[];
-};
-
-export function createSink(): CaptureSink {
-  const buf: Captured[] = [];
-  return {
-    push: (c) => void buf.push(c),
-    drain: () => buf.splice(0, buf.length),
-  };
-}
