@@ -11,6 +11,7 @@ export default defineConfig({
       ["src/test/components/**", "jsdom"]
     ],
     include: ["src/test/**/*.test.ts", "src/test/**/*.test.tsx"],
+    fileParallelism: false,
     env: {
       DATABASE_URL: "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public",
       BETTER_AUTH_SECRET: "test-secret-at-least-32-chars-long-okay",

@@ -7,8 +7,8 @@ export const slugSchema = z
   .regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hífen apenas");
 
 export const step1Schema = z.object({
-  name: z.string().min(2).max(120),
-  title: z.string().min(2).max(180),
+  name: z.string().min(1).max(120),
+  title: z.string().min(1).max(180),
   slug: slugSchema,
   language: z.string().min(2).max(10)
 });
