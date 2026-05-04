@@ -89,9 +89,13 @@ describe("step3Schema", () => {
 });
 
 describe("step4Schema", () => {
-  it("requires URL", () => {
-    expect(step4Schema.safeParse({ videoExternalUrl: "not-a-url" }).success).toBe(false);
-    expect(step4Schema.safeParse({ videoExternalUrl: "https://example.com/video.mp4" }).success).toBe(true);
+  it("requires URL in external mode", () => {
+    expect(step4Schema.safeParse({ mode: "external", videoExternalUrl: "not-a-url" }).success).toBe(false);
+    expect(step4Schema.safeParse({ mode: "external", videoExternalUrl: "https://example.com/video.mp4" }).success).toBe(true);
+  });
+  it("library mode requires videoId", () => {
+    expect(step4Schema.safeParse({ mode: "library", videoId: "" }).success).toBe(false);
+    expect(step4Schema.safeParse({ mode: "library", videoId: "abc" }).success).toBe(true);
   });
 });
 

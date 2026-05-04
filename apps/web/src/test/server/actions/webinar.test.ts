@@ -70,7 +70,7 @@ describe("updateWebinarStep4", () => {
   it("creates an EXTERNAL Video and connects it", async () => {
     const { createDraftWebinar, updateWebinarStep4 } = await import("@/server/actions/webinar");
     const { id } = await createDraftWebinar();
-    const r = await updateWebinarStep4(id, { videoExternalUrl: "https://cdn.example.com/video.mp4", pitchAtSec: 600 });
+    const r = await updateWebinarStep4(id, { mode: "external", videoExternalUrl: "https://cdn.example.com/video.mp4", pitchAtSec: 600 });
     expect(r).toEqual({ ok: true });
     const w = await prisma.webinar.findUnique({ where: { id }, include: { video: true } });
     expect(w?.video).toMatchObject({
@@ -143,7 +143,7 @@ describe("publishWebinar", () => {
       waitingTitle: "Sala",
       waitingSubtitle: ""
     });
-    await updateWebinarStep4(id, { videoExternalUrl: "https://x.com/v.mp4" });
+    await updateWebinarStep4(id, { mode: "external", videoExternalUrl: "https://x.com/v.mp4" });
     const r = await publishWebinar(id);
     expect(r).toEqual({ ok: true });
     const w = await prisma.webinar.findUnique({ where: { id } });

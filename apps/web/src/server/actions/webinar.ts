@@ -146,40 +146,51 @@ export async function updateWebinarStep4(id: string, input: Step4Input): Promise
     return { error: { field: issue.path.join("."), message: issue.message } };
   }
 
-  let videoId = owned.videoId;
-  if (videoId) {
-    await prisma.video.update({
-      where: { id: videoId },
-      data: {
-        source: "EXTERNAL",
-        originalUrl: parsed.data.videoExternalUrl,
-        hlsUrl: parsed.data.videoExternalUrl,
-        status: "READY"
-      }
-    });
+  const data = parsed.data;
+  let videoId: string | null = null;
+
+  if (data.mode === "external") {
+    if (owned.videoId) {
+      await prisma.video.update({
+        where: { id: owned.videoId },
+        data: {
+          source: "EXTERNAL",
+          originalUrl: data.videoExternalUrl,
+          hlsUrl: data.videoExternalUrl,
+          status: "READY"
+        }
+      });
+      videoId = owned.videoId;
+    } else {
+      const v = await prisma.video.create({
+        data: {
+          ownerId: session.user.id,
+          name: owned.title || "Vídeo externo",
+          source: "EXTERNAL",
+          originalUrl: data.videoExternalUrl,
+          hlsUrl: data.videoExternalUrl,
+          status: "READY",
+          progress: 100
+        }
+      });
+      videoId = v.id;
+    }
   } else {
-    const v = await prisma.video.create({
-      data: {
-        ownerId: session.user.id,
-        name: owned.title || "Vídeo externo",
-        source: "EXTERNAL",
-        originalUrl: parsed.data.videoExternalUrl,
-        hlsUrl: parsed.data.videoExternalUrl,
-        status: "READY",
-        progress: 100
-      }
-    });
+    // library or upload-complete: validate video ownership + ready
+    const v = await prisma.video.findUnique({ where: { id: data.videoId } });
+    if (!v || v.ownerId !== session.user.id) {
+      return { error: { field: "videoId", message: "Vídeo não encontrado" } };
+    }
+    if (v.status !== "READY") {
+      return { error: { field: "videoId", message: "Vídeo ainda não está pronto" } };
+    }
     videoId = v.id;
   }
 
   await prisma.webinar.update({
     where: { id },
-    data: {
-      videoId,
-      pitchAtSec: parsed.data.pitchAtSec ?? null
-    }
+    data: { videoId, pitchAtSec: data.pitchAtSec ?? null }
   });
-
   revalidatePath(`/dashboard/webinars/${id}`);
   return { ok: true };
 }

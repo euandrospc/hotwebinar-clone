@@ -46,10 +46,26 @@ export const step3Schema = z.object({
 });
 export type Step3Input = z.infer<typeof step3Schema>;
 
-export const step4Schema = z.object({
+export const step4ExternalSchema = z.object({
+  mode: z.literal("external"),
   videoExternalUrl: z.string().url("Cole uma URL válida"),
   pitchAtSec: z.number().int().min(0).optional()
 });
+export const step4LibrarySchema = z.object({
+  mode: z.literal("library"),
+  videoId: z.string().min(1),
+  pitchAtSec: z.number().int().min(0).optional()
+});
+export const step4UploadSchema = z.object({
+  mode: z.literal("upload-complete"),
+  videoId: z.string().min(1),
+  pitchAtSec: z.number().int().min(0).optional()
+});
+export const step4Schema = z.discriminatedUnion("mode", [
+  step4ExternalSchema,
+  step4LibrarySchema,
+  step4UploadSchema
+]);
 export type Step4Input = z.infer<typeof step4Schema>;
 
 export const ctaItemSchema = z.object({
