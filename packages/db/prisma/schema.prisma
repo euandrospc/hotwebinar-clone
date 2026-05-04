@@ -17,8 +17,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions Session[]
-  accounts Account[]
+  sessions        Session[]
+  accounts        Account[]
+  webinars        Webinar[]
+  videos          Video[]
+  accountSettings AccountSettings?
 
   @@map("user")
 }
@@ -70,4 +73,173 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+enum WebinarMode {
+  UNICO
+  JIT
+}
+
+enum WebinarStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum VideoSource {
+  EXTERNAL
+  UPLOAD
+}
+
+enum VideoStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum EventKind {
+  OPTIN
+  PAGE_VIEW
+  VIDEO_START
+  VIDEO_TICK
+  VIDEO_END
+  CTA_CLICK
+  PITCH_REACHED
+}
+
+model AccountSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  defaultLanguage  String   @default("pt-BR")
+  defaultTimezone  String   @default("America/Sao_Paulo")
+  brandName        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("account_settings")
+}
+
+model Video {
+  id           String      @id @default(cuid())
+  ownerId      String
+  name         String
+  source       VideoSource
+  originalUrl  String?
+  hlsUrl       String?
+  status       VideoStatus @default(QUEUED)
+  progress     Int         @default(0)
+  durationSec  Int?
+  bytes        BigInt?
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  owner        User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  webinars     Webinar[]
+  @@index([ownerId, createdAt])
+  @@map("video")
+}
+
+model Webinar {
+  id               String         @id @default(cuid())
+  ownerId          String
+  videoId          String?
+  slug             String?        @unique
+  name             String         @default("")
+  title            String         @default("")
+  language         String         @default("pt-BR")
+  status           WebinarStatus  @default(DRAFT)
+  mode             WebinarMode    @default(UNICO)
+  startDate        DateTime?
+  endDate          DateTime?
+  timezone         String         @default("America/Sao_Paulo")
+  waitingTitle     String         @default("Sala de Espera")
+  waitingSubtitle  String         @default("Estamos prestes a começar")
+  logoUrl          String?
+  primaryColor     String?
+  loginButtonText  String         @default("Entrar")
+  loginButtonColor String         @default("#16a34a")
+  nameEnabled      Boolean        @default(true)
+  nameRequired     Boolean        @default(true)
+  emailEnabled     Boolean        @default(true)
+  emailRequired    Boolean        @default(true)
+  phoneEnabled     Boolean        @default(true)
+  phoneRequired    Boolean        @default(false)
+  namePlaceholder  String         @default("Seu nome")
+  emailPlaceholder String         @default("Seu e-mail")
+  phonePlaceholder String         @default("Seu telefone")
+  pitchAtSec       Int?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  owner            User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  video            Video?         @relation(fields: [videoId], references: [id])
+  chatMessages     ChatMessage[]
+  ctas             Cta[]
+  leads            Lead[]
+  events           Event[]
+  @@index([ownerId, status])
+  @@map("webinar")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  webinarId  String
+  authorName String
+  text       String
+  showAtSec  Int
+  isOwner    Boolean  @default(false)
+  webinar    Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  @@index([webinarId, showAtSec])
+  @@map("chat_message")
+}
+
+model Cta {
+  id         String   @id @default(cuid())
+  webinarId  String
+  label      String
+  url        String
+  showAtSec  Int
+  hideAtSec  Int?
+  createdAt  DateTime @default(now())
+  webinar    Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  @@index([webinarId, showAtSec])
+  @@map("cta")
+}
+
+model Lead {
+  id           String    @id @default(cuid())
+  webinarId    String
+  name         String
+  email        String
+  phone        String?
+  ip           String?
+  userAgent    String?
+  device       String?
+  country      String?
+  watchedSec   Int       @default(0)
+  reachedPitch Boolean   @default(false)
+  ctaClicks    Int       @default(0)
+  sessionStart DateTime  @default(now())
+  lastSeenAt   DateTime  @default(now())
+  webinar      Webinar   @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  events       Event[]
+  @@unique([webinarId, email])
+  @@index([webinarId, sessionStart])
+  @@map("lead")
+}
+
+model Event {
+  id        String    @id @default(cuid())
+  webinarId String
+  leadId    String?
+  kind      EventKind
+  videoSec  Int?
+  ctaId     String?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+  webinar   Webinar   @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  @@index([webinarId, kind, createdAt])
+  @@index([leadId, kind])
+  @@map("event")
 }
