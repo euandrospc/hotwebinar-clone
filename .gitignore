@@ -3,6 +3,7 @@ node_modules
 dist
 build
 out
+*.tsbuildinfo
 .env
 .env.local
 .env.*.local
