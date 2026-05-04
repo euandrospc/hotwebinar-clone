@@ -35,7 +35,8 @@ describe("crawl stage", () => {
     expect(paths).toContain("/webinars");
     expect(paths).toContain("/leads");
     expect(paths).toContain("/settings");
-    const dupes = paths.filter((p) => p === "/webinars");
+    // /dashboard is duplicated in the fixture sidebar — must be deduped to 1
+    const dupes = paths.filter((p) => p === "/dashboard");
     expect(dupes.length).toBe(1);
   });
 
