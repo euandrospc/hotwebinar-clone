@@ -78,4 +78,47 @@ describe("schema-infer", () => {
     expect(m.fields.id.kind).toBe("primitive");
     expect(m.fields.name).toEqual({ kind: "primitive", type: "string", optional: true, nullable: false });
   });
+
+  it("merge(unknown, X) returns X (identity)", () => {
+    const prim: Schema = { kind: "primitive", type: "string", optional: false, nullable: false };
+    expect(mergeSchemas({ kind: "unknown" }, prim)).toEqual(prim);
+    expect(mergeSchemas(prim, { kind: "unknown" })).toEqual(prim);
+  });
+
+  it("merges mismatched primitive types to unknown", () => {
+    const a: Schema = { kind: "primitive", type: "string", optional: false, nullable: false };
+    const b: Schema = { kind: "primitive", type: "number", optional: false, nullable: false };
+    expect(mergeSchemas(a, b)).toEqual({ kind: "unknown" });
+  });
+
+  it("merges mismatched kinds (array vs object) to unknown", () => {
+    const arr: Schema = { kind: "array", element: { kind: "unknown" }, optional: false, nullable: false };
+    const obj: Schema = { kind: "object", fields: {} };
+    expect(mergeSchemas(arr, obj)).toEqual({ kind: "unknown" });
+  });
+
+  it("infers mixed-primitive arrays as unknown element", () => {
+    const s = infer([{ items: [1, "a"] }]);
+    if (s.kind !== "object") throw new Error("expected object");
+    const arr = s.fields.items;
+    if (arr.kind !== "array") throw new Error("expected array");
+    expect(arr.element).toEqual({ kind: "unknown" });
+  });
+
+  it("marks array element nullable when null appears in array", () => {
+    const s = infer([{ tags: ["a", null, "b"] }]);
+    if (s.kind !== "object") throw new Error("expected object");
+    const arr = s.fields.tags;
+    if (arr.kind !== "array" || arr.element.kind !== "primitive") throw new Error("expected primitive array");
+    expect(arr.element.nullable).toBe(true);
+    expect(arr.element.type).toBe("string");
+  });
+
+  it("marks nested object field nullable when null sample seen", () => {
+    const s = infer([{ user: { id: 1 } }, { user: null }]);
+    if (s.kind !== "object") throw new Error("expected object");
+    const user = s.fields.user;
+    if (user.kind !== "object") throw new Error("expected object");
+    expect(user.nullable).toBe(true);
+  });
 });

@@ -17,6 +17,8 @@ export type ArraySchema = {
 export type ObjectSchema = {
   kind: "object";
   fields: Record<string, Schema>;
+  optional?: boolean;
+  nullable?: boolean;
 };
 
 export type UnknownSchema = { kind: "unknown" };
@@ -86,7 +88,12 @@ export function mergeSchemas(a: Schema, b: Schema): Schema {
         fields[key] = setOptional(b.fields[key]!, true);
       }
     }
-    return { kind: "object", fields };
+    const merged: ObjectSchema = { kind: "object", fields };
+    const optional = (a.optional ?? false) || (b.optional ?? false);
+    const nullable = (a.nullable ?? false) || (b.nullable ?? false);
+    if (optional) merged.optional = true;
+    if (nullable) merged.nullable = true;
+    return merged;
   }
   return { kind: "unknown" };
 }
@@ -95,7 +102,51 @@ function setOptional(schema: Schema, optional: boolean): Schema {
   if (schema.kind === "primitive" || schema.kind === "array") {
     return { ...schema, optional };
   }
+  if (schema.kind === "object") {
+    if (!optional) {
+      // Strip optional flag.
+      const { optional: _o, ...rest } = schema;
+      return rest;
+    }
+    return { ...schema, optional: true };
+  }
   return schema;
+}
+
+function setNullable(schema: Schema, nullable: boolean): Schema {
+  if (schema.kind === "primitive" || schema.kind === "array") {
+    return { ...schema, nullable };
+  }
+  if (schema.kind === "object") {
+    if (!nullable) {
+      const { nullable: _n, ...rest } = schema;
+      return rest;
+    }
+    return { ...schema, nullable: true };
+  }
+  return schema;
+}
+
+function applyArrayElementNullability(schema: ArraySchema, sample: unknown[]): ArraySchema {
+  let element = schema.element;
+  let sawNull = false;
+  for (const item of sample) {
+    if (item === null || item === undefined) {
+      sawNull = true;
+      continue;
+    }
+    if (element.kind === "object") {
+      element = applyFieldNullability(element, item);
+    } else if (element.kind === "array" && Array.isArray(item)) {
+      element = applyArrayElementNullability(element, item);
+    }
+  }
+  if (sawNull && (element.kind === "primitive" || element.kind === "array")) {
+    element = setNullable(element, true);
+  } else if (sawNull && element.kind === "object") {
+    element = setNullable(element, true);
+  }
+  return { ...schema, element };
 }
 
 function applyFieldNullability(schema: Schema, sample: unknown): Schema {
@@ -107,15 +158,27 @@ function applyFieldNullability(schema: Schema, sample: unknown): Schema {
   const fields: Record<string, Schema> = {};
   for (const [k, fieldSchema] of Object.entries(schema.fields)) {
     const sampleValue = sampleObj[k];
-    if (sampleValue === null && (fieldSchema.kind === "primitive" || fieldSchema.kind === "array")) {
-      fields[k] = { ...fieldSchema, nullable: true };
+    if (sampleValue === null) {
+      if (fieldSchema.kind === "primitive" || fieldSchema.kind === "array") {
+        fields[k] = { ...fieldSchema, nullable: true };
+      } else if (fieldSchema.kind === "object") {
+        fields[k] = setNullable(fieldSchema, true);
+      } else {
+        fields[k] = fieldSchema;
+      }
     } else if (fieldSchema.kind === "object") {
       fields[k] = applyFieldNullability(fieldSchema, sampleValue);
+    } else if (fieldSchema.kind === "array" && Array.isArray(sampleValue)) {
+      fields[k] = applyArrayElementNullability(fieldSchema, sampleValue);
     } else {
       fields[k] = fieldSchema;
     }
   }
-  return { kind: "object", fields };
+  // Preserve optional/nullable flags from the original object schema.
+  const result: ObjectSchema = { kind: "object", fields };
+  if (schema.optional) result.optional = true;
+  if (schema.nullable) result.nullable = true;
+  return result;
 }
 
 export function infer(samples: unknown[]): Schema {
@@ -126,7 +189,7 @@ export function infer(samples: unknown[]): Schema {
   for (const s of nonNull) {
     merged = mergeSchemas(merged, inferOne(s));
   }
-  for (const sample of samples) {
+  for (const sample of nonNull) {
     merged = applyFieldNullability(merged, sample);
   }
   return merged;
