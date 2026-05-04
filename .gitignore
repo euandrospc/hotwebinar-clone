@@ -16,7 +16,8 @@ test-results
 
 # scraper output
 apps/scraper/capture
-apps/scraper/auth-state.json
+apps/scraper/recorded
+apps/scraper/recorded/auth-state.json
 
 # prisma
 packages/db/prisma/migrations/dev_*

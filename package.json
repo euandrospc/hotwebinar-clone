@@ -4,7 +4,12 @@
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm -r build",
-    "scrape": "pnpm --filter scraper start",
+    "test": "pnpm -r test",
+    "scrape:record": "pnpm --filter scraper scrape:record",
+    "scrape:replay": "pnpm --filter scraper scrape:replay",
+    "scrape:crawl": "pnpm --filter scraper scrape:crawl",
+    "scrape:analyze": "pnpm --filter scraper scrape:analyze",
+    "scrape:all": "pnpm --filter scraper scrape:all",
     "db:push": "pnpm --filter db prisma db push",
     "db:generate": "pnpm --filter db prisma generate",
     "db:studio": "pnpm --filter db prisma studio"
