@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+// TODO(better-auth-upgrade): replace with getSessionCookie when bumping past 1.0.7
 // NOTE: better-auth 1.0.7 (pinned in apps/web/package.json) does not yet export
 // `getSessionCookie` from `better-auth/cookies` — that helper landed in a later
 // minor. We replicate its (presence-only) behavior here: check whether the
