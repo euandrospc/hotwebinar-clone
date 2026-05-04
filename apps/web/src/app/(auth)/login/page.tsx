@@ -23,7 +23,9 @@ export default function LoginPage() {
       setError("Credenciais inválidas");
       return;
     }
-    const target = new URLSearchParams(window.location.search).get("from") ?? "/dashboard";
+    // Open-redirect guard: only allow same-origin paths starting with a single "/".
+    const raw = new URLSearchParams(window.location.search).get("from");
+    const target = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
     router.push(target);
   }
 
