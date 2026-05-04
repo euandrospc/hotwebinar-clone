@@ -1,4 +1,13 @@
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import path from "node:path";
+import dotenv from "dotenv";
+
+// Load .env.local from repo root (Next dev does this automatically, but tsx doesn't).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "../../..");
+dotenv.config({ path: path.resolve(repoRoot, ".env.local") });
+dotenv.config({ path: path.resolve(repoRoot, ".env") });
+
 import { prisma } from "db";
 
 function must(name: string): string {

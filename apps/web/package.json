@@ -27,7 +27,8 @@
     "tailwind-merge": "2.5.4",
     "lucide-react": "0.454.0",
     "@radix-ui/react-slot": "1.1.0",
-    "@radix-ui/react-label": "2.1.0"
+    "@radix-ui/react-label": "2.1.0",
+    "dotenv": "16.4.5"
   },
   "devDependencies": {
     "@types/node": "22.7.5",
