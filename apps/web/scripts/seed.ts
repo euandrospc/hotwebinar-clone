@@ -38,9 +38,9 @@ export async function runSeed(): Promise<void> {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runSeed()
     .then(() => prisma.$disconnect())
-    .catch((e) => {
+    .catch(async (e) => {
       console.error(e);
-      prisma.$disconnect();
+      await prisma.$disconnect();
       process.exit(1);
     });
 }

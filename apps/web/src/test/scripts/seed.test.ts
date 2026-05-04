@@ -9,6 +9,7 @@ beforeEach(async () => {
   process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
   await prisma.session.deleteMany({});
   await prisma.account.deleteMany({});
+  await prisma.verification.deleteMany({});
   await prisma.user.deleteMany({});
 });
 
