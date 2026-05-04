@@ -17,7 +17,7 @@ async function main() {
   console.log("=== Manual session ===");
   console.log("1. Log in to the platform");
   console.log("2. Navigate through any flows you want recorded");
-  console.log("3. Close the browser window when done");
+  console.log("3. Close the browser window (NOT the terminal — Ctrl-C loses data) when done");
   console.log("");
 
   const visitedUrls: string[] = [];
@@ -42,6 +42,9 @@ export const visitedUrls: string[] = ${JSON.stringify(visitedUrls, null, 2)};
   await fs.writeFile(config.flowSpecPath, flow);
   console.log("Saved flow →", config.flowSpecPath);
   console.log("Visited URLs:", visitedUrls.length);
+  if (visitedUrls.length === 0) {
+    console.warn("Warning: no URLs recorded. Did you navigate after logging in?");
+  }
 
   await browser.close();
 }
