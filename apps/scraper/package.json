@@ -1,0 +1,26 @@
+{
+  "name": "scraper",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "scrape:record": "tsx src/stages/01-record.ts",
+    "scrape:replay": "tsx src/stages/02-replay.ts",
+    "scrape:crawl": "tsx src/stages/03-crawl.ts",
+    "scrape:analyze": "tsx src/stages/04-analyze.ts",
+    "scrape:all": "pnpm scrape:replay && pnpm scrape:crawl && pnpm scrape:analyze"
+  },
+  "dependencies": {
+    "playwright": "1.48.0",
+    "dotenv": "16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "4.19.1",
+    "typescript": "5.6.3",
+    "vitest": "2.1.4",
+    "@types/node": "22.7.5"
+  }
+}
