@@ -1,0 +1,16 @@
+{
+  "name": "hotwebinar-clone",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm -r build",
+    "scrape": "pnpm --filter scraper start",
+    "db:push": "pnpm --filter db prisma db push",
+    "db:generate": "pnpm --filter db prisma generate",
+    "db:studio": "pnpm --filter db prisma studio"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
