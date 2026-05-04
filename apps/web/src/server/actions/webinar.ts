@@ -150,17 +150,19 @@ export async function updateWebinarStep4(id: string, input: Step4Input): Promise
   let videoId: string | null = null;
 
   if (data.mode === "external") {
-    if (owned.videoId) {
+    const existing = owned.videoId
+      ? await prisma.video.findUnique({ where: { id: owned.videoId } })
+      : null;
+    if (existing && existing.source === "EXTERNAL") {
       await prisma.video.update({
-        where: { id: owned.videoId },
+        where: { id: existing.id },
         data: {
-          source: "EXTERNAL",
           originalUrl: data.videoExternalUrl,
           hlsUrl: data.videoExternalUrl,
           status: "READY"
         }
       });
-      videoId = owned.videoId;
+      videoId = existing.id;
     } else {
       const v = await prisma.video.create({
         data: {
