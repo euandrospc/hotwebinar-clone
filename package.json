@@ -5,14 +5,18 @@
     "dev": "pnpm --filter web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "test:e2e": "pnpm --filter web test:e2e",
+    "seed": "pnpm --filter web seed",
+    "db:generate": "pnpm --filter db generate",
+    "db:migrate:dev": "pnpm --filter db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter db migrate:deploy",
+    "db:studio": "pnpm --filter db studio",
     "scrape:record": "pnpm --filter scraper scrape:record",
     "scrape:replay": "pnpm --filter scraper scrape:replay",
     "scrape:crawl": "pnpm --filter scraper scrape:crawl",
     "scrape:analyze": "pnpm --filter scraper scrape:analyze",
-    "scrape:all": "pnpm --filter scraper scrape:all",
-    "db:push": "pnpm --filter db prisma db push",
-    "db:generate": "pnpm --filter db prisma generate",
-    "db:studio": "pnpm --filter db prisma studio"
+    "scrape:all": "pnpm --filter scraper scrape:all"
   },
   "packageManager": "pnpm@9.12.0",
   "engines": {
