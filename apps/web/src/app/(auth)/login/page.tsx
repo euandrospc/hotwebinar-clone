@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +23,7 @@ export default function LoginPage() {
       setError("Credenciais inválidas");
       return;
     }
-    const target = params.get("from") ?? "/dashboard";
+    const target = new URLSearchParams(window.location.search).get("from") ?? "/dashboard";
     router.push(target);
   }
 
@@ -58,7 +57,7 @@ export default function LoginPage() {
           />
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button className="w-full" disabled={loading}>
+        <Button className="w-full" disabled={loading} aria-busy={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </Button>
       </form>
