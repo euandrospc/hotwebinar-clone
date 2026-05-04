@@ -1,0 +1,5 @@
+# One route per line, relative to TARGET_BASE_URL. Lines starting with # are ignored.
+# Used by stage 03 only when sidebar discovery misses a route you care about.
+# Examples:
+# /webinars/some-specific-id
+# /admin/hidden-page
