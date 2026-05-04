@@ -121,21 +121,23 @@ model AccountSettings {
 }
 
 model Video {
-  id           String      @id @default(cuid())
-  ownerId      String
-  name         String
-  source       VideoSource
-  originalUrl  String?
-  hlsUrl       String?
-  status       VideoStatus @default(QUEUED)
-  progress     Int         @default(0)
-  durationSec  Int?
-  bytes        BigInt?
-  errorMessage String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  owner        User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  webinars     Webinar[]
+  id              String      @id @default(cuid())
+  ownerId         String
+  name            String
+  source          VideoSource
+  originalUrl     String?
+  hlsUrl          String?
+  thumbUrl        String?
+  customThumbUrl  String?
+  status          VideoStatus @default(QUEUED)
+  progress        Int         @default(0)
+  durationSec     Int?
+  bytes           BigInt?
+  errorMessage    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  owner           User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  webinars        Webinar[]
   @@index([ownerId, createdAt])
   @@map("video")
 }
