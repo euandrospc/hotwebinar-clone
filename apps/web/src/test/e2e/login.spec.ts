@@ -10,6 +10,7 @@ test("admin can log in and reach the dashboard", async ({ page }) => {
   await page.getByLabel("Senha").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 });
 
 test("invalid credentials show an error", async ({ page }) => {
