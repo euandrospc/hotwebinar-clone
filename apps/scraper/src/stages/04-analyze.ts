@@ -9,7 +9,7 @@ export type AnalyzeOptions = { runDir: string; runId: string };
 
 const ID_RE = /^[0-9]+$|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^[a-z0-9]{16,}$/i;
 
-function normalizePath(rawUrl: string): string {
+export function normalizePath(rawUrl: string): string {
   try {
     const u = new URL(rawUrl);
     const segs = u.pathname.split("/").map((s) => (ID_RE.test(s) ? ":id" : s));
@@ -49,14 +49,29 @@ async function findArtifactFiles(runDir: string, name: "requests.json" | "meta.j
   return out;
 }
 
-function guessEntityName(pathPattern: string): string | null {
+const SKIP = new Set([":id", "api", "v1", "v2", "v3", "v4", "internal", "public", "private"]);
+
+export function singularize(word: string): string {
+  const lower = word.toLowerCase();
+  // Irregulars / already-singular: leave alone
+  if (["news", "media", "data", "people", "children"].includes(lower)) return word;
+  // -ies → -y (categories → category, properties → property)
+  if (/[a-z]ies$/i.test(word) && word.length > 3) return word.slice(0, -3) + "y";
+  // -ses, -xes, -zes, -ches, -shes → strip -es (statuses → status, boxes → box, classes → class)
+  if (/(?:s|x|z|ch|sh)es$/i.test(word)) return word.slice(0, -2);
+  // plain -s (but not -ss): strip
+  if (/[^s]s$/i.test(word)) return word.slice(0, -1);
+  return word;
+}
+
+export function guessEntityName(pathPattern: string): string | null {
   const parts = pathPattern.split("/").filter(Boolean);
   for (let i = parts.length - 1; i >= 0; i--) {
     const p = parts[i];
-    if (p === ":id" || p === "api") continue;
+    if (SKIP.has(p)) continue;
     const word = p.replace(/[^a-z0-9]/gi, "");
     if (word.length === 0) continue;
-    const singular = word.endsWith("s") && word.length > 1 ? word.slice(0, -1) : word;
+    const singular = singularize(word);
     return singular.charAt(0).toUpperCase() + singular.slice(1);
   }
   return null;
@@ -71,19 +86,20 @@ export async function analyze(opts: AnalyzeOptions): Promise<Analysis> {
     statusCodes: Set<number>;
     reqBodies: unknown[];
     resBodies: unknown[];
+    truncatedResCount: number;
   };
   const groups = new Map<string, Group>();
 
   for (const f of reqFiles) {
     const items = (await readJson<Captured[]>(f)) ?? [];
     for (const c of items) {
-      const ct = c.responseHeaders["content-type"];
-      if (!ct || !ct.includes("application/json")) continue;
+      const ct = (c.responseHeaders["content-type"] ?? "").toLowerCase();
+      if (!/(?:^|[\s;])application\/(?:[a-z.+-]+\+)?json\b/.test(ct) && !ct.includes("text/json")) continue;
       const pathPattern = normalizePath(c.url);
       const key = `${c.method} ${pathPattern}`;
       let g = groups.get(key);
       if (!g) {
-        g = { method: c.method, pathPattern, statusCodes: new Set(), reqBodies: [], resBodies: [] };
+        g = { method: c.method, pathPattern, statusCodes: new Set(), reqBodies: [], resBodies: [], truncatedResCount: 0 };
         groups.set(key, g);
       }
       g.statusCodes.add(c.status);
@@ -91,7 +107,11 @@ export async function analyze(opts: AnalyzeOptions): Promise<Analysis> {
         try { g.reqBodies.push(JSON.parse(c.requestBody)); } catch { /* ignore non-JSON */ }
       }
       if (c.responseBody) {
-        try { g.resBodies.push(JSON.parse(c.responseBody)); } catch { /* ignore non-JSON / truncated */ }
+        if (c.truncated) {
+          g.truncatedResCount += 1;
+        } else {
+          try { g.resBodies.push(JSON.parse(c.responseBody)); } catch { /* ignore non-JSON */ }
+        }
       }
     }
   }
@@ -106,6 +126,7 @@ export async function analyze(opts: AnalyzeOptions): Promise<Analysis> {
       method: g.method,
       pathPattern: g.pathPattern,
       samples: g.resBodies.length || g.reqBodies.length,
+      truncatedSamples: g.truncatedResCount > 0 ? g.truncatedResCount : undefined,
       statusCodes: [...g.statusCodes].sort((a, b) => a - b),
       requestBodySchema,
       responseSchema,

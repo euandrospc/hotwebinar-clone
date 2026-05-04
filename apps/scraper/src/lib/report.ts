@@ -4,6 +4,7 @@ export type EndpointAnalysis = {
   method: string;
   pathPattern: string;
   samples: number;
+  truncatedSamples?: number;
   statusCodes: number[];
   // schemas surfaced via the Entities section, not per-endpoint
   requestBodySchema: Schema;
@@ -71,7 +72,8 @@ export function buildReport(a: Analysis): string {
     out.push("|--------|------|---------|--------------|");
     for (const e of a.endpoints) {
       const codes = [...e.statusCodes].sort((a, b) => a - b).join(", ");
-      out.push(`| ${e.method} | \`${cell(e.pathPattern)}\` | ${e.samples} | ${codes} |`);
+      const sampleCol = e.truncatedSamples ? `${e.samples} (+${e.truncatedSamples} truncated)` : `${e.samples}`;
+      out.push(`| ${e.method} | \`${cell(e.pathPattern)}\` | ${sampleCol} | ${codes} |`);
     }
     out.push("");
   }
