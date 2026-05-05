@@ -12,6 +12,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Switch } from "@/components/ui/switch";
 import { WizardNav } from "@/components/wizard/wizard-nav";
+import { TimezoneSelect } from "@/components/wizard/timezone-select";
+import { WaitingTemplatePicker } from "@/components/wizard/waiting-template-picker";
 
 export interface Step2FormProps {
   webinarId: string;
@@ -97,8 +99,14 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="timezone">Fuso horário</Label>
-        <Input id="timezone" {...register("timezone")} placeholder="America/Sao_Paulo" />
+        <Label>Fuso horário</Label>
+        <Controller
+          control={control}
+          name="timezone"
+          render={({ field }) => (
+            <TimezoneSelect value={field.value} onChange={field.onChange} />
+          )}
+        />
         {errors.timezone && <p className="text-sm text-destructive">{errors.timezone.message}</p>}
       </div>
 
@@ -121,6 +129,17 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
           </label>
         )}
       />
+
+      <div className="space-y-2">
+        <Label>Modelo da página de espera</Label>
+        <Controller
+          control={control}
+          name="waitingTemplate"
+          render={({ field }) => (
+            <WaitingTemplatePicker value={field.value} onChange={field.onChange} />
+          )}
+        />
+      </div>
 
       <input type="hidden" value={mode} {...register("mode")} />
 
