@@ -1,3 +1,3 @@
-export * from "./types.js";
-export { getRedisConnection } from "./connection.js";
-export { getVideoQueue, getWebhookQueue } from "./queue.js";
+export * from "./types";
+export { getRedisConnection } from "./connection";
+export { getVideoQueue, getWebhookQueue } from "./queue";

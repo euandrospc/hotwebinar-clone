@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
-import { getRedisConnection } from "./connection.js";
-import { QUEUE_NAME, QUEUE_WEBHOOK } from "./types.js";
+import { getRedisConnection } from "./connection";
+import { QUEUE_NAME, QUEUE_WEBHOOK } from "./types";
 
 let cachedVideo: Queue | undefined;
 let cachedWebhook: Queue | undefined;

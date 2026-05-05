@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  transpilePackages: ["db"],
+  transpilePackages: ["db", "jobs"],
   experimental: {
     serverActions: { bodySizeLimit: "5mb" }
   }
