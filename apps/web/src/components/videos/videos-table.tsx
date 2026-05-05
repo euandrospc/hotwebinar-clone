@@ -77,9 +77,15 @@ export function VideosTable({ rows }: { rows: VideoRow[] }) {
                 <Badge variant={v.status === "READY" ? "default" : v.status === "FAILED" ? "destructive" : "outline"}>
                   {STATUS_LABEL[v.status]}
                 </Badge>
-                {v.status === "PROCESSING" && (
-                  <div className="mt-2 h-2 w-32 overflow-hidden rounded bg-muted">
-                    <div className="h-full bg-primary" style={{ width: `${v.progress}%` }} />
+                {(v.status === "PROCESSING" || v.status === "QUEUED") && (
+                  <div className="mt-2 w-32 space-y-1">
+                    <div className="h-2 w-full overflow-hidden rounded bg-muted">
+                      <div
+                        className="h-full bg-primary transition-[width] duration-300 ease-out"
+                        style={{ width: `${v.progress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs tabular-nums text-muted-foreground">{v.progress}%</p>
                   </div>
                 )}
               </TableCell>
