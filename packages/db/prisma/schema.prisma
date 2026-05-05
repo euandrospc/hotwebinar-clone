@@ -110,6 +110,20 @@ enum EventKind {
   PITCH_REACHED
 }
 
+enum WaitingTemplate {
+  DEFAULT
+  WITH_THUMB
+  IMMERSIVE
+  MINIMAL
+  FEATURES
+}
+
+enum LogoAlign {
+  LEFT
+  CENTER
+  RIGHT
+}
+
 enum WebhookDeliveryStatus {
   PENDING
   SUCCESS
@@ -167,6 +181,16 @@ model Webinar {
   waitingTitle            String         @default("Sala de Espera")
   waitingSubtitle         String         @default("Estamos prestes a começar")
   waitingShowThumb        Boolean        @default(false)
+  accessFacilitated       Boolean        @default(false)
+  videoSyncWithStart      Boolean        @default(true)
+  waitingTemplate         WaitingTemplate @default(DEFAULT)
+  loginLogoAlign          LogoAlign      @default(CENTER)
+  progressEnabled         Boolean        @default(false)
+  progressStartPct        Int            @default(50)
+  progressBarColor        String         @default("#dc2626")
+  progressTextColor       String         @default("#ffffff")
+  progressText            String         @default("{pct}% das vagas preenchidas...")
+  formFieldOrder          String[]       @default(["name","email","phone"])
   logoUrl                 String?
   primaryColor            String?
   loginButtonText         String         @default("Entrar")
