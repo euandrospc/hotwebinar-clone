@@ -3,11 +3,11 @@ import { useRef, useState } from "react";
 import type { PlayerShellProps } from "../_lib/public-types";
 import { HlsPlayer } from "./hls-player";
 import { ChatPanel } from "./chat-panel";
-import { CtaBanner } from "./cta-banner";
+import { OfferBanner } from "./offer-banner";
 import { Tracker } from "./tracker";
 
 export function PlayerShell({
-  webinar, video, ctas, ownerChat, leadChat, lead, initialOffsetSec
+  webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec
 }: PlayerShellProps) {
   const [currentTimeSec, setCurrentTimeSec] = useState(initialOffsetSec);
   const currentTimeRef = useRef(initialOffsetSec);
@@ -38,7 +38,7 @@ export function PlayerShell({
             startOffsetSec={initialOffsetSec}
             onTimeUpdate={onTimeUpdate}
           />
-          <CtaBanner ctas={ctas} currentTimeSec={currentTimeSec} primaryColor={webinar.primaryColor} />
+          <OfferBanner offer={offer} lead={lead} currentTimeSec={currentTimeSec} />
         </div>
         <ChatPanel
           ownerChat={ownerChat}

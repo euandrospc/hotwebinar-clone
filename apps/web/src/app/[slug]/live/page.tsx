@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
-import { publicWebinarDto, publicVideoDto, publicLeadDto } from "@/lib/public-dto";
+import { publicWebinarDto, publicVideoDto, publicLeadWithUtmsDto } from "@/lib/public-dto";
 import { computePhase, computeInitialOffset } from "@/lib/sync";
 import { maybeFireEnterWebhook } from "@/lib/webhook";
 import { isReservedSlug } from "@/lib/slug-blacklist";
@@ -17,7 +17,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   if (isReservedSlug(slug)) notFound();
   const w = await prisma.webinar.findUnique({
     where: { slug },
-    include: { video: true, ctas: true, chatMessages: { orderBy: { showAtSec: "asc" } } }
+    include: { video: true, chatMessages: { orderBy: { showAtSec: "asc" } } }
   });
   if (!w || w.status !== "ACTIVE") notFound();
 
@@ -52,16 +52,30 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
     <PlayerShell
       webinar={wDto}
       video={videoDto}
-      ctas={w.ctas.map((c) => ({
-        id: c.id, label: c.label, url: c.url, showAtSec: c.showAtSec, hideAtSec: c.hideAtSec
-      }))}
+      offer={{
+        name: w.offerName,
+        title: w.offerTitle,
+        priceOriginal: w.offerPriceOriginal,
+        priceFinal: w.offerPriceFinal,
+        buttonText: w.offerButtonText,
+        buttonColor: w.offerButtonColor,
+        imageDesktopUrl: w.offerImageDesktopUrl,
+        imageMobileUrl: w.offerImageMobileUrl,
+        showAtSec: w.offerShowAtSec,
+        hideAtSec: w.offerHideAtSec,
+        link: w.offerLink,
+        passUtms: w.offerPassUtms,
+        disabled: w.offerDisabled,
+        sameWindow: w.offerSameWindow,
+        raffleEnabled: w.offerRaffleEnabled
+      }}
       ownerChat={w.chatMessages.map((m) => ({
         id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner
       }))}
       leadChat={leadChat.map((m) => ({
         id: m.id, text: m.text, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
       }))}
-      lead={publicLeadDto(lead)}
+      lead={publicLeadWithUtmsDto(lead)}
       initialOffsetSec={offset}
     />
   );
