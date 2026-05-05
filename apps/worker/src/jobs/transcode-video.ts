@@ -1,4 +1,5 @@
 import path from "node:path";
+import crypto from "node:crypto";
 import { type Job } from "bullmq";
 import { prisma } from "db";
 import type { TranscodePayload, JobProgress } from "jobs";
@@ -51,6 +52,17 @@ export async function transcodeVideo(job: Job<TranscodePayload>): Promise<void> 
 
     await reportProgress(job, { pct: 10, stage: "transcoding" });
 
+    // Generate AES-128 HLS encryption key. ffmpeg encrypts segments;
+    // playlist references key via /api/hls/key/<videoId> served by web.
+    const encKey = crypto.randomBytes(16);
+    const keyHex = encKey.toString("hex");
+    const keyBinPath = path.join(tmp.path, "key.bin");
+    const keyInfoPath = path.join(tmp.path, "key_info.txt");
+    const keyUri = `/api/hls/key/${videoId}`;
+    const fsMod = await import("node:fs/promises");
+    await fsMod.writeFile(keyBinPath, encKey);
+    await fsMod.writeFile(keyInfoPath, `${keyUri}\n${keyBinPath}\n`, "utf8");
+
     // Build ffmpeg args: 1 input, N variants, HLS muxer with master playlist.
     const args: string[] = ["-y", "-i", rawPath];
     const variantOutputs: string[] = [];
@@ -70,6 +82,7 @@ export async function transcodeVideo(job: Job<TranscodePayload>): Promise<void> 
         "-b:a", v.audioBitrate,
         "-hls_time", "6",
         "-hls_playlist_type", "vod",
+        "-hls_key_info_file", keyInfoPath,
         "-hls_segment_filename", path.join(tmp.path, `${variantName}_%03d.ts`),
         "-f", "hls",
         playlistFile
@@ -120,9 +133,11 @@ export async function transcodeVideo(job: Job<TranscodePayload>): Promise<void> 
     await reportProgress(job, { pct: 85, stage: "uploading" });
 
     // Upload all variants + segments + master + thumb to hls-public/<videoId>/.
+    // Skip key.bin and key_info.txt — encryption key stays server-side only (DB).
     const entries = await fs.readdir(tmp.path);
     for (const entry of entries) {
       if (entry === "raw") continue;
+      if (entry === "key.bin" || entry === "key_info.txt") continue;
       const local = path.join(tmp.path, entry);
       const stat = await fs.stat(local);
       if (!stat.isFile()) continue;
@@ -142,6 +157,7 @@ export async function transcodeVideo(job: Job<TranscodePayload>): Promise<void> 
         status: "READY",
         hlsUrl: publicUrl(`${videoId}/master.m3u8`),
         thumbUrl: publicUrl(`${videoId}/thumb.jpg`),
+        encKey: keyHex,
         durationSec: Math.round(probe.durationSec),
         progress: 100,
         errorMessage: null

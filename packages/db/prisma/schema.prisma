@@ -137,6 +137,7 @@ model Video {
   hlsUrl          String?
   thumbUrl        String?
   customThumbUrl  String?
+  encKey          String?
   status          VideoStatus @default(QUEUED)
   progress        Int         @default(0)
   durationSec     Int?
