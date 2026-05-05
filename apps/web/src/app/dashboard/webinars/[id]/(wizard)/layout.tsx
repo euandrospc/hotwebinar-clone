@@ -4,8 +4,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WizardShell } from "@/components/wizard/wizard-shell";
 
-const STEP_RE = /\/step-(\d)$/;
-
 export default async function WizardLayout({
   children,
   params
@@ -19,13 +17,8 @@ export default async function WizardLayout({
   const w = await prisma.webinar.findUnique({ where: { id } });
   if (!w || w.ownerId !== session.user.id) notFound();
 
-  const h = await headers();
-  const path = h.get("x-pathname") ?? "";
-  const m = path.match(STEP_RE);
-  const step = m ? parseInt(m[1], 10) : 1;
-
   return (
-    <WizardShell webinarId={id} currentStep={step}>
+    <WizardShell webinarId={id}>
       {children}
     </WizardShell>
   );
