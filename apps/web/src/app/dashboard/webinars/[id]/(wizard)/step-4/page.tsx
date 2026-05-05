@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { Step4Form } from "@/components/wizard/step-4-form";
 import type { LibraryVideo } from "@/components/videos/library-picker";
+import { proxifyHlsUrl } from "@/lib/public-dto";
 
 export default async function Step4Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,8 +20,8 @@ export default async function Step4Page({ params }: { params: Promise<{ id: stri
   const libraryVideos: LibraryVideo[] = library.map((v) => ({
     id: v.id,
     name: v.name,
-    thumbUrl: v.thumbUrl,
-    customThumbUrl: v.customThumbUrl,
+    thumbUrl: proxifyHlsUrl(v.thumbUrl),
+    customThumbUrl: proxifyHlsUrl(v.customThumbUrl),
     durationSec: v.durationSec
   }));
 

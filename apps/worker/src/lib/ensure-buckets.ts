@@ -38,6 +38,8 @@ async function ensureBucket(name: string, publicRead: boolean): Promise<void> {
 }
 
 export async function ensureBuckets(): Promise<void> {
+  // Both buckets PRIVATE. Web app proxies authenticated reads via /api/hls/*.
+  // Direct MinIO URLs return 403 — prevents casual public download of HLS segments.
   await ensureBucket(config.s3BucketOriginals, false);
-  await ensureBucket(config.s3BucketHls, true);
+  await ensureBucket(config.s3BucketHls, false);
 }

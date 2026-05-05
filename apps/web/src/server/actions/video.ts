@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
 import { getVideoQueue, JOB_TRANSCODE, JOB_DELETE_ASSETS } from "jobs";
+import { proxifyHlsUrl } from "@/lib/public-dto";
 
 type Result = { ok: true } | { error: string; webinars?: Array<{ id: string; title: string }> };
 
@@ -28,9 +29,9 @@ export async function listVideos() {
     progress: v.progress,
     durationSec: v.durationSec,
     bytes: v.bytes ? v.bytes.toString() : null,
-    thumbUrl: v.thumbUrl,
-    customThumbUrl: v.customThumbUrl,
-    hlsUrl: v.hlsUrl,
+    thumbUrl: proxifyHlsUrl(v.thumbUrl),
+    customThumbUrl: proxifyHlsUrl(v.customThumbUrl),
+    hlsUrl: proxifyHlsUrl(v.hlsUrl),
     errorMessage: v.errorMessage,
     createdAt: v.createdAt
   }));
