@@ -48,6 +48,32 @@ export function WizardShell({
           );
         })}
       </ol>
+      <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
+        <Link
+          href={`/dashboard/webinars/${webinarId}/integrations`}
+          className="rounded-md border bg-card px-3 py-2 text-sm hover:border-primary"
+        >
+          Integrações
+        </Link>
+        <Link
+          href={`/dashboard/webinars/${webinarId}/webhooks`}
+          className="rounded-md border bg-card px-3 py-2 text-sm hover:border-primary"
+        >
+          Webhooks
+        </Link>
+        <Link
+          href={`/dashboard/webinars/${webinarId}/leads`}
+          className="rounded-md border bg-card px-3 py-2 text-sm hover:border-primary"
+        >
+          Leads
+        </Link>
+        <Link
+          href={`/dashboard/webinars/${webinarId}/metrics`}
+          className="rounded-md border bg-card px-3 py-2 text-sm hover:border-primary"
+        >
+          Métricas
+        </Link>
+      </div>
       <div className="mt-8">{children}</div>
     </div>
   );
