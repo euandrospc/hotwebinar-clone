@@ -65,9 +65,13 @@ export async function maybeFireEnterWebhook(
   lead: import("db").Lead
 ): Promise<void> {
   if (lead.enterFired) return;
-  const updated = await prisma.lead.update({
-    where: { id: lead.id },
+  // Atomic compare-and-swap: only fire if this update wins the race.
+  const result = await prisma.lead.updateMany({
+    where: { id: lead.id, enterFired: false },
     data: { enterFired: true, lastSeenAt: new Date() }
   });
+  if (result.count === 0) return;
+  const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
+  if (!updated) return;
   await enqueueWebhook(webinar, "lead_acessou", updated);
 }

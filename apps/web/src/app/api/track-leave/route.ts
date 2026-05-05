@@ -23,12 +23,18 @@ export async function POST(request: Request) {
     data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_END", videoSec }
   });
 
+  // Atomic compare-and-swap for leaveFired
   if (!lead.leaveFired) {
-    const updated = await prisma.lead.update({
-      where: { id: lead.id },
+    const r = await prisma.lead.updateMany({
+      where: { id: lead.id, leaveFired: false },
       data: { leaveFired: true, lastSeenAt: new Date() }
     });
-    await enqueueWebhook(lead.webinar, "lead_saiu", updated, { videoSec });
+    if (r.count === 1) {
+      const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
+      if (updated) {
+        await enqueueWebhook(lead.webinar, "lead_saiu", updated, { videoSec });
+      }
+    }
   }
 
   return new NextResponse(null, { status: 204 });

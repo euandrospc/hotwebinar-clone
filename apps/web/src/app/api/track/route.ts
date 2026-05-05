@@ -35,39 +35,51 @@ export async function POST(request: Request) {
     data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_TICK", videoSec: parsed.data.videoSec }
   });
 
-  const updateData: any = { watchedSec: newWatched, lastSeenAt: now };
+  // Always update watchedSec + lastSeenAt
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { watchedSec: newWatched, lastSeenAt: now }
+  });
 
   const w = lead.webinar;
-  let firePitch = false;
-  let firePermanence = false;
 
+  // Atomic compare-and-swap for pitchFired
   if (
     w.pitchAtSec != null &&
     parsed.data.videoSec >= w.pitchAtSec &&
     !lead.pitchFired
   ) {
-    updateData.pitchFired = true;
-    firePitch = true;
+    const r = await prisma.lead.updateMany({
+      where: { id: lead.id, pitchFired: false },
+      data: { pitchFired: true }
+    });
+    if (r.count === 1) {
+      const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
+      if (updated) {
+        await prisma.event.create({
+          data: { webinarId: w.id, leadId: lead.id, kind: "PITCH_REACHED", videoSec: parsed.data.videoSec }
+        });
+        await enqueueWebhook(w, "lead_viu_pitch", updated, { videoSec: parsed.data.videoSec });
+      }
+    }
   }
+
+  // Atomic compare-and-swap for permanenceFired
   if (
     w.permanenceThresholdSec > 0 &&
     newWatched >= w.permanenceThresholdSec &&
     !lead.permanenceFired
   ) {
-    updateData.permanenceFired = true;
-    firePermanence = true;
-  }
-
-  const updated = await prisma.lead.update({ where: { id: lead.id }, data: updateData });
-
-  if (firePitch) {
-    await prisma.event.create({
-      data: { webinarId: w.id, leadId: lead.id, kind: "PITCH_REACHED", videoSec: parsed.data.videoSec }
+    const r = await prisma.lead.updateMany({
+      where: { id: lead.id, permanenceFired: false },
+      data: { permanenceFired: true }
     });
-    await enqueueWebhook(w, "lead_viu_pitch", updated, { videoSec: parsed.data.videoSec });
-  }
-  if (firePermanence) {
-    await enqueueWebhook(w, "lead_permaneceu", updated, { videoSec: parsed.data.videoSec });
+    if (r.count === 1) {
+      const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
+      if (updated) {
+        await enqueueWebhook(w, "lead_permaneceu", updated, { videoSec: parsed.data.videoSec });
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });
