@@ -1,0 +1,88 @@
+"use server";
+
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { prisma } from "db";
+import { signLeadCookie } from "@/lib/lead-session";
+import { enqueueWebhook } from "@/lib/webhook";
+import { optinLimiter } from "@/lib/rate-limit";
+
+type OkResult = { ok: true };
+type ErrorResult = { error: { field?: string; message: string } };
+export type ActionResult = OkResult | ErrorResult;
+
+function err(message: string, field?: string): ErrorResult {
+  return { error: { message, field } };
+}
+
+export async function submitOptin(slug: string, formData: FormData): Promise<ActionResult | never> {
+  const w = await prisma.webinar.findUnique({ where: { slug } });
+  if (!w || w.status !== "ACTIVE") return err("Webinar não disponível");
+
+  const hdrs = await headers();
+  const ip = (hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "") || "unknown";
+  const ua = hdrs.get("user-agent") ?? "";
+  if (!optinLimiter.check(ip)) return err("Muitas tentativas, aguarde");
+
+  const schemaShape: Record<string, z.ZodTypeAny> = {};
+  if (w.nameEnabled) {
+    schemaShape.name = w.nameRequired ? z.string().min(1, "Nome obrigatório") : z.string().optional();
+  }
+  if (w.emailEnabled) {
+    schemaShape.email = w.emailRequired
+      ? z.string().email("Email inválido")
+      : z.string().email().optional().or(z.literal(""));
+  }
+  if (w.phoneEnabled) {
+    schemaShape.phone = w.phoneRequired
+      ? z.string().min(8, "Telefone inválido")
+      : z.string().optional();
+  }
+  const schema = z.object(schemaShape);
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return err(issue.message, issue.path.join("."));
+  }
+  const data = parsed.data as { name?: string; email?: string; phone?: string };
+
+  const email = data.email ?? "";
+  const name = data.name ?? "";
+  const phone = data.phone || null;
+
+  const existing = email
+    ? await prisma.lead.findUnique({ where: { webinarId_email: { webinarId: w.id, email } } })
+    : null;
+
+  let lead;
+  if (existing) {
+    lead = await prisma.lead.update({
+      where: { id: existing.id },
+      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date() }
+    });
+  } else {
+    lead = await prisma.lead.create({
+      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua }
+    });
+  }
+
+  await prisma.event.create({
+    data: { webinarId: w.id, leadId: lead.id, kind: "OPTIN", metadata: { ip, ua } }
+  });
+
+  const cookie = signLeadCookie(lead.id);
+  const cookieStore = await cookies();
+  cookieStore.set("hw_lead", cookie, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 30,
+    path: `/${slug}`
+  });
+
+  await enqueueWebhook(w, "lead_novo", lead);
+
+  redirect(`/${slug}/live`);
+}
