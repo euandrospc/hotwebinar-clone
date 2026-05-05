@@ -33,7 +33,7 @@ export function RowActions({
       toast.error("Defina o slug antes de copiar o link");
       return;
     }
-    await navigator.clipboard.writeText(`${publicBaseUrl}/w/${slug}`);
+    await navigator.clipboard.writeText(`${publicBaseUrl}/${slug}`);
     toast.success("Link copiado");
   }
 

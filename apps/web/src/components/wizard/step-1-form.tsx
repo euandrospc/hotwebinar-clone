@@ -74,7 +74,7 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
         <Label htmlFor="slug">URL amigável</Label>
         <Input id="slug" {...register("slug")} />
         <p className="text-xs text-muted-foreground">
-          https://hotwebinar.com.br/w/<span className="font-mono">{watch("slug") || "<slug>"}</span>
+          https://hotwebinar.com.br/<span className="font-mono">{watch("slug") || "<slug>"}</span>
         </p>
         {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
       </div>
