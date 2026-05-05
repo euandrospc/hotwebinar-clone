@@ -27,7 +27,15 @@ export default async function Step3Page({ params }: { params: Promise<{ id: stri
         phoneRequired: w.phoneRequired,
         namePlaceholder: w.namePlaceholder,
         emailPlaceholder: w.emailPlaceholder,
-        phonePlaceholder: w.phonePlaceholder
+        phonePlaceholder: w.phonePlaceholder,
+        loginLogoAlign: w.loginLogoAlign,
+        progressEnabled: w.progressEnabled,
+        progressStartPct: w.progressStartPct,
+        progressBarColor: w.progressBarColor,
+        progressTextColor: w.progressTextColor,
+        progressText: w.progressText,
+        formFieldOrder: w.formFieldOrder as ("name" | "email" | "phone")[],
+        titleHint: w.title
       }}
     />
   );

@@ -21,7 +21,8 @@ export default async function Step2Page({ params }: { params: Promise<{ id: stri
         timezone: w.timezone,
         waitingTitle: w.waitingTitle,
         waitingSubtitle: w.waitingSubtitle,
-        waitingShowThumb: w.waitingShowThumb
+        waitingShowThumb: w.waitingShowThumb,
+        waitingTemplate: w.waitingTemplate
       }}
     />
   );

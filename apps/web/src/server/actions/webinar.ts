@@ -70,7 +70,9 @@ export async function updateWebinarStep1(id: string, input: Step1Input): Promise
         name: parsed.data.name,
         title: parsed.data.title,
         slug: parsed.data.slug,
-        language: parsed.data.language
+        language: parsed.data.language,
+        accessFacilitated: parsed.data.accessFacilitated,
+        videoSyncWithStart: parsed.data.videoSyncWithStart
       }
     });
   } catch (e) {
@@ -101,7 +103,12 @@ export async function updateWebinarStep2(id: string, input: Step2Input): Promise
       timezone: parsed.data.timezone,
       waitingTitle: parsed.data.waitingTitle,
       waitingSubtitle: parsed.data.waitingSubtitle,
-      waitingShowThumb: parsed.data.waitingShowThumb
+      waitingTemplate: parsed.data.waitingTemplate,
+      // Backwards-compat: keep waitingShowThumb in sync with template choice
+      waitingShowThumb:
+        parsed.data.waitingTemplate === "WITH_THUMB"
+          ? true
+          : parsed.data.waitingShowThumb
     }
   });
   revalidatePath(`/dashboard/webinars/${id}`);
@@ -132,7 +139,14 @@ export async function updateWebinarStep3(id: string, input: Step3Input): Promise
       phoneRequired: parsed.data.phoneRequired,
       namePlaceholder: parsed.data.namePlaceholder,
       emailPlaceholder: parsed.data.emailPlaceholder,
-      phonePlaceholder: parsed.data.phonePlaceholder
+      phonePlaceholder: parsed.data.phonePlaceholder,
+      loginLogoAlign: parsed.data.loginLogoAlign,
+      progressEnabled: parsed.data.progressEnabled,
+      progressStartPct: parsed.data.progressStartPct,
+      progressBarColor: parsed.data.progressBarColor,
+      progressTextColor: parsed.data.progressTextColor,
+      progressText: parsed.data.progressText,
+      formFieldOrder: parsed.data.formFieldOrder
     }
   });
   revalidatePath(`/dashboard/webinars/${id}`);

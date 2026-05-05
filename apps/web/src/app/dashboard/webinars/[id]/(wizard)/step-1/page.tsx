@@ -18,7 +18,9 @@ export default async function Step1Page({ params }: { params: Promise<{ id: stri
         name: w.name,
         title: w.title,
         slug: w.slug ?? "",
-        language: w.language
+        language: w.language,
+        accessFacilitated: w.accessFacilitated,
+        videoSyncWithStart: w.videoSyncWithStart
       }}
     />
   );
