@@ -5,4 +5,6 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 expect.extend(matchers);
 
 // Mock hasPointerCapture for radix-ui components in jsdom
-Element.prototype.hasPointerCapture = vi.fn(() => false);
+if (typeof Element !== "undefined") {
+  Element.prototype.hasPointerCapture = vi.fn(() => false);
+}

@@ -51,7 +51,7 @@ describe("updateWebinarStep1", () => {
   it("updates name/title/slug/language", async () => {
     const { createDraftWebinar, updateWebinarStep1 } = await import("@/server/actions/webinar");
     const { id } = await createDraftWebinar();
-    const r = await updateWebinarStep1(id, { name: "X", title: "Hello", slug: "hello-x", language: "pt-BR" });
+    const r = await updateWebinarStep1(id, { name: "X", title: "Hello", slug: "hello-x", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
     expect(r).toEqual({ ok: true });
     const w = await prisma.webinar.findUnique({ where: { id } });
     expect(w).toMatchObject({ name: "X", title: "Hello", slug: "hello-x" });
@@ -61,7 +61,7 @@ describe("updateWebinarStep1", () => {
     const { createDraftWebinar, updateWebinarStep1 } = await import("@/server/actions/webinar");
     await prisma.user.create({ data: { id: "other", email: "other@x.com", name: "Other" } });
     const stranger = await prisma.webinar.create({ data: { ownerId: "other" } });
-    const r = await updateWebinarStep1(stranger.id, { name: "X", title: "Y", slug: "yyy", language: "pt-BR" });
+    const r = await updateWebinarStep1(stranger.id, { name: "X", title: "Y", slug: "yyy", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
     expect(r).toMatchObject({ error: { message: expect.stringMatching(/não encontrado|not_found/i) } });
   });
 });
@@ -134,7 +134,7 @@ describe("publishWebinar", () => {
       publishWebinar
     } = await import("@/server/actions/webinar");
     const { id } = await createDraftWebinar();
-    await updateWebinarStep1(id, { name: "N", title: "T", slug: "active-test", language: "pt-BR" });
+    await updateWebinarStep1(id, { name: "N", title: "T", slug: "active-test", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
     await updateWebinarStep2(id, {
       mode: "UNICO",
       startDate: new Date("2026-06-01T10:00:00Z"),
@@ -142,7 +142,8 @@ describe("publishWebinar", () => {
       timezone: "America/Sao_Paulo",
       waitingTitle: "Sala",
       waitingSubtitle: "",
-      waitingShowThumb: false
+      waitingShowThumb: false,
+      waitingTemplate: "DEFAULT" as const
     });
     await updateWebinarStep4(id, { mode: "external", videoExternalUrl: "https://x.com/v.mp4" });
     const r = await publishWebinar(id);
@@ -177,7 +178,7 @@ describe("duplicateWebinar", () => {
       duplicateWebinar
     } = await import("@/server/actions/webinar");
     const { id } = await createDraftWebinar();
-    await updateWebinarStep1(id, { name: "Orig", title: "Orig", slug: "orig", language: "pt-BR" });
+    await updateWebinarStep1(id, { name: "Orig", title: "Orig", slug: "orig", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
     await updateWebinarStep5(id, { ctas: [{ label: "X", url: "https://x.com", showAtSec: 0 }] });
     await updateWebinarStep6(id, {
       messages: [{ authorName: "A", text: "Olá", showAtSec: 0, isOwner: false }]
@@ -194,5 +195,41 @@ describe("duplicateWebinar", () => {
     expect(dup?.title).toBe("Orig (cópia)");
     expect(dup?.ctas).toHaveLength(1);
     expect(dup?.chatMessages).toHaveLength(1);
+  });
+});
+
+describe("updateWebinarStep1 D1 fields", () => {
+  it("persists accessFacilitated + videoSyncWithStart", async () => {
+    const { createDraftWebinar, updateWebinarStep1 } = await import("@/server/actions/webinar?" + Date.now());
+    const { id } = await createDraftWebinar();
+    const r = await updateWebinarStep1(id, {
+      name: "X", title: "X", slug: "d1-test-1", language: "pt-BR",
+      accessFacilitated: true,
+      videoSyncWithStart: false
+    });
+    expect(r).toEqual({ ok: true });
+    const after = await prisma.webinar.findUnique({ where: { id } });
+    expect(after?.accessFacilitated).toBe(true);
+    expect(after?.videoSyncWithStart).toBe(false);
+  });
+});
+
+describe("updateWebinarStep2 waitingTemplate", () => {
+  it("setting WITH_THUMB also sets waitingShowThumb=true", async () => {
+    const { createDraftWebinar, updateWebinarStep1, updateWebinarStep2 } = await import("@/server/actions/webinar?" + (Date.now() + 1));
+    const { id } = await createDraftWebinar();
+    await updateWebinarStep1(id, { name: "X", title: "X", slug: "d1-test-2", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
+    await updateWebinarStep2(id, {
+      mode: "UNICO",
+      startDate: new Date("2026-06-01T10:00:00Z"),
+      endDate: new Date("2026-06-01T11:00:00Z"),
+      timezone: "America/Sao_Paulo",
+      waitingTitle: "Sala", waitingSubtitle: "",
+      waitingShowThumb: false,
+      waitingTemplate: "WITH_THUMB"
+    });
+    const after = await prisma.webinar.findUnique({ where: { id } });
+    expect(after?.waitingTemplate).toBe("WITH_THUMB");
+    expect(after?.waitingShowThumb).toBe(true);
   });
 });
