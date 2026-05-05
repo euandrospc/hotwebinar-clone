@@ -11,12 +11,14 @@ import {
   step4Schema,
   step5Schema,
   step6Schema,
+  integrationsSchema,
   type Step1Input,
   type Step2Input,
   type Step3Input,
   type Step4Input,
   type Step5Input,
-  type Step6Input
+  type Step6Input,
+  type IntegrationsInput
 } from "@/lib/validations/webinar";
 
 type Result = { ok: true } | { error: { field?: string; message: string } };
@@ -367,4 +369,31 @@ export async function duplicateWebinar(id: string): Promise<{ newId: string } | 
 
   revalidatePath("/dashboard/webinars");
   return { newId: dup.id };
+}
+
+export async function updateWebinarIntegrations(id: string, input: IntegrationsInput): Promise<Result> {
+  const session = await requireSession();
+  const owned = await loadOwned(id, session.user.id);
+  if (!owned) return notFound();
+  const parsed = integrationsSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: { field: issue.path.join("."), message: issue.message } };
+  }
+  await prisma.webinar.update({
+    where: { id },
+    data: {
+      webhookUrl: parsed.data.webhookUrl || null,
+      webhookOnOptin: parsed.data.webhookOnOptin,
+      webhookOnEnter: parsed.data.webhookOnEnter,
+      webhookOnCtaView: parsed.data.webhookOnCtaView,
+      webhookOnCtaClick: parsed.data.webhookOnCtaClick,
+      webhookOnPitchReached: parsed.data.webhookOnPitchReached,
+      webhookOnPermanence: parsed.data.webhookOnPermanence,
+      webhookOnLeave: parsed.data.webhookOnLeave,
+      permanenceThresholdSec: parsed.data.permanenceThresholdSec
+    }
+  });
+  revalidatePath(`/dashboard/webinars/${id}/integrations`);
+  return { ok: true };
 }

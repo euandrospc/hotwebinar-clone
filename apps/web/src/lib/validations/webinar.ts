@@ -91,3 +91,16 @@ export const chatItemSchema = z.object({
 export const step6Schema = z.object({ messages: z.array(chatItemSchema) });
 export type Step6Input = z.infer<typeof step6Schema>;
 export type ChatItem = z.infer<typeof chatItemSchema>;
+
+export const integrationsSchema = z.object({
+  webhookUrl: z.string().url("URL inválida").or(z.literal("")).optional(),
+  webhookOnOptin: z.boolean(),
+  webhookOnEnter: z.boolean(),
+  webhookOnCtaView: z.boolean(),
+  webhookOnCtaClick: z.boolean(),
+  webhookOnPitchReached: z.boolean(),
+  webhookOnPermanence: z.boolean(),
+  webhookOnLeave: z.boolean(),
+  permanenceThresholdSec: z.number().int().min(1).max(86_400)
+});
+export type IntegrationsInput = z.infer<typeof integrationsSchema>;
