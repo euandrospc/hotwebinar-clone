@@ -6,7 +6,7 @@ export type UploadState =
   | { status: "init" }
   | { status: "uploading"; pct: number }
   | { status: "completing" }
-  | { status: "polling"; videoId: string }
+  | { status: "polling"; videoId: string; pct: number }
   | { status: "ready"; videoId: string }
   | { status: "failed"; error: string; videoId?: string };
 
@@ -62,7 +62,7 @@ export function usePresignedUpload(opts: UsePresignedUploadOptions = {}) {
         throw new Error(data?.error ?? `complete failed (${completeRes.status})`);
       }
 
-      setState({ status: "polling", videoId });
+      setState({ status: "polling", videoId, pct: 0 });
 
       // Poll status every 3s up to 60 minutes.
       const deadline = Date.now() + 60 * 60 * 1000;
@@ -70,9 +70,10 @@ export function usePresignedUpload(opts: UsePresignedUploadOptions = {}) {
         await new Promise((r) => setTimeout(r, 3000));
         const res = await fetch("/api/videos");
         if (!res.ok) continue;
-        const data = (await res.json()) as { videos: Array<{ id: string; status: string; errorMessage?: string }> };
+        const data = (await res.json()) as { videos: Array<{ id: string; status: string; progress?: number; errorMessage?: string }> };
         const me = data.videos.find((v) => v.id === videoId);
         if (!me) continue;
+        setState({ status: "polling", videoId, pct: me.progress ?? 0 });
         if (me.status === "READY") {
           setState({ status: "ready", videoId });
           opts.onReady?.(videoId);
