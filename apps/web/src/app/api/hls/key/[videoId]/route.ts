@@ -5,8 +5,16 @@ import { auth } from "@/lib/auth";
 
 const SESSION_TTL_MS = 15 * 60 * 1000; // 15 minutes since last lead activity
 
+function refererAllowed(req: Request, isAdmin: boolean): boolean {
+  const ref = req.headers.get("referer") ?? "";
+  if (!ref) return false;
+  if (/\/[^/]+\/live(\/|$|\?)/.test(ref)) return true;
+  if (isAdmin && /\/dashboard\//.test(ref)) return true;
+  return false;
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ videoId: string }> }
 ) {
   const { videoId } = await params;
@@ -19,6 +27,7 @@ export async function GET(
 
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
+  let isAdmin = false;
   if (leadId) {
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
@@ -42,6 +51,11 @@ export async function GET(
     if (video.ownerId !== session.user.id) {
       return new Response("forbidden", { status: 403 });
     }
+    isAdmin = true;
+  }
+
+  if (!refererAllowed(req, isAdmin)) {
+    return new Response("forbidden", { status: 403 });
   }
 
   const keyBytes = Buffer.from(video.encKey, "hex");

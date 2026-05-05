@@ -14,8 +14,18 @@ function contentTypeFor(key: string): string {
   return "application/octet-stream";
 }
 
+function refererAllowed(req: Request, isAdmin: boolean): boolean {
+  const ref = req.headers.get("referer") ?? "";
+  if (!ref) return false;
+  // Lead-side: must come from /<slug>/live page.
+  if (/\/[^/]+\/live(\/|$|\?)/.test(ref)) return true;
+  // Admin-side: dashboard + wizard + library picker pages.
+  if (isAdmin && /\/dashboard\//.test(ref)) return true;
+  return false;
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
@@ -25,9 +35,17 @@ export async function GET(
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
   let authorized = Boolean(leadId);
+  let isAdmin = false;
   if (!authorized) {
     const session = await auth.api.getSession({ headers: await headers() });
     authorized = Boolean(session);
+    isAdmin = authorized;
+  }
+
+  // Referer gate: blocks direct browser-bar URL access even with valid cookie.
+  // Trade-off: cURL with -H "Referer: ..." bypasses; this is best-effort browser-only.
+  if (!refererAllowed(req, isAdmin)) {
+    return new Response("forbidden", { status: 403 });
   }
   if (!authorized) return new Response("unauthorized", { status: 401 });
 
