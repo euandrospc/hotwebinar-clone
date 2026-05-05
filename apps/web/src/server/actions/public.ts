@@ -66,9 +66,28 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
       data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date() }
     });
   } else {
-    lead = await prisma.lead.create({
-      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua }
-    });
+    try {
+      lead = await prisma.lead.create({
+        data: { webinarId: w.id, name, email, phone, ip, userAgent: ua }
+      });
+    } catch (createErr: any) {
+      // Concurrent submitOptin race: another request created lead with same email between findUnique and create.
+      if (createErr?.code === "P2002" && email) {
+        const racedExisting = await prisma.lead.findUnique({
+          where: { webinarId_email: { webinarId: w.id, email } }
+        });
+        if (racedExisting) {
+          lead = await prisma.lead.update({
+            where: { id: racedExisting.id },
+            data: { name: name || racedExisting.name, phone: phone ?? racedExisting.phone, ip, userAgent: ua, lastSeenAt: new Date() }
+          });
+        } else {
+          throw createErr;
+        }
+      } else {
+        throw createErr;
+      }
+    }
   }
 
   await prisma.event.create({
