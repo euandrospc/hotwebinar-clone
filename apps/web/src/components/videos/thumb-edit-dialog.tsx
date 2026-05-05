@@ -38,7 +38,8 @@ export function ThumbEditDialog({
       // Compute public URL using S3_PUBLIC_BASE_URL via server action
       const publicBaseUrl = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL ?? "";
       const hlsBucket = process.env.NEXT_PUBLIC_S3_BUCKET_HLS ?? "hls-public";
-      const customThumbUrl = `${publicBaseUrl}/${hlsBucket}/${key}`;
+      // Cache-bust: same key overwrites previous file in MinIO; append ?v= so browser refetches
+      const customThumbUrl = `${publicBaseUrl}/${hlsBucket}/${key}?v=${Date.now()}`;
       const r = await setCustomThumb(videoId, customThumbUrl);
       if ("ok" in r) {
         toast.success("Thumbnail atualizada");

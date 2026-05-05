@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PublicWebinar } from "@/lib/public-dto";
+import type { PublicVideo, PublicWebinar } from "@/lib/public-dto";
 
 function fmt(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -10,7 +10,7 @@ function fmt(secs: number): string {
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 
-export function CountdownView({ w }: { w: PublicWebinar }) {
+export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVideo | null }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState<number>(() => {
     if (!w.startDate) return 0;
@@ -30,11 +30,16 @@ export function CountdownView({ w }: { w: PublicWebinar }) {
     return () => clearInterval(id);
   }, [w.startDate, router]);
 
+  const thumb = w.waitingShowThumb ? (video?.customThumbUrl ?? video?.thumbUrl ?? null) : null;
+
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
       {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
       <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
       <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
+      {thumb ? (
+        <img src={thumb} alt="" className="mt-6 aspect-video w-full max-w-md rounded-lg border object-cover shadow" />
+      ) : null}
       <p className="mt-8 font-mono text-5xl tabular-nums" aria-live="polite">{fmt(remaining)}</p>
     </main>
   );

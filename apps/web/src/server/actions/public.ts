@@ -101,7 +101,10 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 30,
-    path: `/${slug}`
+    // path "/" so /api/* routes (track, cta, lead-chat) receive the cookie too.
+    // Trade-off: lead session of webinar A is visible to webinar B's pages, but
+    // resolveLeadFromCookie validates lead.webinarId matches the requested webinar.
+    path: "/"
   });
 
   await enqueueWebhook(w, "lead_novo", lead);

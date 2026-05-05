@@ -20,7 +20,8 @@ export default async function Step2Page({ params }: { params: Promise<{ id: stri
         endDate: w.endDate ?? new Date(Date.now() + 25 * 60 * 60 * 1000),
         timezone: w.timezone,
         waitingTitle: w.waitingTitle,
-        waitingSubtitle: w.waitingSubtitle
+        waitingSubtitle: w.waitingSubtitle,
+        waitingShowThumb: w.waitingShowThumb
       }}
     />
   );

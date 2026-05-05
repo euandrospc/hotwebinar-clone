@@ -32,7 +32,8 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
     new Date()
   );
   const wDto = publicWebinarDto(w);
-  if (phase === "before" && w.mode === "UNICO") return <CountdownView w={wDto} />;
+  const videoDto = publicVideoDto(w.video);
+  if (phase === "before" && w.mode === "UNICO") return <CountdownView w={wDto} video={videoDto} />;
   if (phase === "closed" && w.mode === "UNICO") return <ClosedView w={wDto} />;
 
   const leadChat = await prisma.leadChatMessage.findMany({
@@ -50,7 +51,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   return (
     <PlayerShell
       webinar={wDto}
-      video={publicVideoDto(w.video)}
+      video={videoDto}
       ctas={w.ctas.map((c) => ({
         id: c.id, label: c.label, url: c.url, showAtSec: c.showAtSec, hideAtSec: c.hideAtSec
       }))}

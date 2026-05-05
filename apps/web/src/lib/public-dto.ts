@@ -11,6 +11,7 @@ export type PublicWebinar = {
   timezone: string;
   waitingTitle: string;
   waitingSubtitle: string;
+  waitingShowThumb: boolean;
   logoUrl: string | null;
   primaryColor: string | null;
   loginButtonText: string;
@@ -33,6 +34,7 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     timezone: w.timezone,
     waitingTitle: w.waitingTitle,
     waitingSubtitle: w.waitingSubtitle,
+    waitingShowThumb: w.waitingShowThumb,
     logoUrl: w.logoUrl,
     primaryColor: w.primaryColor,
     loginButtonText: w.loginButtonText,

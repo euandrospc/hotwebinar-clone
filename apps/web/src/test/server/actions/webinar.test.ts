@@ -141,7 +141,8 @@ describe("publishWebinar", () => {
       endDate: new Date("2026-06-01T11:00:00Z"),
       timezone: "America/Sao_Paulo",
       waitingTitle: "Sala",
-      waitingSubtitle: ""
+      waitingSubtitle: "",
+      waitingShowThumb: false
     });
     await updateWebinarStep4(id, { mode: "external", videoExternalUrl: "https://x.com/v.mp4" });
     const r = await publishWebinar(id);

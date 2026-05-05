@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { Switch } from "@/components/ui/switch";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 
 export interface Step2FormProps {
@@ -109,6 +110,17 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
         <Label htmlFor="waitingSubtitle">Subtítulo da sala de espera</Label>
         <Input id="waitingSubtitle" {...register("waitingSubtitle")} />
       </div>
+
+      <Controller
+        control={control}
+        name="waitingShowThumb"
+        render={({ field }) => (
+          <label className="flex items-center gap-3">
+            <Switch checked={field.value} onCheckedChange={field.onChange} />
+            <span className="text-sm">Mostrar thumbnail do vídeo na sala de espera</span>
+          </label>
+        )}
+      />
 
       <input type="hidden" value={mode} {...register("mode")} />
 

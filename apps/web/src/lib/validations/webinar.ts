@@ -23,7 +23,8 @@ export const step2Schema = z
     endDate: z.coerce.date(),
     timezone: z.string().min(1),
     waitingTitle: z.string().min(1).max(80),
-    waitingSubtitle: z.string().max(200)
+    waitingSubtitle: z.string().max(200),
+    waitingShowThumb: z.boolean().default(false)
   })
   .refine((v) => v.endDate > v.startDate, {
     message: "Fim deve ser após início",

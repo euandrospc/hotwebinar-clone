@@ -100,7 +100,8 @@ export async function updateWebinarStep2(id: string, input: Step2Input): Promise
       endDate: parsed.data.endDate,
       timezone: parsed.data.timezone,
       waitingTitle: parsed.data.waitingTitle,
-      waitingSubtitle: parsed.data.waitingSubtitle
+      waitingSubtitle: parsed.data.waitingSubtitle,
+      waitingShowThumb: parsed.data.waitingShowThumb
     }
   });
   revalidatePath(`/dashboard/webinars/${id}`);

@@ -165,6 +165,7 @@ model Webinar {
   timezone                String         @default("America/Sao_Paulo")
   waitingTitle            String         @default("Sala de Espera")
   waitingSubtitle         String         @default("Estamos prestes a começar")
+  waitingShowThumb        Boolean        @default(false)
   logoUrl                 String?
   primaryColor            String?
   loginButtonText         String         @default("Entrar")
