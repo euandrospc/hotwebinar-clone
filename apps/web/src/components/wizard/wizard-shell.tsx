@@ -46,9 +46,9 @@ export function WizardShell({ webinarId, children }: WizardShellProps) {
   const activeIndex = STEPS.findIndex((s) => s.matchPath(pathname, webinarId));
 
   return (
-    <div className="container mx-auto py-8">
-      <nav className="overflow-x-auto pb-4">
-        <ol className="flex min-w-max items-end gap-0">
+    <div>
+      <nav className="sticky top-0 z-20 overflow-x-auto border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <ol className="mx-auto flex min-w-max items-end justify-center gap-0">
           {STEPS.map((s, i) => {
             const isActive = i === activeIndex;
             const isPast = activeIndex >= 0 && i < activeIndex;
@@ -81,7 +81,7 @@ export function WizardShell({ webinarId, children }: WizardShellProps) {
           })}
         </ol>
       </nav>
-      <div className="mt-6">{children}</div>
+      <div className="container mx-auto px-6 py-6">{children}</div>
     </div>
   );
 }
