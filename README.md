@@ -55,6 +55,16 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - Step 3 — full 3-column layout: logo align (left/center/right), customizable progress bar (start %, colors, text token `{percent}`), reorderable + togglable form fields (`name`, `email`, `phone`), and live `LoginPreview` aside.
 - Schema migration: `20260505174125_d1_wizard_redesign` (enums `WaitingTemplate`, `LogoAlign`; 10 new `Webinar` columns).
 
+## Offer (sub-plan D2)
+
+- Step 5 redesigned to match original Hotwebinar single-Offer UI. Multi-CTA model dropped.
+- Webinar adds 15 offer columns + 5 lead UTM columns + 3 webhook flag columns (`webhookOnOfferView`, `webhookOnOfferClick`, `webhookOnRaffleEntry`).
+- EventKind values `CTA_VIEW`/`CTA_CLICK` renamed in-place to `OFFER_VIEW`/`OFFER_CLICK`. New value `RAFFLE_ENTRY`.
+- WebhookEvent gains `lead_entrou_sorteio`.
+- Image upload via `/api/upload/offer-image` (presigned PUT, MIME `image/jpeg|png|webp`, 2 MiB cap, key `offer/<webinarId>/<kind>.<ext>`).
+- UTMs captured at opt-in (`utm_source/medium/campaign/term/content`) and re-appended at offer click when `offerPassUtms=true`.
+- Schema migration: `20260505180000_d2_offer_rebuild`.
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
