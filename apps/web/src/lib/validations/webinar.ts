@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { isReservedSlug } from "@/lib/slug-blacklist";
 
 export const slugSchema = z
   .string()
   .min(3)
   .max(60)
-  .regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hífen apenas");
+  .regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hífen apenas")
+  .refine((s) => !isReservedSlug(s), { message: "Slug reservado, escolha outro" });
 
 export const step1Schema = z.object({
   name: z.string().min(1).max(120),
