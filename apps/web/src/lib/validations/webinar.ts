@@ -85,16 +85,28 @@ export const step4Schema = z.discriminatedUnion("mode", [
 ]);
 export type Step4Input = z.infer<typeof step4Schema>;
 
-export const ctaItemSchema = z.object({
-  id: z.string().optional(),
-  label: z.string().min(1).max(80),
-  url: z.string().url(),
-  showAtSec: z.number().int().min(0),
-  hideAtSec: z.number().int().min(0).optional()
-});
-export const step5Schema = z.object({ ctas: z.array(ctaItemSchema) });
+export const step5Schema = z.object({
+  offerName: z.string().min(1, "Nome obrigatório").max(100),
+  offerTitle: z.string().min(1, "Título obrigatório").max(120),
+  offerPriceOriginal: z.string().max(50).optional().nullable(),
+  offerPriceFinal: z.string().max(50).optional().nullable(),
+  offerButtonText: z.string().min(1).max(50),
+  offerButtonColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Cor hex inválida"),
+  offerImageDesktopUrl: z.string().url().optional().nullable(),
+  offerImageMobileUrl: z.string().url().optional().nullable(),
+  pitchAtSec: z.number().int().min(0).optional().nullable(),
+  offerShowAtSec: z.number().int().min(0).optional().nullable(),
+  offerHideAtSec: z.number().int().min(0).optional().nullable(),
+  offerLink: z.string().url().optional().nullable().or(z.literal("")),
+  offerPassUtms: z.boolean(),
+  offerDisabled: z.boolean(),
+  offerSameWindow: z.boolean(),
+  offerRaffleEnabled: z.boolean()
+}).refine(
+  (d) => d.offerHideAtSec == null || d.offerShowAtSec == null || d.offerHideAtSec >= d.offerShowAtSec,
+  { message: "Tempo fim deve ser ≥ tempo início", path: ["offerHideAtSec"] }
+);
 export type Step5Input = z.infer<typeof step5Schema>;
-export type CtaItem = z.infer<typeof ctaItemSchema>;
 
 export const chatItemSchema = z.object({
   id: z.string().optional(),
@@ -111,8 +123,9 @@ export const integrationsSchema = z.object({
   webhookUrl: z.string().url("URL inválida").or(z.literal("")).optional(),
   webhookOnOptin: z.boolean(),
   webhookOnEnter: z.boolean(),
-  webhookOnCtaView: z.boolean(),
-  webhookOnCtaClick: z.boolean(),
+  webhookOnOfferView: z.boolean(),
+  webhookOnOfferClick: z.boolean(),
+  webhookOnRaffleEntry: z.boolean(),
   webhookOnPitchReached: z.boolean(),
   webhookOnPermanence: z.boolean(),
   webhookOnLeave: z.boolean(),

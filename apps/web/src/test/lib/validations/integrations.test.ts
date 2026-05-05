@@ -3,9 +3,9 @@ import { integrationsSchema } from "@/lib/validations/webinar";
 
 describe("integrationsSchema", () => {
   const base = {
-    webhookOnOptin: false, webhookOnEnter: false, webhookOnCtaView: false,
-    webhookOnCtaClick: false, webhookOnPitchReached: false, webhookOnPermanence: false,
-    webhookOnLeave: false, permanenceThresholdSec: 300
+    webhookOnOptin: false, webhookOnEnter: false, webhookOnOfferView: false,
+    webhookOnOfferClick: false, webhookOnRaffleEntry: false, webhookOnPitchReached: false,
+    webhookOnPermanence: false, webhookOnLeave: false, permanenceThresholdSec: 300
   };
 
   it("accepts empty webhookUrl", () => {
