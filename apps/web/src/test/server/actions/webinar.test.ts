@@ -23,7 +23,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 beforeEach(async () => {
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
-  await prisma.cta.deleteMany({});
   await prisma.chatMessage.deleteMany({});
   await prisma.webinar.deleteMany({});
   await prisma.video.deleteMany({});
@@ -83,37 +82,33 @@ describe("updateWebinarStep4", () => {
   });
 });
 
-describe("updateWebinarStep5 (CTA upsert)", () => {
-  it("creates new CTAs when payload has no IDs", async () => {
-    const { createDraftWebinar, updateWebinarStep5 } = await import("@/server/actions/webinar");
+describe("updateWebinarStep5 (offer)", () => {
+  it("persists all 15 offer fields + pitchAtSec", async () => {
+    const { createDraftWebinar, updateWebinarStep5 } = await import(
+      "@/server/actions/webinar?" + Date.now()
+    );
     const { id } = await createDraftWebinar();
-    await updateWebinarStep5(id, {
-      ctas: [
-        { label: "Comprar", url: "https://x.com", showAtSec: 30 },
-        { label: "Saiba mais", url: "https://y.com", showAtSec: 60 }
-      ]
+    const r = await updateWebinarStep5(id, {
+      offerName: "Curso A", offerTitle: "Domine Y",
+      offerPriceOriginal: "R$2.997", offerPriceFinal: "12x R$153.44",
+      offerButtonText: "QUERO!", offerButtonColor: "#dc2626",
+      offerImageDesktopUrl: "https://cdn.example.com/d.png",
+      offerImageMobileUrl: null,
+      pitchAtSec: 600,
+      offerShowAtSec: 700, offerHideAtSec: 1800,
+      offerLink: "https://buy.example.com/x",
+      offerPassUtms: true, offerDisabled: false,
+      offerSameWindow: true, offerRaffleEnabled: false
     });
-    const ctas = await prisma.cta.findMany({ where: { webinarId: id }, orderBy: { showAtSec: "asc" } });
-    expect(ctas).toHaveLength(2);
-    expect(ctas[0].label).toBe("Comprar");
-  });
-
-  it("updates existing CTAs by id and deletes ones omitted", async () => {
-    const { createDraftWebinar, updateWebinarStep5 } = await import("@/server/actions/webinar");
-    const { id } = await createDraftWebinar();
-    await updateWebinarStep5(id, {
-      ctas: [{ label: "A", url: "https://a.com", showAtSec: 10 }]
+    expect(r).toEqual({ ok: true });
+    const w = await prisma.webinar.findUnique({ where: { id } });
+    expect(w).toMatchObject({
+      offerName: "Curso A", offerTitle: "Domine Y",
+      offerButtonColor: "#dc2626",
+      pitchAtSec: 600, offerShowAtSec: 700, offerHideAtSec: 1800,
+      offerPassUtms: true, offerSameWindow: true, offerRaffleEnabled: false,
+      offerLink: "https://buy.example.com/x"
     });
-    const [first] = await prisma.cta.findMany({ where: { webinarId: id } });
-    await updateWebinarStep5(id, {
-      ctas: [
-        { id: first.id, label: "A2", url: "https://a.com", showAtSec: 15 },
-        { label: "B", url: "https://b.com", showAtSec: 20 }
-      ]
-    });
-    const after = await prisma.cta.findMany({ where: { webinarId: id }, orderBy: { showAtSec: "asc" } });
-    expect(after).toHaveLength(2);
-    expect(after.find((c) => c.id === first.id)?.label).toBe("A2");
   });
 });
 
@@ -154,22 +149,20 @@ describe("publishWebinar", () => {
 });
 
 describe("deleteWebinar", () => {
-  it("cascades chat + ctas", async () => {
-    const { createDraftWebinar, updateWebinarStep5, updateWebinarStep6, deleteWebinar } = await import(
+  it("cascades chat messages", async () => {
+    const { createDraftWebinar, updateWebinarStep6, deleteWebinar } = await import(
       "@/server/actions/webinar"
     );
     const { id } = await createDraftWebinar();
-    await updateWebinarStep5(id, { ctas: [{ label: "X", url: "https://x.com", showAtSec: 0 }] });
     await updateWebinarStep6(id, { messages: [{ authorName: "A", text: "Olá", showAtSec: 0, isOwner: false }] });
     await deleteWebinar(id);
-    expect(await prisma.cta.count({ where: { webinarId: id } })).toBe(0);
     expect(await prisma.chatMessage.count({ where: { webinarId: id } })).toBe(0);
     expect(await prisma.webinar.findUnique({ where: { id } })).toBeNull();
   });
 });
 
 describe("duplicateWebinar", () => {
-  it("creates a DRAFT copy with cloned CTAs and chat", async () => {
+  it("creates a DRAFT copy with cloned offer + chat (no CTAs)", async () => {
     const {
       createDraftWebinar,
       updateWebinarStep1,
@@ -179,7 +172,16 @@ describe("duplicateWebinar", () => {
     } = await import("@/server/actions/webinar");
     const { id } = await createDraftWebinar();
     await updateWebinarStep1(id, { name: "Orig", title: "Orig", slug: "orig", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
-    await updateWebinarStep5(id, { ctas: [{ label: "X", url: "https://x.com", showAtSec: 0 }] });
+    await updateWebinarStep5(id, {
+      offerName: "OF", offerTitle: "OT",
+      offerPriceOriginal: null, offerPriceFinal: null,
+      offerButtonText: "QUERO!", offerButtonColor: "#dc2626",
+      offerImageDesktopUrl: null, offerImageMobileUrl: null,
+      pitchAtSec: null, offerShowAtSec: null, offerHideAtSec: null,
+      offerLink: "https://x.example.com",
+      offerPassUtms: false, offerDisabled: false,
+      offerSameWindow: false, offerRaffleEnabled: false
+    });
     await updateWebinarStep6(id, {
       messages: [{ authorName: "A", text: "Olá", showAtSec: 0, isOwner: false }]
     });
@@ -188,12 +190,13 @@ describe("duplicateWebinar", () => {
     if (!("newId" in r)) return;
     const dup = await prisma.webinar.findUnique({
       where: { id: r.newId },
-      include: { ctas: true, chatMessages: true }
+      include: { chatMessages: true }
     });
     expect(dup?.status).toBe("DRAFT");
     expect(dup?.slug).toBeNull();
     expect(dup?.title).toBe("Orig (cópia)");
-    expect(dup?.ctas).toHaveLength(1);
+    expect(dup?.offerName).toBe("OF");
+    expect(dup?.offerLink).toBe("https://x.example.com");
     expect(dup?.chatMessages).toHaveLength(1);
   });
 });
