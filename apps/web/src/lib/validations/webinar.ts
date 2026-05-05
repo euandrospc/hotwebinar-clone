@@ -12,7 +12,9 @@ export const step1Schema = z.object({
   name: z.string().min(1).max(120),
   title: z.string().min(1).max(180),
   slug: slugSchema,
-  language: z.string().min(2).max(10)
+  language: z.string().min(2).max(10),
+  accessFacilitated: z.boolean(),
+  videoSyncWithStart: z.boolean()
 });
 export type Step1Input = z.infer<typeof step1Schema>;
 
@@ -24,7 +26,8 @@ export const step2Schema = z
     timezone: z.string().min(1),
     waitingTitle: z.string().min(1).max(80),
     waitingSubtitle: z.string().max(200),
-    waitingShowThumb: z.boolean().default(false)
+    waitingShowThumb: z.boolean().default(false),
+    waitingTemplate: z.enum(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"]).default("DEFAULT")
   })
   .refine((v) => v.endDate > v.startDate, {
     message: "Fim deve ser após início",
@@ -45,7 +48,18 @@ export const step3Schema = z.object({
   phoneRequired: z.boolean(),
   namePlaceholder: z.string(),
   emailPlaceholder: z.string(),
-  phonePlaceholder: z.string()
+  phonePlaceholder: z.string(),
+  loginLogoAlign: z.enum(["LEFT", "CENTER", "RIGHT"]),
+  progressEnabled: z.boolean(),
+  progressStartPct: z.number().int().min(0).max(99),
+  progressBarColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  progressTextColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  progressText: z.string().min(1).max(120),
+  formFieldOrder: z
+    .array(z.enum(["name", "email", "phone"]))
+    .min(1)
+    .max(3)
+    .refine((arr) => new Set(arr).size === arr.length, { message: "Sem duplicatas em formFieldOrder" })
 });
 export type Step3Input = z.infer<typeof step3Schema>;
 

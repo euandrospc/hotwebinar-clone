@@ -14,18 +14,20 @@ describe("step1Schema", () => {
       name: "Webinar Teste",
       title: "Título Público",
       slug: "webinar-teste",
-      language: "pt-BR"
+      language: "pt-BR",
+      accessFacilitated: false,
+      videoSyncWithStart: true
     });
     expect(r.success).toBe(true);
   });
 
   it("rejects slug with uppercase or spaces", () => {
-    expect(step1Schema.safeParse({ name: "X", title: "Y", slug: "Bad Slug", language: "pt-BR" }).success).toBe(false);
-    expect(step1Schema.safeParse({ name: "X", title: "Y", slug: "bad_slug", language: "pt-BR" }).success).toBe(false);
+    expect(step1Schema.safeParse({ name: "X", title: "Y", slug: "Bad Slug", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true }).success).toBe(false);
+    expect(step1Schema.safeParse({ name: "X", title: "Y", slug: "bad_slug", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true }).success).toBe(false);
   });
 
   it("rejects short slug", () => {
-    expect(step1Schema.safeParse({ name: "Foo Bar", title: "Foo Bar", slug: "ab", language: "pt-BR" }).success).toBe(false);
+    expect(step1Schema.safeParse({ name: "Foo Bar", title: "Foo Bar", slug: "ab", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true }).success).toBe(false);
   });
 });
 
@@ -70,7 +72,11 @@ describe("step3Schema", () => {
       nameEnabled: true, nameRequired: true,
       emailEnabled: true, emailRequired: true,
       phoneEnabled: true, phoneRequired: false,
-      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: ""
+      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "",
+      loginLogoAlign: "CENTER",
+      progressEnabled: false, progressStartPct: 50,
+      progressBarColor: "#dc2626", progressTextColor: "#ffffff",
+      progressText: "test", formFieldOrder: ["name", "email"]
     }).success).toBe(false);
   });
 
@@ -83,7 +89,11 @@ describe("step3Schema", () => {
       nameEnabled: true, nameRequired: true,
       emailEnabled: true, emailRequired: true,
       phoneEnabled: true, phoneRequired: false,
-      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: ""
+      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "",
+      loginLogoAlign: "CENTER",
+      progressEnabled: false, progressStartPct: 50,
+      progressBarColor: "#dc2626", progressTextColor: "#ffffff",
+      progressText: "test", formFieldOrder: ["name", "email"]
     }).success).toBe(true);
   });
 });
