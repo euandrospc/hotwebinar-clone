@@ -35,6 +35,17 @@ pnpm scrape -- --routes routes.txt
 pnpm dev
 ```
 
+## Public routes (sub-plan C)
+
+- `/<slug>` — capture form for a published webinar
+- `/<slug>/live` — live-style synchronized HLS player (requires opt-in cookie `hw_lead`)
+
+Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_next`, `admin`, `signup`, `register`, `static`, `favicon.ico`, `robots.txt`, `sitemap.xml`.
+
+## New env vars (sub-plan C)
+
+- `LEAD_SESSION_SECRET` — HMAC secret for the public lead-session cookie. Min 16 chars; generate with `openssl rand -base64 32`.
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
