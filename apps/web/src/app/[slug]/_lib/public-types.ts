@@ -1,11 +1,21 @@
-import type { PublicLead, PublicVideo, PublicWebinar } from "@/lib/public-dto";
+import type { PublicVideo, PublicWebinar, PublicLeadWithUtms } from "@/lib/public-dto";
 
-export interface PlayerCta {
-  id: string;
-  label: string;
-  url: string;
-  showAtSec: number;
+export interface PlayerOffer {
+  name: string;
+  title: string;
+  priceOriginal: string | null;
+  priceFinal: string | null;
+  buttonText: string;
+  buttonColor: string;
+  imageDesktopUrl: string | null;
+  imageMobileUrl: string | null;
+  showAtSec: number | null;
   hideAtSec: number | null;
+  link: string | null;
+  passUtms: boolean;
+  disabled: boolean;
+  sameWindow: boolean;
+  raffleEnabled: boolean;
 }
 
 export interface PlayerOwnerMsg {
@@ -26,9 +36,9 @@ export interface PlayerLeadMsg {
 export interface PlayerShellProps {
   webinar: PublicWebinar;
   video: PublicVideo | null;
-  ctas: PlayerCta[];
+  offer: PlayerOffer;
   ownerChat: PlayerOwnerMsg[];
   leadChat: PlayerLeadMsg[];
-  lead: PublicLead;
+  lead: PublicLeadWithUtms;
   initialOffsetSec: number;
 }
