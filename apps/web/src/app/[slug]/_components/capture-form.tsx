@@ -20,6 +20,17 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
   const [pending, startTransition] = useTransition();
   const [phone, setPhone] = useState<string | undefined>("");
   const [error, setError] = useState<string | null>(null);
+  const [utms, setUtms] = useState<{ source?: string; medium?: string; campaign?: string; term?: string; content?: string }>({});
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const next: typeof utms = {};
+    for (const k of ["source", "medium", "campaign", "term", "content"] as const) {
+      const v = sp.get(`utm_${k}`);
+      if (v) next[k] = v;
+    }
+    setUtms(next);
+  }, []);
 
   function onSubmit(form: FormData) {
     setError(null);
@@ -75,6 +86,11 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
         action={onSubmit}
         className="mt-8 space-y-4 rounded-lg border bg-card p-6 shadow-sm"
       >
+        <input type="hidden" name="utm_source" value={utms.source ?? ""} />
+        <input type="hidden" name="utm_medium" value={utms.medium ?? ""} />
+        <input type="hidden" name="utm_campaign" value={utms.campaign ?? ""} />
+        <input type="hidden" name="utm_term" value={utms.term ?? ""} />
+        <input type="hidden" name="utm_content" value={utms.content ?? ""} />
         {w.formFieldOrder.map((key) => fieldsByKey[key])}
 
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
