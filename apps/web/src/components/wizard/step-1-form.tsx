@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { updateWebinarStep1 } from "@/server/actions/webinar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WizardNav } from "@/components/wizard/wizard-nav";
+import { ToggleCard } from "@/components/wizard/toggle-card";
 
 export interface Step1FormProps {
   webinarId: string;
@@ -22,6 +23,7 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     watch,
     setError,
@@ -84,6 +86,34 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
         <Input id="language" {...register("language")} placeholder="pt-BR" />
         {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
       </div>
+
+      <Controller
+        control={control}
+        name="accessFacilitated"
+        render={({ field }) => (
+          <ToggleCard
+            title="Forma de acesso à sala"
+            description="Acesso Facilitado"
+            info="Ao ativar o acesso facilitado, o usuário é direcionado imediatamente para a sala do webinar, sem a necessidade de fazer login."
+            checked={field.value}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="videoSyncWithStart"
+        render={({ field }) => (
+          <ToggleCard
+            title="Sincronizar vídeo com tempo de início do webinar"
+            description="Quando ativo, o vídeo respeita o atraso do lead."
+            info="Por exemplo, se o seu webinar estiver agendado para 20h e o usuário entrar às 20h05, o vídeo começará a partir do minuto 5."
+            checked={field.value}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
 
       <WizardNav webinarId={webinarId} step={1} submitting={pending} />
     </form>
