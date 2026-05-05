@@ -9,14 +9,14 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String   @id
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  role          String    @default("admin")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String   @default("admin")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sessions        Session[]
   accounts        Account[]
@@ -105,9 +105,10 @@ enum EventKind {
   VIDEO_START
   VIDEO_TICK
   VIDEO_END
-  CTA_VIEW
-  CTA_CLICK
+  OFFER_VIEW
+  OFFER_CLICK
   PITCH_REACHED
+  RAFFLE_ENTRY
 }
 
 enum WaitingTemplate {
@@ -131,152 +132,164 @@ enum WebhookDeliveryStatus {
 }
 
 model AccountSettings {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  defaultLanguage  String   @default("pt-BR")
-  defaultTimezone  String   @default("America/Sao_Paulo")
-  brandName        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  defaultLanguage String   @default("pt-BR")
+  defaultTimezone String   @default("America/Sao_Paulo")
+  brandName       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("account_settings")
 }
 
 model Video {
-  id              String      @id @default(cuid())
-  ownerId         String
-  name            String
-  source          VideoSource
-  originalUrl     String?
-  hlsUrl          String?
-  thumbUrl        String?
-  customThumbUrl  String?
-  encKey          String?
-  status          VideoStatus @default(QUEUED)
-  progress        Int         @default(0)
-  durationSec     Int?
-  bytes           BigInt?
-  errorMessage    String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  owner           User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  webinars        Webinar[]
+  id             String      @id @default(cuid())
+  ownerId        String
+  name           String
+  source         VideoSource
+  originalUrl    String?
+  hlsUrl         String?
+  thumbUrl       String?
+  customThumbUrl String?
+  encKey         String?
+  status         VideoStatus @default(QUEUED)
+  progress       Int         @default(0)
+  durationSec    Int?
+  bytes          BigInt?
+  errorMessage   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  owner          User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  webinars       Webinar[]
+
   @@index([ownerId, createdAt])
   @@map("video")
 }
 
 model Webinar {
-  id                      String         @id @default(cuid())
-  ownerId                 String
-  videoId                 String?
-  slug                    String?        @unique
-  name                    String         @default("")
-  title                   String         @default("")
-  language                String         @default("pt-BR")
-  status                  WebinarStatus  @default(DRAFT)
-  mode                    WebinarMode    @default(UNICO)
-  startDate               DateTime?
-  endDate                 DateTime?
-  timezone                String         @default("America/Sao_Paulo")
-  waitingTitle            String         @default("Sala de Espera")
-  waitingSubtitle         String         @default("Estamos prestes a começar")
-  waitingShowThumb        Boolean        @default(false)
-  accessFacilitated       Boolean        @default(false)
-  videoSyncWithStart      Boolean        @default(true)
-  waitingTemplate         WaitingTemplate @default(DEFAULT)
-  loginLogoAlign          LogoAlign      @default(CENTER)
-  progressEnabled         Boolean        @default(false)
-  progressStartPct        Int            @default(50)
-  progressBarColor        String         @default("#dc2626")
-  progressTextColor       String         @default("#ffffff")
-  progressText            String         @default("{pct}% das vagas preenchidas...")
-  formFieldOrder          String[]       @default(["name","email","phone"])
-  logoUrl                 String?
-  primaryColor            String?
-  loginButtonText         String         @default("Entrar")
-  loginButtonColor        String         @default("#16a34a")
-  nameEnabled             Boolean        @default(true)
-  nameRequired            Boolean        @default(true)
-  emailEnabled            Boolean        @default(true)
-  emailRequired           Boolean        @default(true)
-  phoneEnabled            Boolean        @default(true)
-  phoneRequired           Boolean        @default(false)
-  namePlaceholder         String         @default("Seu nome")
-  emailPlaceholder        String         @default("Seu e-mail")
-  phonePlaceholder        String         @default("Seu telefone")
-  pitchAtSec              Int?
-  webhookUrl              String?
-  webhookOnOptin          Boolean        @default(false)
-  webhookOnEnter          Boolean        @default(false)
-  webhookOnCtaView        Boolean        @default(false)
-  webhookOnCtaClick       Boolean        @default(false)
-  webhookOnPitchReached   Boolean        @default(false)
-  webhookOnPermanence     Boolean        @default(false)
-  webhookOnLeave          Boolean        @default(false)
-  permanenceThresholdSec  Int            @default(300)
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
-  owner                   User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  video                   Video?         @relation(fields: [videoId], references: [id], onDelete: SetNull)
-  chatMessages            ChatMessage[]
-  ctas                    Cta[]
-  leads                   Lead[]
-  events                  Event[]
-  leadChatMessages        LeadChatMessage[]
-  webhookDeliveries       WebhookDelivery[]
+  id                     String            @id @default(cuid())
+  ownerId                String
+  videoId                String?
+  slug                   String?           @unique
+  name                   String            @default("")
+  title                  String            @default("")
+  language               String            @default("pt-BR")
+  status                 WebinarStatus     @default(DRAFT)
+  mode                   WebinarMode       @default(UNICO)
+  startDate              DateTime?
+  endDate                DateTime?
+  timezone               String            @default("America/Sao_Paulo")
+  waitingTitle           String            @default("Sala de Espera")
+  waitingSubtitle        String            @default("Estamos prestes a começar")
+  waitingShowThumb       Boolean           @default(false)
+  accessFacilitated      Boolean           @default(false)
+  videoSyncWithStart     Boolean           @default(true)
+  waitingTemplate        WaitingTemplate   @default(DEFAULT)
+  loginLogoAlign         LogoAlign         @default(CENTER)
+  progressEnabled        Boolean           @default(false)
+  progressStartPct       Int               @default(50)
+  progressBarColor       String            @default("#dc2626")
+  progressTextColor      String            @default("#ffffff")
+  progressText           String            @default("{pct}% das vagas preenchidas...")
+  formFieldOrder         String[]          @default(["name", "email", "phone"])
+  logoUrl                String?
+  primaryColor           String?
+  loginButtonText        String            @default("Entrar")
+  loginButtonColor       String            @default("#16a34a")
+  nameEnabled            Boolean           @default(true)
+  nameRequired           Boolean           @default(true)
+  emailEnabled           Boolean           @default(true)
+  emailRequired          Boolean           @default(true)
+  phoneEnabled           Boolean           @default(true)
+  phoneRequired          Boolean           @default(false)
+  namePlaceholder        String            @default("Seu nome")
+  emailPlaceholder       String            @default("Seu e-mail")
+  phonePlaceholder       String            @default("Seu telefone")
+  pitchAtSec             Int?
+  // Offer (sub-plan D2)
+  offerName              String            @default("")
+  offerTitle             String            @default("")
+  offerPriceOriginal     String?
+  offerPriceFinal        String?
+  offerButtonText        String            @default("Quero aproveitar")
+  offerButtonColor       String            @default("#dc2626")
+  offerImageDesktopUrl   String?
+  offerImageMobileUrl    String?
+  offerShowAtSec         Int?
+  offerHideAtSec         Int?
+  offerLink              String?
+  offerPassUtms          Boolean           @default(false)
+  offerDisabled          Boolean           @default(false)
+  offerSameWindow        Boolean           @default(false)
+  offerRaffleEnabled     Boolean           @default(false)
+  webhookOnOfferView     Boolean           @default(false)
+  webhookOnOfferClick    Boolean           @default(false)
+  webhookOnRaffleEntry   Boolean           @default(false)
+  webhookUrl             String?
+  webhookOnOptin         Boolean           @default(false)
+  webhookOnEnter         Boolean           @default(false)
+  webhookOnPitchReached  Boolean           @default(false)
+  webhookOnPermanence    Boolean           @default(false)
+  webhookOnLeave         Boolean           @default(false)
+  permanenceThresholdSec Int               @default(300)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  owner                  User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  video                  Video?            @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  chatMessages           ChatMessage[]
+  leads                  Lead[]
+  events                 Event[]
+  leadChatMessages       LeadChatMessage[]
+  webhookDeliveries      WebhookDelivery[]
+
   @@index([ownerId, status])
   @@map("webinar")
 }
 
 model ChatMessage {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   webinarId  String
   authorName String
   text       String
   showAtSec  Int
-  isOwner    Boolean  @default(false)
-  webinar    Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  isOwner    Boolean @default(false)
+  webinar    Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
   @@index([webinarId, showAtSec])
   @@map("chat_message")
 }
 
-model Cta {
-  id         String   @id @default(cuid())
-  webinarId  String
-  label      String
-  url        String
-  showAtSec  Int
-  hideAtSec  Int?
-  createdAt  DateTime @default(now())
-  webinar    Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
-  @@index([webinarId, showAtSec])
-  @@map("cta")
-}
-
 model Lead {
-  id                  String    @id @default(cuid())
-  webinarId           String
-  name                String
-  email               String
-  phone               String?
-  ip                  String?
-  userAgent           String?
-  device              String?
-  country             String?
-  watchedSec          Int       @default(0)
-  reachedPitch        Boolean   @default(false)
-  ctaClicks           Int       @default(0)
-  sessionStart        DateTime  @default(now())
-  lastSeenAt          DateTime  @default(now())
-  enterFired          Boolean   @default(false)
-  pitchFired          Boolean   @default(false)
-  permanenceFired     Boolean   @default(false)
-  leaveFired          Boolean   @default(false)
-  webinar             Webinar   @relation(fields: [webinarId], references: [id], onDelete: Cascade)
-  events              Event[]
-  leadChatMessages    LeadChatMessage[]
-  webhookDeliveries   WebhookDelivery[]
-  ctaViews            CtaView[]
+  id                String            @id @default(cuid())
+  webinarId         String
+  name              String
+  email             String
+  phone             String?
+  ip                String?
+  userAgent         String?
+  device            String?
+  country           String?
+  watchedSec        Int               @default(0)
+  reachedPitch      Boolean           @default(false)
+  ctaClicks         Int               @default(0)
+  sessionStart      DateTime          @default(now())
+  lastSeenAt        DateTime          @default(now())
+  enterFired        Boolean           @default(false)
+  pitchFired        Boolean           @default(false)
+  permanenceFired   Boolean           @default(false)
+  leaveFired        Boolean           @default(false)
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign       String?
+  utmTerm           String?
+  utmContent        String?
+  webinar           Webinar           @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  events            Event[]
+  leadChatMessages  LeadChatMessage[]
+  webhookDeliveries WebhookDelivery[]
+
   @@unique([webinarId, email])
   @@index([webinarId, sessionStart])
   @@map("lead")
@@ -293,6 +306,7 @@ model Event {
   createdAt DateTime  @default(now())
   webinar   Webinar   @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   @@index([webinarId, kind, createdAt])
   @@index([leadId, kind])
   @@map("event")
@@ -307,6 +321,7 @@ model LeadChatMessage {
   createdAt DateTime @default(now())
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   webinar   Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
   @@index([leadId, createdAt])
   @@map("lead_chat_message")
 }
@@ -327,17 +342,7 @@ model WebhookDelivery {
   updatedAt      DateTime              @updatedAt
   webinar        Webinar               @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   lead           Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   @@index([webinarId, status, createdAt])
   @@map("webhook_delivery")
-}
-
-model CtaView {
-  id        String   @id @default(cuid())
-  leadId    String
-  ctaId     String
-  createdAt DateTime @default(now())
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  @@unique([leadId, ctaId])
-  @@index([ctaId])
-  @@map("cta_view")
 }
