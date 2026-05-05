@@ -28,6 +28,21 @@ export type PublicWebinar = {
   progressTextColor: string;
   progressText: string;
   formFieldOrder: ReadonlyArray<"name" | "email" | "phone">;
+  offerName: string;
+  offerTitle: string;
+  offerPriceOriginal: string | null;
+  offerPriceFinal: string | null;
+  offerButtonText: string;
+  offerButtonColor: string;
+  offerImageDesktopUrl: string | null;
+  offerImageMobileUrl: string | null;
+  offerShowAtSec: number | null;
+  offerHideAtSec: number | null;
+  offerLink: string | null;
+  offerPassUtms: boolean;
+  offerDisabled: boolean;
+  offerSameWindow: boolean;
+  offerRaffleEnabled: boolean;
 };
 
 export function publicWebinarDto(w: Webinar): PublicWebinar {
@@ -58,7 +73,22 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     progressBarColor: w.progressBarColor,
     progressTextColor: w.progressTextColor,
     progressText: w.progressText,
-    formFieldOrder: w.formFieldOrder as ReadonlyArray<"name" | "email" | "phone">
+    formFieldOrder: w.formFieldOrder as ReadonlyArray<"name" | "email" | "phone">,
+    offerName: w.offerName,
+    offerTitle: w.offerTitle,
+    offerPriceOriginal: w.offerPriceOriginal,
+    offerPriceFinal: w.offerPriceFinal,
+    offerButtonText: w.offerButtonText,
+    offerButtonColor: w.offerButtonColor,
+    offerImageDesktopUrl: w.offerImageDesktopUrl,
+    offerImageMobileUrl: w.offerImageMobileUrl,
+    offerShowAtSec: w.offerShowAtSec,
+    offerHideAtSec: w.offerHideAtSec,
+    offerLink: w.offerLink,
+    offerPassUtms: w.offerPassUtms,
+    offerDisabled: w.offerDisabled,
+    offerSameWindow: w.offerSameWindow,
+    offerRaffleEnabled: w.offerRaffleEnabled
   };
 }
 
@@ -102,4 +132,26 @@ export type PublicLead = {
 
 export function publicLeadDto(l: Lead): PublicLead {
   return { id: l.id, name: l.name };
+}
+
+export type PublicLeadWithUtms = {
+  id: string;
+  name: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmTerm: string | null;
+  utmContent: string | null;
+};
+
+export function publicLeadWithUtmsDto(l: Lead): PublicLeadWithUtms {
+  return {
+    id: l.id,
+    name: l.name,
+    utmSource: l.utmSource,
+    utmMedium: l.utmMedium,
+    utmCampaign: l.utmCampaign,
+    utmTerm: l.utmTerm,
+    utmContent: l.utmContent
+  };
 }

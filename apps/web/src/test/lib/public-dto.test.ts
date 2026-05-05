@@ -65,3 +65,37 @@ describe("publicLeadDto", () => {
     expect(out).toEqual({ id: "l1", name: "Joe" });
   });
 });
+
+describe("publicWebinarDto offer fields", () => {
+  it("returns all 15 offer fields from Webinar", () => {
+    const w: any = {
+      id: "w1", slug: "x", title: "T", name: "N", mode: "UNICO",
+      startDate: null, endDate: null, timezone: "America/Sao_Paulo",
+      waitingTitle: "", waitingSubtitle: "", waitingShowThumb: false,
+      logoUrl: null, primaryColor: null,
+      loginButtonText: "", loginButtonColor: "#000000",
+      nameEnabled: true, nameRequired: true, namePlaceholder: "",
+      emailEnabled: true, emailRequired: true, emailPlaceholder: "",
+      phoneEnabled: false, phoneRequired: false, phonePlaceholder: "",
+      pitchAtSec: 600, waitingTemplate: "DEFAULT", loginLogoAlign: "CENTER",
+      progressEnabled: false, progressStartPct: 50, progressBarColor: "#000",
+      progressTextColor: "#fff", progressText: "", formFieldOrder: ["name","email","phone"],
+      offerName: "X", offerTitle: "Y",
+      offerPriceOriginal: "R$10", offerPriceFinal: "R$5",
+      offerButtonText: "Q", offerButtonColor: "#dc2626",
+      offerImageDesktopUrl: "https://cdn.example.com/d.png",
+      offerImageMobileUrl: "https://cdn.example.com/m.png",
+      offerShowAtSec: 100, offerHideAtSec: 200,
+      offerLink: "https://buy.example.com",
+      offerPassUtms: true, offerDisabled: false,
+      offerSameWindow: true, offerRaffleEnabled: true
+    };
+    const dto = publicWebinarDto(w);
+    expect(dto.offerName).toBe("X");
+    expect(dto.offerButtonColor).toBe("#dc2626");
+    expect(dto.offerShowAtSec).toBe(100);
+    expect(dto.offerPassUtms).toBe(true);
+    expect(dto.offerRaffleEnabled).toBe(true);
+    expect(dto.offerImageDesktopUrl).toBe("https://cdn.example.com/d.png");
+  });
+});
