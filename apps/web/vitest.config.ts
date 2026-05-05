@@ -11,6 +11,7 @@ export default defineConfig({
       ["src/test/components/**", "jsdom"]
     ],
     include: ["src/test/**/*.test.ts", "src/test/**/*.test.tsx"],
+    setupFiles: ["./vitest.setup.ts"],
     fileParallelism: false,
     env: {
       DATABASE_URL: "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public",

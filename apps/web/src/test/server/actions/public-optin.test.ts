@@ -82,7 +82,7 @@ describe("submitOptin", () => {
     expect(setCookieMock).toHaveBeenCalledWith(
       "hw_lead",
       expect.stringMatching(/^[a-f0-9]{32}\./),
-      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/demo-1" })
+      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" })
     );
     const events = await prisma.event.findMany({ where: { kind: "OPTIN" } });
     expect(events).toHaveLength(1);
