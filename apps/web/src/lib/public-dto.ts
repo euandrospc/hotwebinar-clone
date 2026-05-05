@@ -20,6 +20,14 @@ export type PublicWebinar = {
   emailEnabled: boolean; emailRequired: boolean; emailPlaceholder: string;
   phoneEnabled: boolean; phoneRequired: boolean; phonePlaceholder: string;
   pitchAtSec: number | null;
+  waitingTemplate: "DEFAULT" | "WITH_THUMB" | "IMMERSIVE" | "MINIMAL" | "FEATURES";
+  loginLogoAlign: "LEFT" | "CENTER" | "RIGHT";
+  progressEnabled: boolean;
+  progressStartPct: number;
+  progressBarColor: string;
+  progressTextColor: string;
+  progressText: string;
+  formFieldOrder: ReadonlyArray<"name" | "email" | "phone">;
 };
 
 export function publicWebinarDto(w: Webinar): PublicWebinar {
@@ -42,7 +50,15 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     nameEnabled: w.nameEnabled, nameRequired: w.nameRequired, namePlaceholder: w.namePlaceholder,
     emailEnabled: w.emailEnabled, emailRequired: w.emailRequired, emailPlaceholder: w.emailPlaceholder,
     phoneEnabled: w.phoneEnabled, phoneRequired: w.phoneRequired, phonePlaceholder: w.phonePlaceholder,
-    pitchAtSec: w.pitchAtSec
+    pitchAtSec: w.pitchAtSec,
+    waitingTemplate: w.waitingTemplate,
+    loginLogoAlign: w.loginLogoAlign,
+    progressEnabled: w.progressEnabled,
+    progressStartPct: w.progressStartPct,
+    progressBarColor: w.progressBarColor,
+    progressTextColor: w.progressTextColor,
+    progressText: w.progressText,
+    formFieldOrder: w.formFieldOrder as ReadonlyArray<"name" | "email" | "phone">
   };
 }
 
