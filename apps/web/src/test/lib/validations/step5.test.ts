@@ -46,4 +46,13 @@ describe("step5Schema", () => {
   it("rejects invalid offerLink URL", () => {
     expect(step5Schema.safeParse({ ...VALID, offerLink: "not-a-url" }).success).toBe(false);
   });
+  it("rejects empty offerTitle", () => {
+    expect(step5Schema.safeParse({ ...VALID, offerTitle: "" }).success).toBe(false);
+  });
+  it("accepts when only offerShowAtSec is set", () => {
+    expect(step5Schema.safeParse({ ...VALID, offerShowAtSec: 100, offerHideAtSec: null }).success).toBe(true);
+  });
+  it("accepts when only offerHideAtSec is set", () => {
+    expect(step5Schema.safeParse({ ...VALID, offerShowAtSec: null, offerHideAtSec: 100 }).success).toBe(true);
+  });
 });

@@ -4,7 +4,6 @@ import {
   step2Schema,
   step3Schema,
   step4Schema,
-  step5Schema,
   step6Schema
 } from "@/lib/validations/webinar";
 
@@ -106,25 +105,6 @@ describe("step4Schema", () => {
   it("library mode requires videoId", () => {
     expect(step4Schema.safeParse({ mode: "library", videoId: "" }).success).toBe(false);
     expect(step4Schema.safeParse({ mode: "library", videoId: "abc" }).success).toBe(true);
-  });
-});
-
-describe("step5Schema (CTAs array)", () => {
-  it("accepts empty array", () => {
-    expect(step5Schema.safeParse({ ctas: [] }).success).toBe(true);
-  });
-
-  it("rejects CTA with invalid URL", () => {
-    expect(step5Schema.safeParse({
-      ctas: [{ label: "Comprar", url: "nope", showAtSec: 30 }]
-    }).success).toBe(false);
-  });
-
-  it("preserves optional id field", () => {
-    const r = step5Schema.safeParse({
-      ctas: [{ id: "c1", label: "Comprar", url: "https://x.com", showAtSec: 30 }]
-    });
-    expect(r.success).toBe(true);
   });
 });
 
