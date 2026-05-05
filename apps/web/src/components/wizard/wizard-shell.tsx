@@ -1,5 +1,6 @@
-import { headers } from "next/headers";
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Flag,
@@ -39,9 +40,8 @@ export interface WizardShellProps {
   children: React.ReactNode;
 }
 
-export async function WizardShell({ webinarId, children }: WizardShellProps) {
-  const hdrs = await headers();
-  const pathname = hdrs.get("x-pathname") ?? "";
+export function WizardShell({ webinarId, children }: WizardShellProps) {
+  const pathname = usePathname() ?? "";
 
   const activeIndex = STEPS.findIndex((s) => s.matchPath(pathname, webinarId));
 
