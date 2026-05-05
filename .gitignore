@@ -26,3 +26,5 @@ packages/db/prisma/migrations/dev_*
 # IDE
 .vscode
 .idea
+
+.claude/
