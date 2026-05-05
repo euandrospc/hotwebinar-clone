@@ -1,10 +1,10 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, Download } from "lucide-react";
 import { step6Schema, type Step6Input } from "@/lib/validations/webinar";
 import { updateWebinarStep6, publishWebinar } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
   const [pending, startTransition] = useTransition();
   const [tsv, setTsv] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [xlsxUploading, setXlsxUploading] = useState(false);
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
   const {
     register,
     handleSubmit,
@@ -61,6 +63,29 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
     });
   }
 
+  async function onXlsxFile(file: File) {
+    setXlsxUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch(`/api/webinars/${webinarId}/messages/import`, {
+        method: "POST",
+        body: fd
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.message ?? "Falha ao importar XLSX");
+        return;
+      }
+      const { messages } = (await res.json()) as { messages: Array<{ authorName: string; text: string; showAtSec: number; isOwner: boolean }> };
+      for (const m of messages) append(m);
+      toast.success(`${messages.length} mensagens importadas`);
+    } finally {
+      setXlsxUploading(false);
+      if (xlsxInputRef.current) xlsxInputRef.current.value = "";
+    }
+  }
+
   function importTsv() {
     const rows = tsv
       .split(/\r?\n/)
@@ -82,8 +107,33 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-2xl font-semibold">Chat scriptado</h2>
+        <div className="flex items-center gap-2">
+          <input
+            ref={xlsxInputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onXlsxFile(f);
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={xlsxUploading}
+            onClick={() => xlsxInputRef.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {xlsxUploading ? "Importando..." : "Importar XLSX"}
+          </Button>
+          <Button asChild type="button" variant="outline">
+            <a href={`/api/webinars/${webinarId}/messages/export`} download>
+              <Download className="mr-2 h-4 w-4" /> Exportar XLSX
+            </a>
+          </Button>
         <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
           <AlertDialogTrigger asChild>
             <Button type="button" variant="outline">Importar TSV</Button>
@@ -106,6 +156,7 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground">
