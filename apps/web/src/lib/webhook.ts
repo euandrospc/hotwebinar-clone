@@ -6,11 +6,12 @@ import { publicLeadDto } from "@/lib/public-dto";
 const FLAG_BY_EVENT: Record<WebhookEvent, keyof Webinar> = {
   lead_novo: "webhookOnOptin",
   lead_acessou: "webhookOnEnter",
-  lead_viu_oferta: "webhookOnCtaView",
-  lead_clicou_oferta: "webhookOnCtaClick",
+  lead_viu_oferta: "webhookOnOfferView",
+  lead_clicou_oferta: "webhookOnOfferClick",
   lead_viu_pitch: "webhookOnPitchReached",
   lead_permaneceu: "webhookOnPermanence",
-  lead_saiu: "webhookOnLeave"
+  lead_saiu: "webhookOnLeave",
+  lead_entrou_sorteio: "webhookOnRaffleEntry"
 };
 
 export function isEventEnabled(w: Webinar, event: WebhookEvent): boolean {
