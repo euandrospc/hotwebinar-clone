@@ -19,8 +19,9 @@ export interface IntegrationsFormProps {
 const TRIGGERS: ReadonlyArray<{ key: keyof IntegrationsInput; label: string }> = [
   { key: "webhookOnOptin", label: "Ao captar lead novo" },
   { key: "webhookOnEnter", label: "Quando lead acessar o webinar" },
-  { key: "webhookOnCtaView", label: "Quando lead vir a oferta" },
-  { key: "webhookOnCtaClick", label: "Quando lead clicar na oferta" },
+  { key: "webhookOnOfferView", label: "Quando lead vir a oferta" },
+  { key: "webhookOnOfferClick", label: "Quando lead clicar na oferta" },
+  { key: "webhookOnRaffleEntry", label: "Quando lead entrar no sorteio" },
   { key: "webhookOnPitchReached", label: "Quando lead vir o pitch" },
   { key: "webhookOnPermanence", label: "Quando lead permanecer (threshold abaixo)" },
   { key: "webhookOnLeave", label: "Quando lead sair do webinar" }
