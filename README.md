@@ -46,6 +46,15 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 
 - `LEAD_SESSION_SECRET` — HMAC secret for the public lead-session cookie. Min 16 chars; generate with `openssl rand -base64 32`.
 
+## Wizard redesign (sub-plan D1)
+
+- Steps 1, 2, 3 redesigned to match original Hotwebinar UI.
+- 9-step horizontal nav with Lucide icons and connecting progress line (`apps/web/src/components/wizard/wizard-shell.tsx`).
+- Step 1 — adds **Acesso facilitado** + **Sincronizar vídeo com início** toggles.
+- Step 2 — `TimezoneSelect` (auto-detect via `Intl.DateTimeFormat` + ~20 zones) and `WaitingTemplatePicker` with 5 templates (`DEFAULT`, `WITH_THUMB`, `IMMERSIVE`, `MINIMAL`, `FEATURES`). Public `/[slug]` countdown branches by template.
+- Step 3 — full 3-column layout: logo align (left/center/right), customizable progress bar (start %, colors, text token `{percent}`), reorderable + togglable form fields (`name`, `email`, `phone`), and live `LoginPreview` aside.
+- Schema migration: `20260505174125_d1_wizard_redesign` (enums `WaitingTemplate`, `LogoAlign`; 10 new `Webinar` columns).
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
