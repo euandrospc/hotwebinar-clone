@@ -23,7 +23,6 @@ const TEST_USER = { id: "trv-user", email: "trv@example.com", name: "TR Tester" 
 async function setupOwnerAndVideo(originalKey: string) {
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
-  await prisma.cta.deleteMany({});
   await prisma.chatMessage.deleteMany({});
   await prisma.webinar.deleteMany({});
   await prisma.video.deleteMany({});

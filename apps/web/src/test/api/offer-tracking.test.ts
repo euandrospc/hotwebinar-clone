@@ -49,9 +49,8 @@ describe("POST /api/offer-view", () => {
   it("creates OFFER_VIEW once per (webinar, lead), idempotent on second call", async () => {
     await setup();
     const { POST } = await import("@/app/api/offer-view/route");
-    const req = () => new Request("http://localhost/api/offer-view", { method: "POST" });
-    const r1 = await POST(req()); expect(r1.status).toBe(200);
-    const r2 = await POST(req()); expect(r2.status).toBe(200);
+    const r1 = await POST(); expect(r1.status).toBe(200);
+    const r2 = await POST(); expect(r2.status).toBe(200);
     const events = await prisma.event.findMany({ where: { kind: "OFFER_VIEW" } });
     expect(events).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(1);
@@ -62,7 +61,7 @@ describe("POST /api/offer-click", () => {
   it("creates OFFER_CLICK + increments ctaClicks + fires webhook", async () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/offer-click/route");
-    const res = await POST(new Request("http://localhost/api/offer-click", { method: "POST" }));
+    const res = await POST();
     expect(res.status).toBe(200);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.ctaClicks).toBe(1);
@@ -73,7 +72,7 @@ describe("POST /api/offer-click", () => {
   it("also emits RAFFLE_ENTRY when offerRaffleEnabled", async () => {
     await setup({ offerRaffleEnabled: true });
     const { POST } = await import("@/app/api/offer-click/route?" + Date.now());
-    await POST(new Request("http://localhost/api/offer-click", { method: "POST" }));
+    await POST();
     const raffle = await prisma.event.findMany({ where: { kind: "RAFFLE_ENTRY" } });
     expect(raffle).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(2); // offer_click + raffle_entry

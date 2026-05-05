@@ -20,7 +20,6 @@ vi.mock("jobs", async () => ({
 beforeEach(async () => {
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
-  await prisma.cta.deleteMany({});
   await prisma.chatMessage.deleteMany({});
   await prisma.webinar.deleteMany({});
   await prisma.video.deleteMany({});
