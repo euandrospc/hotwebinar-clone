@@ -59,3 +59,15 @@ export async function enqueueWebhook(
     }
   );
 }
+
+export async function maybeFireEnterWebhook(
+  webinar: import("db").Webinar,
+  lead: import("db").Lead
+): Promise<void> {
+  if (lead.enterFired) return;
+  const updated = await prisma.lead.update({
+    where: { id: lead.id },
+    data: { enterFired: true, lastSeenAt: new Date() }
+  });
+  await enqueueWebhook(webinar, "lead_acessou", updated);
+}
