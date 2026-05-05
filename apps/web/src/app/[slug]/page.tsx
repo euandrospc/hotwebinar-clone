@@ -18,6 +18,6 @@ export default async function CapturePage({ params }: { params: Promise<{ slug: 
     new Date()
   );
   const dto = publicWebinarDto(w);
-  if (phase === "closed" && w.mode === "UNICO") return <ClosedView w={dto} />;
+  if (phase === "closed") return <ClosedView w={dto} />;
   return <CaptureForm w={dto} />;
 }

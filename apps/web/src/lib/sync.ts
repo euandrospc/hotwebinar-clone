@@ -11,10 +11,11 @@ export interface SyncLead {
 }
 
 export function computePhase(w: SyncWebinar, now: Date): Phase {
+  // endDate hard-closes BOTH modes (UNICO + JIT) once it passes.
+  if (w.endDate && now >= w.endDate) return "closed";
   if (w.mode !== "UNICO") return "open";
   if (!w.startDate) return "open";
   if (now < w.startDate) return "before";
-  if (w.endDate && now >= w.endDate) return "closed";
   return "open";
 }
 

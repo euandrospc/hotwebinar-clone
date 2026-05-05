@@ -34,7 +34,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   const wDto = publicWebinarDto(w);
   const videoDto = publicVideoDto(w.video);
   if (phase === "before" && w.mode === "UNICO") return <CountdownView w={wDto} video={videoDto} />;
-  if (phase === "closed" && w.mode === "UNICO") return <ClosedView w={wDto} />;
+  if (phase === "closed") return <ClosedView w={wDto} />;
 
   const leadChat = await prisma.leadChatMessage.findMany({
     where: { leadId: lead.id }, orderBy: { createdAt: "asc" }
