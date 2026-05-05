@@ -51,6 +51,14 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   }
   const data = parsed.data as { name?: string; email?: string; phone?: string };
 
+  const utm = {
+    utmSource: (formData.get("utm_source") as string) || null,
+    utmMedium: (formData.get("utm_medium") as string) || null,
+    utmCampaign: (formData.get("utm_campaign") as string) || null,
+    utmTerm: (formData.get("utm_term") as string) || null,
+    utmContent: (formData.get("utm_content") as string) || null
+  };
+
   const email = data.email ?? "";
   const name = data.name ?? "";
   const phone = data.phone || null;
@@ -63,12 +71,12 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   if (existing) {
     lead = await prisma.lead.update({
       where: { id: existing.id },
-      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date() }
+      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date(), ...utm }
     });
   } else {
     try {
       lead = await prisma.lead.create({
-        data: { webinarId: w.id, name, email, phone, ip, userAgent: ua }
+        data: { webinarId: w.id, name, email, phone, ip, userAgent: ua, ...utm }
       });
     } catch (createErr: any) {
       // Concurrent submitOptin race: another request created lead with same email between findUnique and create.
@@ -79,7 +87,7 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
         if (racedExisting) {
           lead = await prisma.lead.update({
             where: { id: racedExisting.id },
-            data: { name: name || racedExisting.name, phone: phone ?? racedExisting.phone, ip, userAgent: ua, lastSeenAt: new Date() }
+            data: { name: name || racedExisting.name, phone: phone ?? racedExisting.phone, ip, userAgent: ua, lastSeenAt: new Date(), ...utm }
           });
         } else {
           throw createErr;

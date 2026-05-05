@@ -113,6 +113,23 @@ describe("submitOptin", () => {
     expect(await prisma.lead.count()).toBe(1);
   });
 
+  it("persists UTM fields from FormData on the Lead row", async () => {
+    await makeWebinar({ slug: "demo-utm" });
+    const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 5));
+    const fd = new FormData();
+    fd.set("name", "U"); fd.set("email", "u@e.com"); fd.set("phone", "+5511999990000");
+    fd.set("utm_source", "fb");
+    fd.set("utm_medium", "cpc");
+    fd.set("utm_campaign", "launch");
+    await expect(submitOptin("demo-utm", fd)).rejects.toThrow(/__redirect/);
+    const lead = await prisma.lead.findFirst({ where: { email: "u@e.com" } });
+    expect(lead?.utmSource).toBe("fb");
+    expect(lead?.utmMedium).toBe("cpc");
+    expect(lead?.utmCampaign).toBe("launch");
+    expect(lead?.utmTerm).toBeNull();
+    expect(lead?.utmContent).toBeNull();
+  });
+
   it("returns error when slug not found", async () => {
     const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 1));
     const fd = new FormData();
