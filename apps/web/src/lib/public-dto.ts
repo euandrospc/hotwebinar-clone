@@ -1,4 +1,4 @@
-import type { Lead, Video, Webinar } from "@prisma/client";
+import type { Lead, Video, Webinar } from "db";
 
 export type PublicWebinar = {
   id: string;

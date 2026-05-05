@@ -1,4 +1,4 @@
-import type { Lead, Webinar } from "@prisma/client";
+import type { Lead, Webinar } from "db";
 import { prisma } from "db";
 import { getWebhookQueue, JOB_DISPATCH_WEBHOOK, type WebhookEvent } from "jobs";
 import { publicLeadDto } from "@/lib/public-dto";
