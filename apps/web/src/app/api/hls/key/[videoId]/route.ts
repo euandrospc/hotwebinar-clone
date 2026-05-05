@@ -39,7 +39,7 @@ export async function GET(
       return new Response("forbidden", { status: 403 });
     }
     // Session TTL: 15min since last activity (lastSeenAt is bumped by /api/track,
-    // /api/cta-click, /api/cta-view, opt-in, etc.)
+    // /api/offer-click, opt-in, etc.)
     const elapsed = Date.now() - lead.lastSeenAt.getTime();
     if (elapsed > SESSION_TTL_MS) {
       return new Response("session expired", { status: 401 });
