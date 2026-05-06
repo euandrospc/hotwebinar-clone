@@ -4,6 +4,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebhookRow, type WebhookRowData } from "@/components/webinar/webhook-row";
+import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 
 const PAGE_SIZE = 50;
 
@@ -51,8 +52,9 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-semibold">Webhooks — {w.title}</h1>
+    <div className="container mx-auto py-6">
+      <WebinarTabs webinarId={id} />
+      <h1 className="mt-6 text-2xl font-semibold">Webhooks — {w.title}</h1>
       <div className="mt-4 flex gap-2 text-sm">
         <FilterLink id={id} label="Todos" sp={sp} apply={{ status: undefined }} />
         <FilterLink id={id} label="Pending" sp={sp} apply={{ status: "PENDING" }} />
