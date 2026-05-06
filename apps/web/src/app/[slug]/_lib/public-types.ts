@@ -1,4 +1,4 @@
-import type { PublicVideo, PublicWebinar, PublicLeadWithUtms } from "@/lib/public-dto";
+import type { PublicLead, PublicVideo, PublicWebinar, PublicLeadWithUtms, PublicSaleNotification } from "@/lib/public-dto";
 
 export interface PlayerOffer {
   name: string;
@@ -40,5 +40,6 @@ export interface PlayerShellProps {
   ownerChat: PlayerOwnerMsg[];
   leadChat: PlayerLeadMsg[];
   lead: PublicLeadWithUtms;
+  salesNotifications: PublicSaleNotification[];
   initialOffsetSec: number;
 }

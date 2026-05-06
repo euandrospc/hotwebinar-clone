@@ -5,9 +5,10 @@ import { HlsPlayer } from "./hls-player";
 import { ChatPanel } from "./chat-panel";
 import { OfferBanner } from "./offer-banner";
 import { Tracker } from "./tracker";
+import { SalesNotifier } from "./sales-notifier";
 
 export function PlayerShell({
-  webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec
+  webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications
 }: PlayerShellProps) {
   const [currentTimeSec, setCurrentTimeSec] = useState(initialOffsetSec);
   const currentTimeRef = useRef(initialOffsetSec);
@@ -48,6 +49,7 @@ export function PlayerShell({
         />
       </div>
       <Tracker currentTimeRef={currentTimeRef} />
+      <SalesNotifier notifications={salesNotifications} currentTimeRef={currentTimeRef} />
     </main>
   );
 }

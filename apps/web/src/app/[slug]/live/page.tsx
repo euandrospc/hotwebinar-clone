@@ -17,7 +17,11 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   if (isReservedSlug(slug)) notFound();
   const w = await prisma.webinar.findUnique({
     where: { slug },
-    include: { video: true, chatMessages: { orderBy: { showAtSec: "asc" } } }
+    include: {
+      video: true,
+      chatMessages: { orderBy: { showAtSec: "asc" } },
+      saleNotifications: { orderBy: { showAtSec: "asc" } }
+    }
   });
   if (!w || w.status !== "ACTIVE") notFound();
 
@@ -76,6 +80,13 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
         id: m.id, text: m.text, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
       }))}
       lead={publicLeadWithUtmsDto(lead)}
+      salesNotifications={w.saleNotifications.map((n) => ({
+        id: n.id,
+        showAtSec: n.showAtSec,
+        buyerName: n.buyerName,
+        productName: n.productName,
+        price: n.price
+      }))}
       initialOffsetSec={offset}
     />
   );
