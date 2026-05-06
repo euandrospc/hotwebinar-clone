@@ -81,6 +81,14 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - Schema migration: `20260505230000_d4_audience_and_geo` — enum `AudienceMode`, 4 cols Webinar (`audienceMode/Min/Max/LiveBadge`), 4 cols Lead (`city/region/lat/lng`).
 - Mapa de leads = futuro D5.
 
+## Mapa de Leads (sub-plan D5)
+
+- Nova rota `/dashboard/webinars/[id]/leads-map` exibe mapa Leaflet (OpenStreetMap tiles) com pins individuais até 500 leads, cluster (`react-leaflet-cluster`) acima.
+- Sidebar mostra total + geo count + top 5 países (com flag emoji) + top 5 cidades + leads sem geo.
+- Mapa lazy-loaded via `next/dynamic({ ssr: false })` (Leaflet usa `window`).
+- Tabs `<WebinarTabs>` adicionadas em `/leads`, `/leads-map`, `/metrics`, `/webhooks` — Editor / Leads / Mapa / Métricas / Webhooks.
+- Sem schema novo — consome `Lead.city/region/country/lat/lng` populados em D4.
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
