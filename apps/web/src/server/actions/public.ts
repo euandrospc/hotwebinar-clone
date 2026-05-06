@@ -7,6 +7,7 @@ import { z } from "zod";
 import { prisma } from "db";
 import { signLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
+import { enrichLeadGeo } from "@/lib/geoip";
 import { optinLimiter } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
 import { getWebhookQueue, JOB_DISPATCH_WEBHOOK } from "jobs";
@@ -114,6 +115,8 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
     // resolveLeadFromCookie validates lead.webinarId matches the requested webinar.
     path: "/"
   });
+
+  void enrichLeadGeo(lead.id, ip);
 
   await enqueueWebhook(w, "lead_novo", lead);
 

@@ -32,6 +32,11 @@ const redirectMock = vi.fn((url: string) => {
 });
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 
+const enrichLeadGeoMock = vi.fn(async () => undefined);
+vi.mock("@/lib/geoip", () => ({
+  enrichLeadGeo: (...args: unknown[]) => enrichLeadGeoMock(...args)
+}));
+
 const TEST_USER = { id: "po-user", email: "po@example.com", name: "PO" };
 
 beforeEach(async () => {
@@ -40,6 +45,7 @@ beforeEach(async () => {
   setCookieMock.mockClear();
   redirectMock.mockClear();
   queueAddMock.mockClear();
+  enrichLeadGeoMock.mockClear();
   await prisma.webhookDelivery.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
@@ -128,6 +134,16 @@ describe("submitOptin", () => {
     expect(lead?.utmCampaign).toBe("launch");
     expect(lead?.utmTerm).toBeNull();
     expect(lead?.utmContent).toBeNull();
+  });
+
+  it("invokes enrichLeadGeo with lead.id + ip after persisting", async () => {
+    await makeWebinar({ slug: "demo-geo" });
+    const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 9));
+    const fd = new FormData();
+    fd.set("name", "G"); fd.set("email", "g@e.com"); fd.set("phone", "+5511999990000");
+    await expect(submitOptin("demo-geo", fd)).rejects.toThrow(/__redirect/);
+    const lead = await prisma.lead.findFirst({ where: { email: "g@e.com" } });
+    expect(enrichLeadGeoMock).toHaveBeenCalledWith(lead!.id, "1.2.3.4");
   });
 
   it("returns error when slug not found", async () => {
