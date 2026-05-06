@@ -24,6 +24,7 @@ beforeEach(async () => {
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
   await prisma.chatMessage.deleteMany({});
+  await prisma.saleNotification.deleteMany({});
   await prisma.webinar.deleteMany({});
   await prisma.video.deleteMany({});
   await prisma.accountSettings.deleteMany({});
@@ -109,6 +110,39 @@ describe("updateWebinarStep5 (offer)", () => {
       offerPassUtms: true, offerSameWindow: true, offerRaffleEnabled: false,
       offerLink: "https://buy.example.com/x"
     });
+  });
+});
+
+describe("updateWebinarStep7", () => {
+  it("persists notifications + replaces on subsequent calls", async () => {
+    const { createDraftWebinar, updateWebinarStep7 } = await import("@/server/actions/webinar?" + Date.now());
+    const { id } = await createDraftWebinar();
+    const r1 = await updateWebinarStep7(id, {
+      notifications: [
+        { showAtSec: 60, buyerName: "Ana", productName: "Curso", price: "R$ 99" },
+        { showAtSec: 120, buyerName: "Bob", productName: "Mentor", price: null }
+      ]
+    });
+    expect(r1).toEqual({ ok: true });
+    const after1 = await prisma.saleNotification.findMany({ where: { webinarId: id }, orderBy: { showAtSec: "asc" } });
+    expect(after1).toHaveLength(2);
+    expect(after1[0].buyerName).toBe("Ana");
+
+    const r2 = await updateWebinarStep7(id, {
+      notifications: [{ showAtSec: 30, buyerName: "Z", productName: "X", price: null }]
+    });
+    expect(r2).toEqual({ ok: true });
+    const after2 = await prisma.saleNotification.findMany({ where: { webinarId: id } });
+    expect(after2).toHaveLength(1);
+    expect(after2[0].buyerName).toBe("Z");
+  });
+
+  it("rejects when called for another user's webinar", async () => {
+    const { updateWebinarStep7 } = await import("@/server/actions/webinar?" + (Date.now() + 1));
+    await prisma.user.create({ data: { id: "stranger-7", email: "s7@x.com", name: "S" } });
+    const stranger = await prisma.webinar.create({ data: { ownerId: "stranger-7" } });
+    const r = await updateWebinarStep7(stranger.id, { notifications: [] });
+    expect(r).toMatchObject({ error: { message: expect.stringMatching(/não encontrado/i) } });
   });
 });
 

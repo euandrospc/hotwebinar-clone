@@ -11,6 +11,7 @@ import {
   step4Schema,
   step5Schema,
   step6Schema,
+  step7Schema,
   integrationsSchema,
   type Step1Input,
   type Step2Input,
@@ -18,6 +19,7 @@ import {
   type Step4Input,
   type Step5Input,
   type Step6Input,
+  type Step7Input,
   type IntegrationsInput
 } from "@/lib/validations/webinar";
 
@@ -387,6 +389,31 @@ export async function duplicateWebinar(id: string): Promise<{ newId: string } | 
 
   revalidatePath("/dashboard/webinars");
   return { newId: dup.id };
+}
+
+export async function updateWebinarStep7(id: string, input: Step7Input): Promise<Result> {
+  const session = await requireSession();
+  const owned = await loadOwned(id, session.user.id);
+  if (!owned) return notFound();
+  const parsed = step7Schema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: { field: issue.path.join("."), message: issue.message } };
+  }
+  await prisma.$transaction([
+    prisma.saleNotification.deleteMany({ where: { webinarId: id } }),
+    prisma.saleNotification.createMany({
+      data: parsed.data.notifications.map((n) => ({
+        webinarId: id,
+        showAtSec: n.showAtSec,
+        buyerName: n.buyerName,
+        productName: n.productName,
+        price: n.price ?? null
+      }))
+    })
+  ]);
+  revalidatePath(`/dashboard/webinars/${id}`);
+  return { ok: true };
 }
 
 export async function updateWebinarIntegrations(id: string, input: IntegrationsInput): Promise<Result> {
