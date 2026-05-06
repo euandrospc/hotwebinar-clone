@@ -15,12 +15,13 @@ function contentTypeFor(key: string): string {
 }
 
 function refererAllowed(req: Request, isAdmin: boolean): boolean {
+  // Admin with valid session = trusted; no referer gate (browsers may omit Referer
+  // on cross-context fetches like dialog portals or when Referrer-Policy strips it).
+  if (isAdmin) return true;
   const ref = req.headers.get("referer") ?? "";
   if (!ref) return false;
   // Lead-side: must come from /<slug>/live page.
   if (/\/[^/]+\/live(\/|$|\?)/.test(ref)) return true;
-  // Admin-side: dashboard + wizard + library picker pages.
-  if (isAdmin && /\/dashboard\//.test(ref)) return true;
   return false;
 }
 
