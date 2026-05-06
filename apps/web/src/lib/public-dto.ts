@@ -155,3 +155,27 @@ export function publicLeadWithUtmsDto(l: Lead): PublicLeadWithUtms {
     utmContent: l.utmContent
   };
 }
+
+export type PublicSaleNotification = {
+  id: string;
+  showAtSec: number;
+  buyerName: string;
+  productName: string;
+  price: string | null;
+};
+
+export function publicSaleNotificationDto(n: {
+  id: string;
+  showAtSec: number;
+  buyerName: string;
+  productName: string;
+  price: string | null;
+}): PublicSaleNotification {
+  return {
+    id: n.id,
+    showAtSec: n.showAtSec,
+    buyerName: n.buyerName,
+    productName: n.productName,
+    price: n.price
+  };
+}
