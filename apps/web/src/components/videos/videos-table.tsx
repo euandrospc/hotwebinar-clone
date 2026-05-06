@@ -97,6 +97,7 @@ export function VideosTable({ rows }: { rows: VideoRow[] }) {
                   name={v.name}
                   status={v.status}
                   customThumbUrl={v.customThumbUrl}
+                  hlsUrl={v.hlsUrl}
                 />
               </TableCell>
             </TableRow>

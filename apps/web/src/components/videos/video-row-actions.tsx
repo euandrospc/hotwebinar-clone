@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Image as ImageIcon, RefreshCw, Trash2, MoreHorizontal } from "lucide-react";
+import { Image as ImageIcon, RefreshCw, Trash2, MoreHorizontal, Play } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -10,15 +10,17 @@ import { toast } from "sonner";
 import { retryTranscode } from "@/server/actions/video";
 import { DeleteVideoDialog } from "./delete-video-dialog";
 import { ThumbEditDialog } from "./thumb-edit-dialog";
+import { VideoPreviewDialog } from "./video-preview-dialog";
 
 export function VideoRowActions({
-  id, name, status, customThumbUrl
+  id, name, status, customThumbUrl, hlsUrl
 }: {
-  id: string; name: string; status: "QUEUED" | "PROCESSING" | "READY" | "FAILED"; customThumbUrl: string | null;
+  id: string; name: string; status: "QUEUED" | "PROCESSING" | "READY" | "FAILED"; customThumbUrl: string | null; hlsUrl: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [thumbOpen, setThumbOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   function onRetry() {
     startTransition(async () => {
@@ -37,6 +39,11 @@ export function VideoRowActions({
           <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          {status === "READY" && hlsUrl && (
+            <DropdownMenuItem onClick={() => setPreviewOpen(true)}>
+              <Play className="mr-2 h-4 w-4" /> Preview
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => setThumbOpen(true)}>
             <ImageIcon className="mr-2 h-4 w-4" /> Editar thumbnail
           </DropdownMenuItem>
@@ -58,6 +65,12 @@ export function VideoRowActions({
         onOpenChange={setThumbOpen}
         videoId={id}
         currentCustomThumbUrl={customThumbUrl}
+      />
+      <VideoPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        name={name}
+        hlsUrl={hlsUrl}
       />
     </>
   );
