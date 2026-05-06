@@ -29,7 +29,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24
   },
   secret,
-  baseURL
+  baseURL,
+  trustedOrigins: [baseURL]
 });
 
 export type Session = typeof auth.$Infer.Session;
