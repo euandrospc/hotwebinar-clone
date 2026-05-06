@@ -17,4 +17,4 @@ ENV NODE_ENV=production
 COPY --from=builder /app /app
 EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "pnpm --filter db exec prisma migrate deploy && pnpm --filter web ensure-buckets && pnpm --filter web start"]
+CMD ["sh", "-c", "pnpm --filter db exec prisma migrate deploy && (pnpm --filter web ensure-buckets || echo '[ensure-buckets] failed, continuing') && pnpm --filter web start"]
