@@ -4,7 +4,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl libc6-compat ca-certificates
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN NODE_ENV=development pnpm install --frozen-lockfile --prod=false
 RUN pnpm --filter db exec prisma generate
 ENV NODE_ENV=production
 RUN pnpm --filter web build
