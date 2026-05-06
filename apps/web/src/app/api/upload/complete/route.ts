@@ -40,7 +40,14 @@ export async function POST(request: Request) {
     });
   }
 
-  await enqueueTranscode({ videoId: video.id });
+  console.log("[upload-complete] enqueuing transcode for", video.id);
+  try {
+    const handle = await enqueueTranscode({ videoId: video.id });
+    console.log("[upload-complete] enqueued, runId=", handle.id);
+  } catch (err: any) {
+    console.error("[upload-complete] enqueueTranscode FAILED:", err?.message, err?.stack?.slice(0, 500));
+    return NextResponse.json({ error: "enqueue_failed", message: err?.message || String(err) }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
