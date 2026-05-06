@@ -42,7 +42,7 @@ export function ColorPicker({ value, onChange, "aria-label": ariaLabel, children
     <button
       type="button"
       aria-label={ariaLabel ?? "Selecionar cor"}
-      className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-accent"
+      className="flex w-fit items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm hover:bg-accent"
     >
       <span
         className="inline-block h-5 w-5 rounded-full border shadow-inner"
