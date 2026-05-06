@@ -73,6 +73,14 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - AI generation buttons present but disabled (`disabled={true}` + tooltip "Em breve") in both steps; reserved for a future sub-plan.
 - Schema migration: `20260505220000_d3_sales_notifications`.
 
+## Audiência + GeoIP (sub-plan D4)
+
+- Step 8 (Audiência) — new sub-plan: 3 modos (NONE / FIXED / DYNAMIC), min/max participantes, switch "AO VIVO" badge, prévia da curva (Recharts).
+- Player `/[slug]/live` header: `<AudienceBadge>` mostra `🔴 AO VIVO · 1.234 assistindo` quando `audienceMode != NONE`. Counter determinístico via hash(`webinarId:leadId`); DYNAMIC tick 5 s.
+- Lead enrichment: opt-in dispara `enrichLeadGeo(leadId, ip)` (fire-and-forget) — busca city/region/lat/lng via ipapi.co. Falha silenciosa em IP privado / rede / rate-limit.
+- Schema migration: `20260505230000_d4_audience_and_geo` — enum `AudienceMode`, 4 cols Webinar (`audienceMode/Min/Max/LiveBadge`), 4 cols Lead (`city/region/lat/lng`).
+- Mapa de leads = futuro D5.
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
