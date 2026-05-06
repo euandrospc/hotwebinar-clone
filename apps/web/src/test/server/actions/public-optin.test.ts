@@ -32,7 +32,7 @@ const redirectMock = vi.fn((url: string) => {
 });
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 
-const enrichLeadGeoMock = vi.fn(async () => undefined);
+const enrichLeadGeoMock = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock("@/lib/geoip", () => ({
   enrichLeadGeo: (...args: unknown[]) => enrichLeadGeoMock(...args)
 }));
