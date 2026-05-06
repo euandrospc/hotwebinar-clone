@@ -1,50 +1,35 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, Download } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { step6Schema, type Step6Input } from "@/lib/validations/webinar";
 import { updateWebinarStep6, publishWebinar } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SecondsInput } from "@/components/ui/seconds-input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from "@/components/ui/alert-dialog";
+import { AiStubSection } from "@/components/wizard/ai-stub-section";
+import { WizardSectionAccordion } from "@/components/wizard/wizard-section-accordion";
+import { ChatPreviewAside } from "@/components/wizard/chat-preview-aside";
+import { WizardNav } from "@/components/wizard/wizard-nav";
 
 export interface Step6FormProps {
   webinarId: string;
+  slug: string | null;
   initial: Step6Input;
 }
 
-export function Step6Form({ webinarId, initial }: Step6FormProps) {
+export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [tsv, setTsv] = useState("");
-  const [importOpen, setImportOpen] = useState(false);
   const [xlsxUploading, setXlsxUploading] = useState(false);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors }
-  } = useForm<Step6Input>({
+  const { handleSubmit, control, setValue } = useForm<Step6Input>({
     resolver: zodResolver(step6Schema),
     defaultValues: initial
   });
   const { fields, append, remove } = useFieldArray({ control, name: "messages" });
+  const watched = useWatch({ control, name: "messages" }) ?? [];
 
   function onSubmit(values: Step6Input) {
     startTransition(async () => {
@@ -68,10 +53,7 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
     try {
       const fd = new FormData();
       fd.set("file", file);
-      const res = await fetch(`/api/webinars/${webinarId}/messages/import`, {
-        method: "POST",
-        body: fd
-      });
+      const res = await fetch(`/api/webinars/${webinarId}/messages/import`, { method: "POST", body: fd });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error(err.message ?? "Falha ao importar XLSX");
@@ -86,133 +68,88 @@ export function Step6Form({ webinarId, initial }: Step6FormProps) {
     }
   }
 
-  function importTsv() {
-    const rows = tsv
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line) => line.split("\t"));
-    for (const cols of rows) {
-      if (cols.length >= 3) {
-        const [authorName, text, secStr] = cols;
-        const showAtSec = Number.parseInt(secStr, 10);
-        if (!Number.isNaN(showAtSec)) {
-          append({ authorName, text, showAtSec, isOwner: false });
-        }
-      }
-    }
-    setTsv("");
-    setImportOpen(false);
+  function updateRow(idx: number, patch: Partial<{ authorName: string; text: string; showAtSec: number; isOwner: boolean }>) {
+    if (patch.authorName !== undefined) setValue(`messages.${idx}.authorName`, patch.authorName, { shouldDirty: true });
+    if (patch.text !== undefined) setValue(`messages.${idx}.text`, patch.text, { shouldDirty: true });
+    if (patch.showAtSec !== undefined) setValue(`messages.${idx}.showAtSec`, patch.showAtSec, { shouldDirty: true });
+    if (patch.isOwner !== undefined) setValue(`messages.${idx}.isOwner`, patch.isOwner, { shouldDirty: true });
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
+      <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Chat scriptado</h2>
-        <div className="flex items-center gap-2">
-          <input
-            ref={xlsxInputRef}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onXlsxFile(f);
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={xlsxUploading}
-            onClick={() => xlsxInputRef.current?.click()}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {xlsxUploading ? "Importando..." : "Importar XLSX"}
-          </Button>
-          <Button asChild type="button" variant="outline">
-            <a href={`/api/webinars/${webinarId}/messages/export`} download>
-              <Download className="mr-2 h-4 w-4" /> Exportar XLSX
-            </a>
-          </Button>
-        <AlertDialog open={importOpen} onOpenChange={setImportOpen}>
-          <AlertDialogTrigger asChild>
-            <Button type="button" variant="outline">Importar TSV</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Importar mensagens (TSV)</AlertDialogTitle>
-              <AlertDialogDescription>
-                Cola linhas no formato <code>nome[TAB]mensagem[TAB]segundos</code>. Uma por linha.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <textarea
-              value={tsv}
-              onChange={(e) => setTsv(e.target.value)}
-              className="h-40 w-full rounded-md border p-2 font-mono text-sm"
+
+        <WizardSectionAccordion
+          ai={
+            <AiStubSection
+              badge="Novidade"
+              title="Automação Inteligente de Chat"
+              description="Use IA para gerar mensagens automáticas e simular engajamento no chat do seu webinar."
+              cta="Gerar Chat com IA"
             />
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={importTsv}>Importar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted-foreground">
-        Use <code>{"{lead.name}"}</code> na mensagem para personalizar com o nome do lead (renderizado pelo player na sub-plan C).
-      </p>
-
-      <div className="space-y-3">
-        {fields.map((f, i) => (
-          <div key={f.id} className="grid grid-cols-12 items-end gap-2 rounded-md border p-3">
-            <div className="col-span-3 space-y-1">
-              <Label htmlFor={`messages.${i}.authorName`}>Autor</Label>
-              <Input id={`messages.${i}.authorName`} {...register(`messages.${i}.authorName` as const)} />
-              {errors.messages?.[i]?.authorName && (
-                <p className="text-xs text-destructive">{errors.messages[i]?.authorName?.message}</p>
-              )}
-            </div>
-            <div className="col-span-6 space-y-1">
-              <Label htmlFor={`messages.${i}.text`}>Mensagem</Label>
-              <Input id={`messages.${i}.text`} {...register(`messages.${i}.text` as const)} />
-              {errors.messages?.[i]?.text && (
-                <p className="text-xs text-destructive">{errors.messages[i]?.text?.message}</p>
-              )}
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label>Mostrar</Label>
-              <Controller
-                control={control}
-                name={`messages.${i}.showAtSec` as const}
-                render={({ field }) => <SecondsInput value={field.value} onChange={field.onChange} aria-label="Mostrar" />}
+          }
+          fileTitle="Crie o chat via arquivo"
+          fileSection={
+            <div className="flex flex-col items-center gap-2 py-2 text-sm">
+              <input
+                ref={xlsxInputRef}
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onXlsxFile(f);
+                }}
               />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={xlsxUploading}
+                onClick={() => xlsxInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {xlsxUploading ? "Importando..." : "Importar planilha XLSX"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Colunas: Hora | Minuto | Segundo | Nome | Texto | Suporte
+              </p>
             </div>
-            <div className="col-span-1">
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)} aria-label="Remover">
-                <Trash2 className="h-4 w-4" />
+          }
+          individualTitle="Crie o chat individualmente"
+          individualSection={
+            <div className="space-y-2 py-2">
+              <p className="text-xs text-muted-foreground">{fields.length} mensagens. Edite na prévia ao lado.</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => append({ authorName: "", text: "", showAtSec: 0, isOwner: false })}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Adicionar mensagem
               </Button>
             </div>
-          </div>
-        ))}
+          }
+        />
+
+        <WizardNav webinarId={webinarId} step={6} submitting={pending} />
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => append({ authorName: "", text: "", showAtSec: 0, isOwner: false })}
-      >
-        <Plus className="mr-2 h-4 w-4" /> Adicionar mensagem
-      </Button>
-
-      <div className="mt-8 flex items-center justify-between border-t pt-4">
-        <Button asChild variant="outline" type="button">
-          <a href={`/dashboard/webinars/${webinarId}/step-5`}>← Voltar</a>
-        </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Salvando..." : "Salvar e Ativar"}
-        </Button>
-      </div>
+      <ChatPreviewAside
+        webinarId={webinarId}
+        slug={slug}
+        messages={watched.map((m) => ({
+          id: m?.id,
+          authorName: m?.authorName ?? "",
+          text: m?.text ?? "",
+          showAtSec: m?.showAtSec ?? 0,
+          isOwner: m?.isOwner ?? false
+        }))}
+        onUpdate={updateRow}
+        onDelete={remove}
+        onDeleteAll={() => {
+          for (let i = fields.length - 1; i >= 0; i--) remove(i);
+        }}
+      />
     </form>
   );
 }

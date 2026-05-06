@@ -17,6 +17,7 @@ export default async function Step6Page({ params }: { params: Promise<{ id: stri
   return (
     <Step6Form
       webinarId={id}
+      slug={w.slug}
       initial={{
         messages: w.chatMessages.map((m) => ({
           id: m.id,
