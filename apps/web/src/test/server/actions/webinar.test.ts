@@ -146,6 +146,40 @@ describe("updateWebinarStep7", () => {
   });
 });
 
+describe("updateWebinarStep8", () => {
+  it("persists 4 audience cols", async () => {
+    const { createDraftWebinar, updateWebinarStep8 } = await import("@/server/actions/webinar?" + Date.now());
+    const { id } = await createDraftWebinar();
+    const r = await updateWebinarStep8(id, {
+      audienceMode: "DYNAMIC",
+      audienceMin: 100,
+      audienceMax: 1000,
+      audienceLiveBadge: false
+    });
+    expect(r).toEqual({ ok: true });
+    const w = await prisma.webinar.findUnique({ where: { id } });
+    expect(w).toMatchObject({
+      audienceMode: "DYNAMIC",
+      audienceMin: 100,
+      audienceMax: 1000,
+      audienceLiveBadge: false
+    });
+  });
+
+  it("rejects when called for another user's webinar", async () => {
+    const { updateWebinarStep8 } = await import("@/server/actions/webinar?" + (Date.now() + 1));
+    await prisma.user.create({ data: { id: "stranger-8", email: "s8@x.com", name: "S8" } });
+    const stranger = await prisma.webinar.create({ data: { ownerId: "stranger-8" } });
+    const r = await updateWebinarStep8(stranger.id, {
+      audienceMode: "NONE",
+      audienceMin: 0,
+      audienceMax: 0,
+      audienceLiveBadge: false
+    });
+    expect(r).toMatchObject({ error: { message: expect.stringMatching(/não encontrado/i) } });
+  });
+});
+
 describe("publishWebinar", () => {
   it("rejects with missing-field list when fields incomplete", async () => {
     const { createDraftWebinar, publishWebinar } = await import("@/server/actions/webinar");

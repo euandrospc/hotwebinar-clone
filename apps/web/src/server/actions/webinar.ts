@@ -12,6 +12,7 @@ import {
   step5Schema,
   step6Schema,
   step7Schema,
+  step8Schema,
   integrationsSchema,
   type Step1Input,
   type Step2Input,
@@ -20,6 +21,7 @@ import {
   type Step5Input,
   type Step6Input,
   type Step7Input,
+  type Step8Input,
   type IntegrationsInput
 } from "@/lib/validations/webinar";
 
@@ -412,6 +414,28 @@ export async function updateWebinarStep7(id: string, input: Step7Input): Promise
       }))
     })
   ]);
+  revalidatePath(`/dashboard/webinars/${id}`);
+  return { ok: true };
+}
+
+export async function updateWebinarStep8(id: string, input: Step8Input): Promise<Result> {
+  const session = await requireSession();
+  const owned = await loadOwned(id, session.user.id);
+  if (!owned) return notFound();
+  const parsed = step8Schema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: { field: issue.path.join("."), message: issue.message } };
+  }
+  await prisma.webinar.update({
+    where: { id },
+    data: {
+      audienceMode: parsed.data.audienceMode,
+      audienceMin: parsed.data.audienceMin,
+      audienceMax: parsed.data.audienceMax,
+      audienceLiveBadge: parsed.data.audienceLiveBadge
+    }
+  });
   revalidatePath(`/dashboard/webinars/${id}`);
   return { ok: true };
 }
