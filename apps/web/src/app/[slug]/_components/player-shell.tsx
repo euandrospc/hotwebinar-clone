@@ -6,6 +6,7 @@ import { ChatPanel } from "./chat-panel";
 import { OfferBanner } from "./offer-banner";
 import { Tracker } from "./tracker";
 import { SalesNotifier } from "./sales-notifier";
+import { AudienceBadge } from "./audience-badge";
 
 export function PlayerShell({
   webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications
@@ -30,6 +31,15 @@ export function PlayerShell({
     <main className="grid min-h-screen grid-rows-[auto_1fr] bg-background">
       <header className="flex items-center justify-between border-b p-4">
         {webinar.logoUrl ? <img src={webinar.logoUrl} alt="" className="h-8 object-contain" /> : <div />}
+        <AudienceBadge
+          mode={webinar.audienceMode}
+          min={webinar.audienceMin}
+          max={webinar.audienceMax}
+          showLiveBadge={webinar.audienceLiveBadge}
+          seed={`${webinar.id}:${lead.id}`}
+          durationSec={video?.durationSec ?? 3600}
+          currentTimeRef={currentTimeRef}
+        />
         <span className="text-sm text-muted-foreground">Olá, {lead.name}</span>
       </header>
       <div className="grid gap-4 p-4 md:grid-cols-[2fr_1fr]">
