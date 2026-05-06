@@ -87,3 +87,29 @@ export function avgWatchedMinutes(leads: Array<{ watchedSec: number }>): number 
   const sum = leads.reduce((acc, l) => acc + l.watchedSec, 0);
   return Math.round(sum / leads.length / 60);
 }
+
+export interface SalesKpis {
+  totalRevenueCents: number;
+  totalSales: number;
+  uniqueBuyers: number;
+  revenuePerUserCents: number;
+}
+
+export function buildSalesKpis(
+  sales: Array<{ amount: number; buyerEmail: string | null; leadId: string | null }>
+): SalesKpis {
+  const totalRevenueCents = sales.reduce((acc, s) => acc + s.amount, 0);
+  const buyers = new Set<string>();
+  for (const s of sales) {
+    const key = s.leadId ?? s.buyerEmail;
+    if (key) buyers.add(key);
+  }
+  const uniqueBuyers = buyers.size;
+  const revenuePerUserCents = uniqueBuyers > 0 ? Math.round(totalRevenueCents / uniqueBuyers) : 0;
+  return {
+    totalRevenueCents,
+    totalSales: sales.length,
+    uniqueBuyers,
+    revenuePerUserCents
+  };
+}

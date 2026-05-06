@@ -26,9 +26,15 @@ export function DashboardCalendar({ scheduledDates }: { scheduledDates: string[]
           onMonthChange={setMonth}
           locale={ptBR}
           modifiersClassNames={{
-            selected: "bg-destructive text-white rounded-md"
+            selected: "!bg-destructive !text-white !rounded-md",
+            today: "!font-bold !text-foreground"
           }}
-          className="text-sm [&_.rdp-day]:h-8 [&_.rdp-day]:w-8"
+          classNames={{
+            day: "text-foreground",
+            day_button: "text-foreground",
+            chevron: "fill-muted-foreground"
+          }}
+          className="text-sm [&_.rdp-day]:h-8 [&_.rdp-day]:w-8 [&_button]:!text-foreground"
         />
       </div>
     </section>

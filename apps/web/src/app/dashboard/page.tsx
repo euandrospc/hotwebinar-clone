@@ -7,6 +7,7 @@ import {
   buildFunnel,
   buildDailyParticipants,
   buildDeviceBreakdown,
+  buildSalesKpis,
   avgWatchedMinutes
 } from "@/lib/dashboard-stats";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
@@ -15,19 +16,38 @@ import { DashboardParticipantesChart } from "@/components/dashboard/dashboard-pa
 import { DashboardDispositivosChart } from "@/components/dashboard/dashboard-dispositivos-chart";
 import { DashboardRegionCard } from "@/components/dashboard/dashboard-region-card";
 import { DashboardCalendar } from "@/components/dashboard/dashboard-calendar";
+import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+interface PageProps {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}
+
+function parseRange(from: string | undefined, to: string | undefined): { rangeStart: Date; rangeEnd: Date } {
+  const now = new Date();
+  const fallbackEnd = new Date(now);
+  fallbackEnd.setHours(23, 59, 0, 0);
+  const fallbackStart = new Date(now);
+  fallbackStart.setDate(fallbackStart.getDate() - 5);
+  fallbackStart.setHours(0, 0, 0, 0);
+
+  const rangeStart = from ? new Date(from) : fallbackStart;
+  const rangeEnd = to ? new Date(to) : fallbackEnd;
+  if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) {
+    return { rangeStart: fallbackStart, rangeEnd: fallbackEnd };
+  }
+  return { rangeStart, rangeEnd };
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect(ADMIN_LOGIN_PATH);
 
-  const rangeEnd = new Date();
-  const rangeStart = new Date();
-  rangeStart.setDate(rangeStart.getDate() - 5);
-  rangeStart.setHours(0, 0, 0, 0);
+  const sp = await searchParams;
+  const { rangeStart, rangeEnd } = parseRange(sp.from, sp.to);
 
-  const [leads, webinars, firstWebinar] = await Promise.all([
+  const [leads, webinars, firstWebinar, sales] = await Promise.all([
     prisma.lead.findMany({
       where: {
         webinar: { ownerId: session.user.id },
@@ -50,6 +70,13 @@ export default async function DashboardPage() {
       where: { ownerId: session.user.id },
       orderBy: { createdAt: "desc" },
       select: { id: true }
+    }),
+    prisma.sale.findMany({
+      where: {
+        webinar: { ownerId: session.user.id },
+        createdAt: { gte: rangeStart, lte: rangeEnd }
+      },
+      select: { amount: true, buyerEmail: true, leadId: true }
     })
   ]);
 
@@ -70,24 +97,30 @@ export default async function DashboardPage() {
   const participantes = buildDailyParticipants(input);
   const devices = buildDeviceBreakdown(input);
   const avgMin = avgWatchedMinutes(leads);
+  const salesKpis = buildSalesKpis(sales);
   const scheduledIso = webinars
     .map((w) => w.startDate?.toISOString())
     .filter((s): s is string => Boolean(s));
 
-  const fmtRange = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  const toIsoDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const toIsoTime = (d: Date) =>
+    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-semibold">Dashboard geral</h1>
-        <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-          <span aria-hidden>👁</span>
-          <span>{fmtRange.format(rangeStart)} ~ {fmtRange.format(rangeEnd)}</span>
-        </div>
+        <DashboardRangePicker
+          initialFrom={toIsoDate(rangeStart)}
+          initialTo={toIsoDate(rangeEnd)}
+          initialFromTime={toIsoTime(rangeStart)}
+          initialToTime={toIsoTime(rangeEnd)}
+        />
       </div>
 
       <div className="mt-6 space-y-4">
-        <DashboardKpis avgMinutes={avgMin} />
+        <DashboardKpis avgMinutes={avgMin} sales={salesKpis} />
 
         <DashboardFunnel stages={funnel} />
 

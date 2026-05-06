@@ -49,3 +49,13 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
 }
+
+/* react-day-picker theme override (default uses blue) */
+.rdp-root {
+  --rdp-accent-color: hsl(var(--destructive));
+  --rdp-accent-background-color: hsl(var(--destructive) / 0.15);
+  --rdp-day_button-border-radius: 0.375rem;
+  --rdp-today-color: hsl(var(--foreground));
+}
+.rdp-root .rdp-day_button { color: hsl(var(--foreground)); }
+.rdp-root .rdp-chevron { fill: hsl(var(--muted-foreground)); }

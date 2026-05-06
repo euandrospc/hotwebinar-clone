@@ -254,6 +254,7 @@ model Webinar {
   leadChatMessages       LeadChatMessage[]
   webhookDeliveries      WebhookDelivery[]
   saleNotifications      SaleNotification[]
+  sales                  Sale[]
 
   @@index([ownerId, status])
   @@map("webinar")
@@ -304,6 +305,7 @@ model Lead {
   events            Event[]
   leadChatMessages  LeadChatMessage[]
   webhookDeliveries WebhookDelivery[]
+  sales             Sale[]
 
   @@unique([webinarId, email])
   @@index([webinarId, sessionStart])
@@ -374,4 +376,25 @@ model SaleNotification {
 
   @@index([webinarId, showAtSec])
   @@map("sale_notification")
+}
+
+model Sale {
+  id          String   @id @default(cuid())
+  webinarId   String?
+  leadId      String?
+  externalId  String   @unique
+  amount      Int
+  currency    String   @default("BRL")
+  productName String?
+  buyerEmail  String?
+  buyerName   String?
+  source      String?
+  payload     Json?
+  createdAt   DateTime @default(now())
+  webinar     Webinar? @relation(fields: [webinarId], references: [id], onDelete: SetNull)
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([webinarId, createdAt])
+  @@index([leadId])
+  @@map("sale")
 }
