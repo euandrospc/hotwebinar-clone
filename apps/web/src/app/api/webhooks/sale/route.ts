@@ -15,11 +15,16 @@ const inputSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const secret = process.env.SALES_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 500 });
-
   const provided = request.headers.get("x-webhook-secret") ?? "";
-  if (provided !== secret) {
+  if (!provided) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const acct = await prisma.accountSettings.findUnique({
+    where: { salesWebhookSecret: provided },
+    select: { userId: true }
+  });
+  const globalSecret = process.env.SALES_WEBHOOK_SECRET;
+  const ownerId = acct?.userId ?? null;
+  if (!ownerId && (!globalSecret || provided !== globalSecret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -38,8 +43,11 @@ export async function POST(request: Request) {
 
   let webinarId: string | null = d.webinarId ?? null;
   if (!webinarId && d.webinarSlug) {
-    const w = await prisma.webinar.findUnique({ where: { slug: d.webinarSlug }, select: { id: true } });
-    webinarId = w?.id ?? null;
+    const w = await prisma.webinar.findUnique({ where: { slug: d.webinarSlug }, select: { id: true, ownerId: true } });
+    if (w && (!ownerId || w.ownerId === ownerId)) webinarId = w.id;
+  } else if (webinarId && ownerId) {
+    const w = await prisma.webinar.findUnique({ where: { id: webinarId }, select: { ownerId: true } });
+    if (w?.ownerId !== ownerId) webinarId = null;
   }
 
   let leadId: string | null = null;

@@ -58,3 +58,30 @@ export async function upsertAccountSettings(input: AccountSettingsInput): Promis
   revalidatePath("/dashboard/settings");
   return { ok: true };
 }
+
+function generateSecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function getSalesWebhookSecret(): Promise<string | null> {
+  const session = await requireSession();
+  const row = await prisma.accountSettings.findUnique({
+    where: { userId: session.user.id },
+    select: { salesWebhookSecret: true }
+  });
+  return row?.salesWebhookSecret ?? null;
+}
+
+export async function regenerateSalesWebhookSecret(): Promise<{ secret: string }> {
+  const session = await requireSession();
+  const secret = generateSecret();
+  await prisma.accountSettings.upsert({
+    where: { userId: session.user.id },
+    update: { salesWebhookSecret: secret },
+    create: { userId: session.user.id, salesWebhookSecret: secret }
+  });
+  revalidatePath("/dashboard/settings");
+  return { secret };
+}

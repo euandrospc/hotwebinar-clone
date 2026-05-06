@@ -138,14 +138,15 @@ enum WebhookDeliveryStatus {
 }
 
 model AccountSettings {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  defaultLanguage String   @default("pt-BR")
-  defaultTimezone String   @default("America/Sao_Paulo")
-  brandName       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  defaultLanguage     String   @default("pt-BR")
+  defaultTimezone     String   @default("America/Sao_Paulo")
+  brandName           String?
+  salesWebhookSecret  String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account_settings")
 }
