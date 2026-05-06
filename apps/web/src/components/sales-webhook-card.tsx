@@ -3,16 +3,21 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Copy, RefreshCw, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { regenerateSalesWebhookSecret } from "@/server/actions/settings";
+import { regenerateWebinarSalesWebhookSecret } from "@/server/actions/settings";
 
-export function SalesWebhookCard({ initialSecret }: { initialSecret: string | null }) {
+interface Props {
+  webinarId: string;
+  initialSecret: string | null;
+}
+
+export function SalesWebhookCard({ webinarId, initialSecret }: Props) {
   const [secret, setSecret] = useState(initialSecret);
   const [pending, startTransition] = useTransition();
   const [showSecret, setShowSecret] = useState(false);
 
   const url = typeof window !== "undefined"
-    ? `${window.location.origin}/api/webhooks/sale`
-    : "/api/webhooks/sale";
+    ? `${window.location.origin}/api/webhooks/sale/${webinarId}`
+    : `/api/webhooks/sale/${webinarId}`;
 
   function copy(value: string, label: string) {
     void navigator.clipboard.writeText(value).then(() => toast.success(`${label} copiado`));
@@ -20,7 +25,11 @@ export function SalesWebhookCard({ initialSecret }: { initialSecret: string | nu
 
   function regen() {
     startTransition(async () => {
-      const r = await regenerateSalesWebhookSecret();
+      const r = await regenerateWebinarSalesWebhookSecret(webinarId);
+      if ("error" in r) {
+        toast.error("Falha ao gerar chave");
+        return;
+      }
       setSecret(r.secret);
       setShowSecret(true);
       toast.success("Nova chave gerada");
@@ -79,7 +88,7 @@ export function SalesWebhookCard({ initialSecret }: { initialSecret: string | nu
 
       <details className="rounded-md border bg-muted/30 p-3 text-xs">
         <summary className="cursor-pointer font-medium">Exemplo de payload</summary>
-        <pre className="mt-2 overflow-x-auto rounded bg-background p-2 font-mono text-[10px]">{`POST /api/webhooks/sale
+        <pre className="mt-2 overflow-x-auto rounded bg-background p-2 font-mono text-[10px]">{`POST ${url}
 x-webhook-secret: <chave>
 content-type: application/json
 
@@ -87,7 +96,6 @@ content-type: application/json
   "externalId": "tx-12345",
   "amount": 29700,
   "currency": "BRL",
-  "webinarSlug": "<slug>",
   "buyerEmail": "comprador@example.com",
   "buyerName": "João",
   "productName": "Curso A",
@@ -95,6 +103,7 @@ content-type: application/json
 }`}</pre>
         <p className="mt-2 text-muted-foreground">
           <strong>amount</strong> em centavos. <strong>externalId</strong> idempotente — mesmo id retorna 409.
+          Cada webinar tem URL própria — vendas ficam atribuídas automaticamente.
         </p>
       </details>
     </section>

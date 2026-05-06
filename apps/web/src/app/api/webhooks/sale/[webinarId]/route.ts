@@ -6,25 +6,25 @@ const inputSchema = z.object({
   externalId: z.string().min(1).max(200),
   amount: z.number().int().nonnegative(),
   currency: z.string().min(3).max(8).default("BRL"),
-  webinarSlug: z.string().min(1).optional(),
-  webinarId: z.string().min(1).optional(),
   buyerEmail: z.string().email().optional(),
   buyerName: z.string().max(120).optional(),
   productName: z.string().max(200).optional(),
   source: z.string().max(40).optional()
 });
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ webinarId: string }> }
+) {
+  const { webinarId } = await params;
   const provided = request.headers.get("x-webhook-secret") ?? "";
   if (!provided) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const acct = await prisma.accountSettings.findUnique({
-    where: { salesWebhookSecret: provided },
-    select: { userId: true }
+  const webinar = await prisma.webinar.findUnique({
+    where: { id: webinarId },
+    select: { id: true, salesWebhookSecret: true }
   });
-  const globalSecret = process.env.SALES_WEBHOOK_SECRET;
-  const ownerId = acct?.userId ?? null;
-  if (!ownerId && (!globalSecret || provided !== globalSecret)) {
+  if (!webinar || !webinar.salesWebhookSecret || webinar.salesWebhookSecret !== provided) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -41,17 +41,8 @@ export async function POST(request: Request) {
   }
   const d = parsed.data;
 
-  let webinarId: string | null = d.webinarId ?? null;
-  if (!webinarId && d.webinarSlug) {
-    const w = await prisma.webinar.findUnique({ where: { slug: d.webinarSlug }, select: { id: true, ownerId: true } });
-    if (w && (!ownerId || w.ownerId === ownerId)) webinarId = w.id;
-  } else if (webinarId && ownerId) {
-    const w = await prisma.webinar.findUnique({ where: { id: webinarId }, select: { ownerId: true } });
-    if (w?.ownerId !== ownerId) webinarId = null;
-  }
-
   let leadId: string | null = null;
-  if (webinarId && d.buyerEmail) {
+  if (d.buyerEmail) {
     const lead = await prisma.lead.findUnique({
       where: { webinarId_email: { webinarId, email: d.buyerEmail } },
       select: { id: true }

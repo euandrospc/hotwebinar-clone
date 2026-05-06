@@ -65,23 +65,24 @@ function generateSecret(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function getSalesWebhookSecret(): Promise<string | null> {
+export async function getWebinarSalesWebhookSecret(webinarId: string): Promise<string | null> {
   const session = await requireSession();
-  const row = await prisma.accountSettings.findUnique({
-    where: { userId: session.user.id },
-    select: { salesWebhookSecret: true }
+  const row = await prisma.webinar.findUnique({
+    where: { id: webinarId },
+    select: { ownerId: true, salesWebhookSecret: true }
   });
-  return row?.salesWebhookSecret ?? null;
+  if (!row || row.ownerId !== session.user.id) return null;
+  return row.salesWebhookSecret;
 }
 
-export async function regenerateSalesWebhookSecret(): Promise<{ secret: string }> {
+export async function regenerateWebinarSalesWebhookSecret(
+  webinarId: string
+): Promise<{ secret: string } | { error: string }> {
   const session = await requireSession();
+  const w = await prisma.webinar.findUnique({ where: { id: webinarId }, select: { ownerId: true } });
+  if (!w || w.ownerId !== session.user.id) return { error: "not_found" };
   const secret = generateSecret();
-  await prisma.accountSettings.upsert({
-    where: { userId: session.user.id },
-    update: { salesWebhookSecret: secret },
-    create: { userId: session.user.id, salesWebhookSecret: secret }
-  });
-  revalidatePath("/dashboard/settings");
+  await prisma.webinar.update({ where: { id: webinarId }, data: { salesWebhookSecret: secret } });
+  revalidatePath(`/dashboard/webinars/${webinarId}/integrations`);
   return { secret };
 }
