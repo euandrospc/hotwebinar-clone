@@ -46,7 +46,7 @@ export interface FfmpegResult {
  */
 export function runFfmpeg(opts: FfmpegOptions): Promise<FfmpegResult> {
   return new Promise((resolve) => {
-    const proc: ChildProcessByStdio<null, Readable, Readable> = spawn("ffmpeg", opts.args, { stdio: ["ignore", "pipe", "pipe"] });
+    const proc: ChildProcessByStdio<null, Readable, Readable> = spawn(process.env.FFMPEG_PATH ?? "ffmpeg", opts.args, { stdio: ["ignore", "pipe", "pipe"] });
     let buffer = "";
     const stderrLines: string[] = [];
     const MAX_TAIL_LINES = 50;
@@ -93,7 +93,7 @@ export function ffprobe(inputPath: string): Promise<{ height: number; durationSe
       "-of", "json",
       inputPath
     ];
-    const proc = spawn("ffprobe", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const proc = spawn(process.env.FFPROBE_PATH ?? "ffprobe", args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     proc.stdout.on("data", (c: Buffer) => { stdout += c.toString("utf8"); });

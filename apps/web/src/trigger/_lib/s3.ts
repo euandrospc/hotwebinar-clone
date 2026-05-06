@@ -10,16 +10,17 @@ import { Readable } from "node:stream";
 import fs from "node:fs/promises";
 import { createWriteStream, createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
-import { config } from "../env.js";
+import { getTriggerConfig } from "./env";
 
 let cached: S3Client | undefined;
 
 export function getS3(): S3Client {
   if (cached) return cached;
+  const cfg = getTriggerConfig();
   cached = new S3Client({
-    endpoint: config.s3Endpoint,
-    region: config.s3Region,
-    credentials: { accessKeyId: config.s3AccessKey, secretAccessKey: config.s3SecretKey },
+    endpoint: cfg.s3Endpoint,
+    region: cfg.s3Region,
+    credentials: { accessKeyId: cfg.s3AccessKey, secretAccessKey: cfg.s3SecretKey },
     forcePathStyle: true
   });
   return cached;

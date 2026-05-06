@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { headObject } from "@/lib/storage/presign";
 import { ORIGINALS_BUCKET } from "@/lib/storage/buckets";
-import { getVideoQueue, JOB_TRANSCODE } from "jobs";
+import { enqueueTranscode } from "jobs";
 
 const inputSchema = z.object({ videoId: z.string().min(1) });
 
@@ -40,11 +40,7 @@ export async function POST(request: Request) {
     });
   }
 
-  await getVideoQueue().add(
-    JOB_TRANSCODE,
-    { videoId: video.id },
-    { attempts: 3, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: 100, removeOnFail: 100 }
-  );
+  await enqueueTranscode({ videoId: video.id });
 
   return NextResponse.json({ ok: true });
 }

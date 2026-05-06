@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
-import { getVideoQueue, JOB_TRANSCODE, JOB_DELETE_ASSETS } from "jobs";
+import { enqueueTranscode, enqueueDeleteAssets } from "jobs";
 import { proxifyHlsUrl } from "@/lib/public-dto";
 
 type Result = { ok: true } | { error: string; webinars?: Array<{ id: string; title: string }> };
@@ -50,7 +50,7 @@ export async function deleteVideo(id: string, force: boolean): Promise<Result> {
     return { error: "in_use", webinars };
   }
   await prisma.video.delete({ where: { id } });
-  await getVideoQueue().add(JOB_DELETE_ASSETS, { videoId: id, ownerId: session.user.id }, { removeOnComplete: 100 });
+  await enqueueDeleteAssets({ videoId: id, ownerId: session.user.id });
   revalidatePath("/dashboard/videos");
   return { ok: true };
 }
@@ -70,11 +70,7 @@ export async function retryTranscode(id: string): Promise<Result> {
   if (!video || video.ownerId !== session.user.id) return { error: "not_found" };
   if (video.status !== "FAILED") return { error: "not_failed" };
   await prisma.video.update({ where: { id }, data: { status: "QUEUED", errorMessage: null, progress: 0 } });
-  await getVideoQueue().add(
-    JOB_TRANSCODE,
-    { videoId: id },
-    { attempts: 3, backoff: { type: "exponential", delay: 30_000 } }
-  );
+  await enqueueTranscode({ videoId: id });
   revalidatePath("/dashboard/videos");
   return { ok: true };
 }

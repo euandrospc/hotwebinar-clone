@@ -9,7 +9,7 @@ vi.mock("next/headers", () => ({
 
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
 vi.mock("jobs", async () => ({
-  getWebhookQueue: () => ({ add: queueAddMock }),
+  enqueueDispatchWebhook: queueAddMock,
   JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
 }));
 

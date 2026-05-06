@@ -10,7 +10,7 @@ import { enqueueWebhook } from "@/lib/webhook";
 import { enrichLeadGeo } from "@/lib/geoip";
 import { optinLimiter } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
-import { getWebhookQueue, JOB_DISPATCH_WEBHOOK } from "jobs";
+import { enqueueDispatchWebhook } from "jobs";
 
 type OkResult = { ok: true };
 type ErrorResult = { error: { field?: string; message: string } };
@@ -142,16 +142,7 @@ export async function retryWebhook(deliveryId: string): Promise<ActionResult> {
       status: "PENDING"
     }
   });
-  await getWebhookQueue().add(
-    JOB_DISPATCH_WEBHOOK,
-    { deliveryId: next.id },
-    {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 30_000 },
-      removeOnComplete: 100,
-      removeOnFail: 100
-    }
-  );
+  await enqueueDispatchWebhook({ deliveryId: next.id });
   revalidatePath(`/dashboard/webinars/${orig.webinarId}/webhooks`);
   return { ok: true };
 }

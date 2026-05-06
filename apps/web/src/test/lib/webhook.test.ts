@@ -3,7 +3,7 @@ import { prisma } from "db";
 
 const queueAddMock = vi.fn(async () => ({ id: "j1" }));
 vi.mock("jobs", async () => ({
-  getWebhookQueue: () => ({ add: queueAddMock }),
+  enqueueDispatchWebhook: queueAddMock,
   JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
 }));
 
@@ -50,11 +50,7 @@ describe("enqueueWebhook", () => {
     expect(deliveries[0].event).toBe("lead_novo");
     expect(deliveries[0].url).toBe("https://hooks.example/x");
     expect(deliveries[0].status).toBe("PENDING");
-    expect(queueAddMock).toHaveBeenCalledWith(
-      "dispatch-webhook",
-      { deliveryId: deliveries[0].id },
-      expect.any(Object)
-    );
+    expect(queueAddMock).toHaveBeenCalledWith({ deliveryId: deliveries[0].id });
   });
 
   it("skips when webhook flag is off", async () => {

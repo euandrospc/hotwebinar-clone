@@ -18,10 +18,10 @@ vi.mock("@/lib/storage/presign.js", () => ({
   headObject: headObjectMock
 }));
 vi.mock("jobs", async () => ({
-  getVideoQueue: () => ({ add: queueAddMock }),
+  enqueueTranscode: queueAddMock,
+  enqueueDeleteAssets: vi.fn(async () => ({ id: "j" })),
   JOB_TRANSCODE: "transcode-video",
-  JOB_DELETE_ASSETS: "delete-video-assets",
-  QUEUE_NAME: "video"
+  JOB_DELETE_ASSETS: "delete-video-assets"
 }));
 
 beforeEach(async () => {
@@ -51,11 +51,7 @@ describe("POST /api/upload/complete", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
-    expect(queueAddMock).toHaveBeenCalledWith(
-      "transcode-video",
-      { videoId: v.id },
-      expect.objectContaining({ attempts: 3 })
-    );
+    expect(queueAddMock).toHaveBeenCalledWith({ videoId: v.id });
   });
 
   it("rejects when HEAD object missing", async () => {

@@ -9,12 +9,13 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const queueAddMock = vi.fn(async () => ({ id: "j1" }));
+const enqueueTranscodeMock = vi.fn(async () => ({ id: "j1" }));
+const enqueueDeleteAssetsMock = vi.fn(async () => ({ id: "j1" }));
 vi.mock("jobs", async () => ({
-  getVideoQueue: () => ({ add: queueAddMock }),
+  enqueueTranscode: enqueueTranscodeMock,
+  enqueueDeleteAssets: enqueueDeleteAssetsMock,
   JOB_TRANSCODE: "transcode-video",
-  JOB_DELETE_ASSETS: "delete-video-assets",
-  QUEUE_NAME: "video"
+  JOB_DELETE_ASSETS: "delete-video-assets"
 }));
 
 beforeEach(async () => {
@@ -27,7 +28,8 @@ beforeEach(async () => {
   await prisma.account.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.user.create({ data: TEST_USER });
-  queueAddMock.mockClear();
+  enqueueTranscodeMock.mockClear();
+  enqueueDeleteAssetsMock.mockClear();
 });
 afterAll(async () => prisma.$disconnect());
 
@@ -62,10 +64,8 @@ describe("deleteVideo", () => {
     expect(await prisma.video.findUnique({ where: { id: v.id } })).toBeNull();
     const updatedWebinar = await prisma.webinar.findUnique({ where: { id: w.id } });
     expect(updatedWebinar?.videoId).toBeNull();
-    expect(queueAddMock).toHaveBeenCalledWith(
-      "delete-video-assets",
-      expect.objectContaining({ videoId: v.id }),
-      expect.any(Object)
+    expect(enqueueDeleteAssetsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ videoId: v.id })
     );
   });
 
@@ -106,6 +106,6 @@ describe("retryTranscode", () => {
     const after = await prisma.video.findUnique({ where: { id: v.id } });
     expect(after?.status).toBe("QUEUED");
     expect(after?.errorMessage).toBeNull();
-    expect(queueAddMock).toHaveBeenCalledWith("transcode-video", { videoId: v.id }, expect.any(Object));
+    expect(enqueueTranscodeMock).toHaveBeenCalledWith({ videoId: v.id });
   });
 });

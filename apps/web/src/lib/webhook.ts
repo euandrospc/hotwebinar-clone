@@ -1,6 +1,6 @@
 import type { Lead, Webinar } from "db";
 import { prisma } from "db";
-import { getWebhookQueue, JOB_DISPATCH_WEBHOOK, type WebhookEvent } from "jobs";
+import { enqueueDispatchWebhook, type WebhookEvent } from "jobs";
 import { publicLeadDto } from "@/lib/public-dto";
 
 const FLAG_BY_EVENT: Record<WebhookEvent, keyof Webinar> = {
@@ -49,16 +49,7 @@ export async function enqueueWebhook(
     }
   });
 
-  await getWebhookQueue().add(
-    JOB_DISPATCH_WEBHOOK,
-    { deliveryId: delivery.id },
-    {
-      attempts: 3,
-      backoff: { type: "exponential", delay: 30_000 },
-      removeOnComplete: 100,
-      removeOnFail: 100
-    }
-  );
+  await enqueueDispatchWebhook({ deliveryId: delivery.id });
 }
 
 export async function maybeFireEnterWebhook(

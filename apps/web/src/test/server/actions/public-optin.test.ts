@@ -21,9 +21,9 @@ vi.mock("next/headers", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const queueAddMock = vi.fn(async () => ({ id: "j1" }));
+const enqueueWebhookMock = vi.fn(async () => ({ id: "j1" }));
 vi.mock("jobs", async () => ({
-  getWebhookQueue: () => ({ add: queueAddMock }),
+  enqueueDispatchWebhook: enqueueWebhookMock,
   JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
 }));
 
@@ -44,7 +44,7 @@ beforeEach(async () => {
   cookieStore.clear();
   setCookieMock.mockClear();
   redirectMock.mockClear();
-  queueAddMock.mockClear();
+  enqueueWebhookMock.mockClear();
   enrichLeadGeoMock.mockClear();
   await prisma.webhookDelivery.deleteMany({});
   await prisma.event.deleteMany({});

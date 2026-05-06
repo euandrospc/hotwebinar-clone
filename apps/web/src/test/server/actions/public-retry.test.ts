@@ -11,9 +11,9 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: async () => ({ user: TEST_USER, session: { id: "s", userId: TEST_USER.id } }) } }
 }));
-const queueAddMock = vi.fn(async () => ({ id: "j2" }));
+const enqueueWebhookMock = vi.fn(async () => ({ id: "j2" }));
 vi.mock("jobs", async () => ({
-  getWebhookQueue: () => ({ add: queueAddMock }),
+  enqueueDispatchWebhook: enqueueWebhookMock,
   JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
 }));
 
@@ -26,7 +26,7 @@ beforeEach(async () => {
   await prisma.account.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.user.create({ data: TEST_USER });
-  queueAddMock.mockClear();
+  enqueueWebhookMock.mockClear();
 });
 
 afterAll(async () => prisma.$disconnect());
@@ -53,11 +53,7 @@ describe("retryWebhook", () => {
     expect(newOne.event).toBe("lead_novo");
     expect(newOne.status).toBe("PENDING");
     expect(newOne.attempt).toBe(0);
-    expect(queueAddMock).toHaveBeenCalledWith(
-      "dispatch-webhook",
-      { deliveryId: newOne.id },
-      expect.any(Object)
-    );
+    expect(enqueueWebhookMock).toHaveBeenCalledWith({ deliveryId: newOne.id });
   });
 
   it("returns error when delivery is for a webinar not owned by session user", async () => {

@@ -6,7 +6,7 @@ const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: cookieGetMock }) }));
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
 vi.mock("jobs", async () => ({
-  getWebhookQueue: () => ({ add: queueAddMock }),
+  enqueueDispatchWebhook: queueAddMock,
   JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
 }));
 
