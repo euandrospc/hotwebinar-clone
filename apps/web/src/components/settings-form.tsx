@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -7,15 +8,20 @@ import { accountSettingsSchema, type AccountSettingsInput } from "@/lib/validati
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimezoneSelect } from "@/components/wizard/timezone-select";
 
 export interface SettingsFormProps {
   initial: AccountSettingsInput;
 }
 
 export function SettingsForm({ initial }: SettingsFormProps) {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
+    reset,
     formState: { errors, isSubmitting }
   } = useForm<AccountSettingsInput>({
     resolver: zodResolver(accountSettingsSchema),
@@ -26,6 +32,8 @@ export function SettingsForm({ initial }: SettingsFormProps) {
     const result = await upsertAccountSettings(values);
     if ("ok" in result) {
       toast.success("Configurações salvas");
+      reset(values);
+      router.refresh();
     } else {
       toast.error(result.error.message);
     }
@@ -45,7 +53,10 @@ export function SettingsForm({ initial }: SettingsFormProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="defaultTimezone">Fuso horário padrão</Label>
-        <Input id="defaultTimezone" {...register("defaultTimezone")} placeholder="America/Sao_Paulo" />
+        <TimezoneSelect
+          value={watch("defaultTimezone") ?? ""}
+          onChange={(v) => setValue("defaultTimezone", v, { shouldDirty: true })}
+        />
         {errors.defaultTimezone && <p className="text-sm text-destructive">{errors.defaultTimezone.message}</p>}
       </div>
       <Button type="submit" disabled={isSubmitting}>

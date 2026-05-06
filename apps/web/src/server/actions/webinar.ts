@@ -46,6 +46,8 @@ export async function createDraftWebinar(): Promise<{ id: string }> {
     data: {
       ownerId: session.user.id,
       status: "DRAFT",
+      name: settings?.brandName ?? "",
+      title: settings?.brandName ?? "",
       language: settings?.defaultLanguage ?? "pt-BR",
       timezone: settings?.defaultTimezone ?? "America/Sao_Paulo"
     }
