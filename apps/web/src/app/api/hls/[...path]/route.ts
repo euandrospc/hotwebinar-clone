@@ -32,16 +32,13 @@ export async function GET(
   const { path } = await params;
   if (!path || path.length < 2) return new Response("invalid path", { status: 400 });
 
-  // Auth: lead cookie OR admin session.
+  // Auth: lead cookie OR admin session. Check both; admin status wins
+  // when both are present (e.g., stale lead cookie + active admin session).
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  let authorized = Boolean(leadId);
-  let isAdmin = false;
-  if (!authorized) {
-    const session = await auth.api.getSession({ headers: await headers() });
-    authorized = Boolean(session);
-    isAdmin = authorized;
-  }
+  const session = await auth.api.getSession({ headers: await headers() });
+  const isAdmin = Boolean(session);
+  const authorized = isAdmin || Boolean(leadId);
 
   // Referer gate: blocks direct browser-bar URL access even with valid cookie.
   // Trade-off: cURL with -H "Referer: ..." bypasses; this is best-effort browser-only.
