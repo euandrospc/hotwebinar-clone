@@ -130,6 +130,17 @@ export const step7Schema = z.object({ notifications: z.array(saleItemSchema) });
 export type Step7Input = z.infer<typeof step7Schema>;
 export type SaleItem = z.infer<typeof saleItemSchema>;
 
+export const step8Schema = z.object({
+  audienceMode: z.enum(["NONE", "FIXED", "DYNAMIC"]),
+  audienceMin: z.number().int().min(0).max(1_000_000),
+  audienceMax: z.number().int().min(0).max(1_000_000),
+  audienceLiveBadge: z.boolean()
+}).refine((d) => d.audienceMax >= d.audienceMin, {
+  message: "Max deve ser ≥ Min",
+  path: ["audienceMax"]
+});
+export type Step8Input = z.infer<typeof step8Schema>;
+
 export const integrationsSchema = z.object({
   webhookUrl: z.string().url("URL inválida").or(z.literal("")).optional(),
   webhookOnOptin: z.boolean(),
