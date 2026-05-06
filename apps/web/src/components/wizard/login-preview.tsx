@@ -1,6 +1,5 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
 
 export interface LoginPreviewProps {
   logoUrl: string;
@@ -30,14 +29,7 @@ const ALIGN_CLASS: Record<LoginPreviewProps["loginLogoAlign"], string> = {
 };
 
 export function LoginPreview(props: LoginPreviewProps) {
-  const [pct, setPct] = useState(props.progressStartPct);
-  useEffect(() => {
-    if (!props.progressEnabled) return;
-    const id = setInterval(() => {
-      setPct((p) => (p < 99 ? p + 1 : 99));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [props.progressEnabled]);
+  const pct = props.progressStartPct;
 
   const fieldsByKey: Record<"name" | "email" | "phone", { enabled: boolean; placeholder: string }> = {
     name: { enabled: props.nameEnabled, placeholder: props.namePlaceholder },

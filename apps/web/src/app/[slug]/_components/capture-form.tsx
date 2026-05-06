@@ -109,13 +109,7 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
 }
 
 function ProgressBar({ w }: { w: import("@/lib/public-dto").PublicWebinar }) {
-  const [pct, setPct] = useState(w.progressStartPct);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPct((p) => (p < 99 ? p + 1 : 99));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
+  const pct = w.progressStartPct;
   const text = w.progressText.replace(/\{pct\}/g, String(pct));
   return (
     <div className="mb-4 overflow-hidden rounded-full" style={{ background: w.progressBarColor }}>
