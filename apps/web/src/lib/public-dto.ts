@@ -28,6 +28,10 @@ export type PublicWebinar = {
   progressTextColor: string;
   progressText: string;
   formFieldOrder: ReadonlyArray<"name" | "email" | "phone">;
+  audienceMode: "NONE" | "FIXED" | "DYNAMIC";
+  audienceMin: number;
+  audienceMax: number;
+  audienceLiveBadge: boolean;
   offerName: string;
   offerTitle: string;
   offerPriceOriginal: string | null;
@@ -74,6 +78,10 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     progressTextColor: w.progressTextColor,
     progressText: w.progressText,
     formFieldOrder: w.formFieldOrder as ReadonlyArray<"name" | "email" | "phone">,
+    audienceMode: w.audienceMode,
+    audienceMin: w.audienceMin,
+    audienceMax: w.audienceMax,
+    audienceLiveBadge: w.audienceLiveBadge,
     offerName: w.offerName,
     offerTitle: w.offerTitle,
     offerPriceOriginal: w.offerPriceOriginal,
