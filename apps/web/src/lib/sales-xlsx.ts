@@ -14,20 +14,37 @@ export async function parseSalesXlsx(buffer: ArrayBuffer | Buffer): Promise<Pars
   const sheet = wb.worksheets[0];
   if (!sheet) return [];
 
+  const headerRow = sheet.getRow(1);
+  const headerCol4 = String(headerRow.getCell(4).value ?? "").trim().toLowerCase();
+  const isShortFormat = !headerRow.getCell(5).value && headerCol4.includes("texto");
+
   const rows: ParsedSale[] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNum) => {
     if (rowNum === 1) return;
     const h = String(row.getCell(1).value ?? "").trim();
     const m = String(row.getCell(2).value ?? "").trim();
     const s = String(row.getCell(3).value ?? "").trim();
-    const buyer = String(row.getCell(4).value ?? "").trim();
-    const product = String(row.getCell(5).value ?? "").trim();
-    const price = String(row.getCell(6).value ?? "").trim();
-    if (!buyer || !product) return;
     const sec =
       (Number.parseInt(h || "0", 10) || 0) * 3600 +
       (Number.parseInt(m || "0", 10) || 0) * 60 +
       (Number.parseInt(s || "0", 10) || 0);
+
+    if (isShortFormat) {
+      const text = String(row.getCell(4).value ?? "").trim();
+      if (!text) return;
+      rows.push({
+        showAtSec: sec,
+        buyerName: text.slice(0, 200),
+        productName: "",
+        price: null
+      });
+      return;
+    }
+
+    const buyer = String(row.getCell(4).value ?? "").trim();
+    const product = String(row.getCell(5).value ?? "").trim();
+    const price = String(row.getCell(6).value ?? "").trim();
+    if (!buyer || !product) return;
     rows.push({
       showAtSec: sec,
       buyerName: buyer.slice(0, 80),

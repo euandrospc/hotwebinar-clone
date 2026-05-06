@@ -18,9 +18,11 @@ export function SalesNotifier({ notifications, currentTimeRef }: Props) {
         if (firedRef.current.has(n.id)) continue;
         if (t >= n.showAtSec) {
           firedRef.current.add(n.id);
-          const msg = n.price
-            ? `🛒 ${n.buyerName} comprou ${n.productName} por ${n.price}`
-            : `🛒 ${n.buyerName} comprou ${n.productName}`;
+          const msg = !n.productName
+            ? `🛒 ${n.buyerName}`
+            : n.price
+              ? `🛒 ${n.buyerName} comprou ${n.productName} por ${n.price}`
+              : `🛒 ${n.buyerName} comprou ${n.productName}`;
           toast.success(msg, { duration: 6000 });
         }
       }

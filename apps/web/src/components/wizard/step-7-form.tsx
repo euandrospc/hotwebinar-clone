@@ -107,7 +107,8 @@ export function Step7Form({ webinarId, slug, initial }: Step7FormProps) {
                 {xlsxUploading ? "Importando..." : "Importar planilha XLSX"}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Colunas: Hora | Minuto | Segundo | Nome do comprador | Produto | Preço
+                Colunas: Hora | Minuto | Segundo | Texto enviado<br />
+                ou: Hora | Minuto | Segundo | Nome | Produto | Preço
               </p>
             </div>
           }
