@@ -24,6 +24,7 @@ async function setProgress(videoId: string, pct: number) {
 export const transcodeVideoTask = task({
   id: "transcode-video",
   maxDuration: 3600,
+  machine: "large-1x",
   run: async (payload: TranscodePayload, { ctx }) => {
     const { videoId } = payload;
     const video = await prisma.video.findUnique({ where: { id: videoId } });
