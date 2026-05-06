@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 
 // TODO(better-auth-upgrade): replace with getSessionCookie when bumping past 1.0.7
 // NOTE: better-auth 1.0.7 (pinned in apps/web/package.json) does not yet export
@@ -17,7 +18,7 @@ function hasSessionCookie(request: NextRequest): boolean {
 
 export function middleware(request: NextRequest) {
   if (!hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL(ADMIN_LOGIN_PATH, request.url);
     loginUrl.searchParams.set("from", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }

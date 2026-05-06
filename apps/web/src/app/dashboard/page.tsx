@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { prisma } from "db";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, TvMinimalPlay, Users } from "lucide-react";
@@ -10,7 +11,7 @@ const fmt = new Intl.NumberFormat("pt-BR");
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect(ADMIN_LOGIN_PATH);
 
   const [webinarsCount, leadsCount, geoLeadsCount] = await Promise.all([
     prisma.webinar.count({ where: { ownerId: session.user.id } }),

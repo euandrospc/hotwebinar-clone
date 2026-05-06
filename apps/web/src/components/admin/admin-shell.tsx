@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { Sidebar } from "./sidebar";
 import { UserMenu } from "./user-menu";
 
@@ -10,7 +11,7 @@ export async function AdminShell({
   children: React.ReactNode;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect(ADMIN_LOGIN_PATH);
 
   return (
     <div className="flex h-screen">

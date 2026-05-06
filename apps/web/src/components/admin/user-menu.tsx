@@ -3,12 +3,13 @@ import { signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 
 export function UserMenu({ name, email }: { name: string; email: string }) {
   const router = useRouter();
   async function logout() {
     await signOut();
-    router.push("/login");
+    router.push(ADMIN_LOGIN_PATH);
   }
   return (
     <div className="flex items-center gap-3 border-t px-4 py-3">
