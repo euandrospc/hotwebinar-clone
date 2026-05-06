@@ -41,6 +41,7 @@
     "next": "15.0.3",
     "next-themes": "^0.4.6",
     "react": "19.0.0-rc-66855b96-20241106",
+    "react-colorful": "^5.6.1",
     "react-day-picker": "9.14.0",
     "react-dom": "19.0.0-rc-66855b96-20241106",
     "react-hook-form": "7.53.0",

@@ -9,6 +9,7 @@ import { step3Schema, type Step3Input } from "@/lib/validations/webinar";
 import { updateWebinarStep3 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LoginPreview } from "@/components/wizard/login-preview";
@@ -134,12 +135,24 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="progressBarColor">Cor da barra</Label>
-                  <Input id="progressBarColor" type="color" {...register("progressBarColor")} />
+                  <Label>Cor da barra</Label>
+                  <Controller
+                    control={control}
+                    name="progressBarColor"
+                    render={({ field }) => (
+                      <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor da barra" />
+                    )}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="progressTextColor">Cor do texto</Label>
-                  <Input id="progressTextColor" type="color" {...register("progressTextColor")} />
+                  <Label>Cor do texto</Label>
+                  <Controller
+                    control={control}
+                    name="progressTextColor"
+                    render={({ field }) => (
+                      <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor do texto" />
+                    )}
+                  />
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <Label htmlFor="progressText">Texto (use {"{pct}"} para o número)</Label>
@@ -155,8 +168,14 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               <Input id="loginButtonText" {...register("loginButtonText")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="loginButtonColor">Cor do botão</Label>
-              <Input id="loginButtonColor" type="color" {...register("loginButtonColor")} />
+              <Label>Cor do botão</Label>
+              <Controller
+                control={control}
+                name="loginButtonColor"
+                render={({ field }) => (
+                  <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor do botão" />
+                )}
+              />
             </div>
           </div>
 
