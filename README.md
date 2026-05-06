@@ -65,6 +65,14 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - UTMs captured at opt-in (`utm_source/medium/campaign/term/content`) and re-appended at offer click when `offerPassUtms=true`.
 - Schema migration: `20260505180000_d2_offer_rebuild`.
 
+## Chat + Vendas (sub-plan D3)
+
+- Step 6 (Chat) redesigned: 2-column layout, accordion 3 sections (AI stub / file XLSX / individual editor), search-filterable preview aside with always-editable rows + per-row delete + bulk delete + Export XLSX + "Testar no player".
+- Step 7 (Vendas) — new: same layout. Schema `Hora | Minuto | Segundo | Nome do comprador | Produto | Preço`. Persists to new `SaleNotification` table.
+- Player `/[slug]/live`: sonner toasts fire as `🛒 {buyer} comprou {product} por {price}` when timeline crosses each `showAtSec`. One toast per notif per session.
+- AI generation buttons present but disabled (`disabled={true}` + tooltip "Em breve") in both steps; reserved for a future sub-plan.
+- Schema migration: `20260505220000_d3_sales_notifications`.
+
 ## Deploy (Coolify)
 
 1. Conecta repo Git no Coolify
