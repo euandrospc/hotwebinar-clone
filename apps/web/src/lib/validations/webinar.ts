@@ -119,6 +119,17 @@ export const step6Schema = z.object({ messages: z.array(chatItemSchema) });
 export type Step6Input = z.infer<typeof step6Schema>;
 export type ChatItem = z.infer<typeof chatItemSchema>;
 
+export const saleItemSchema = z.object({
+  id: z.string().optional(),
+  showAtSec: z.number().int().min(0),
+  buyerName: z.string().min(1, "Nome do comprador obrigatório").max(80),
+  productName: z.string().min(1, "Nome do produto obrigatório").max(120),
+  price: z.string().max(20).optional().nullable()
+});
+export const step7Schema = z.object({ notifications: z.array(saleItemSchema) });
+export type Step7Input = z.infer<typeof step7Schema>;
+export type SaleItem = z.infer<typeof saleItemSchema>;
+
 export const integrationsSchema = z.object({
   webhookUrl: z.string().url("URL inválida").or(z.literal("")).optional(),
   webhookOnOptin: z.boolean(),
