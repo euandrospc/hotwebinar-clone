@@ -7,6 +7,7 @@ import { OfferBanner } from "./offer-banner";
 import { Tracker } from "./tracker";
 import { SalesNotifier } from "./sales-notifier";
 import { AudienceBadge } from "./audience-badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PlayerShell({
   webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications
@@ -29,9 +30,12 @@ export function PlayerShell({
 
   return (
     <main className="grid min-h-screen grid-rows-[auto_1fr] bg-background">
-      <header className="flex items-center justify-between border-b p-4">
+      <header className="flex items-center justify-between gap-4 border-b p-4">
         {webinar.logoUrl ? <img src={webinar.logoUrl} alt="" className="h-8 object-contain" /> : <div />}
-        <span className="text-sm text-muted-foreground">Olá, {lead.name}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Olá, {lead.name}</span>
+          <ThemeToggle />
+        </div>
       </header>
       <div className="grid gap-4 p-4 md:grid-cols-[2fr_1fr]">
         <div className="space-y-3">
@@ -58,6 +62,11 @@ export function PlayerShell({
           leadChat={leadChat}
           currentTimeSec={currentTimeSec}
           leadName={lead.name}
+          baseTimestampMs={
+            webinar.mode === "UNICO" && webinar.startDate
+              ? new Date(webinar.startDate).getTime()
+              : new Date(lead.sessionStart).getTime()
+          }
         />
       </div>
       <Tracker currentTimeRef={currentTimeRef} />

@@ -162,10 +162,18 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
         <button
           type="button"
           onClick={unmuteOverlayClick}
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 text-white"
+          className="group absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-sm"
+          aria-label="Ativar áudio"
         >
-          <span className="rounded-md bg-white/90 px-4 py-2 text-sm font-medium text-black">
-            Clique para ativar áudio
+          <span className="relative flex h-20 w-20 items-center justify-center">
+            <span className="absolute inset-0 animate-ping rounded-full bg-red-600/60" aria-hidden />
+            <span className="absolute inset-2 animate-pulse rounded-full bg-red-600/80" aria-hidden />
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg ring-4 ring-white/30 transition-transform group-hover:scale-110">
+              <Volume2 className="h-7 w-7" />
+            </span>
+          </span>
+          <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-zinc-900 shadow">
+            Clique para ativar o som
           </span>
         </button>
       ) : null}

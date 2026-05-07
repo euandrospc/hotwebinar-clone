@@ -72,7 +72,7 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   if (existing) {
     lead = await prisma.lead.update({
       where: { id: existing.id },
-      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date(), ...utm }
+      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date(), sessionStart: new Date(), enterFired: false, ...utm }
     });
   } else {
     try {

@@ -16,6 +16,7 @@ const baseOffer: PlayerOffer = {
 
 const baseLead = {
   id: "l1", name: "L",
+  sessionStart: new Date().toISOString(),
   utmSource: "fb", utmMedium: "cpc", utmCampaign: "launch",
   utmTerm: null, utmContent: null
 };

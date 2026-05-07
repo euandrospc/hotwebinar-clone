@@ -145,6 +145,7 @@ export function publicLeadDto(l: Lead): PublicLead {
 export type PublicLeadWithUtms = {
   id: string;
   name: string;
+  sessionStart: string;
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
@@ -156,6 +157,7 @@ export function publicLeadWithUtmsDto(l: Lead): PublicLeadWithUtms {
   return {
     id: l.id,
     name: l.name,
+    sessionStart: l.sessionStart.toISOString(),
     utmSource: l.utmSource,
     utmMedium: l.utmMedium,
     utmCampaign: l.utmCampaign,
