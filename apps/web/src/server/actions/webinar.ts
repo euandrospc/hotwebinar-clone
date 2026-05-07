@@ -24,6 +24,8 @@ import {
   type Step8Input,
   type IntegrationsInput
 } from "@/lib/validations/webinar";
+import { deletePrefix } from "@/lib/storage/s3";
+import { HLS_BUCKET } from "@/lib/storage/buckets";
 
 type Result = { ok: true } | { error: { field?: string; message: string } };
 
@@ -323,6 +325,18 @@ export async function deleteWebinar(id: string): Promise<Result> {
   const owned = await loadOwned(id, session.user.id);
   if (!owned) return notFound();
   await prisma.webinar.delete({ where: { id } });
+  // Best-effort: clean uploaded assets (logo + offer images). Failures don't
+  // block deletion since the row is already gone.
+  await Promise.all([
+    deletePrefix(HLS_BUCKET, `logo/${id}`).catch((err) => {
+      console.error("[deleteWebinar] logo cleanup failed", id, err?.message);
+      return 0;
+    }),
+    deletePrefix(HLS_BUCKET, `offer/${id}/`).catch((err) => {
+      console.error("[deleteWebinar] offer cleanup failed", id, err?.message);
+      return 0;
+    })
+  ]);
   revalidatePath("/dashboard/webinars");
   return { ok: true };
 }
