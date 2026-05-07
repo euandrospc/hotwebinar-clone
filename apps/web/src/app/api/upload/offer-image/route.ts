@@ -11,7 +11,7 @@ const MAX_BYTES = 2 * 1024 * 1024;
 
 const inputSchema = z.object({
   webinarId: z.string().min(1),
-  kind: z.enum(["desktop", "mobile"]),
+  kind: z.enum(["desktop", "mobile", "logo"]),
   mimeType: z.string(),
   sizeBytes: z.number().int().positive()
 });
@@ -50,7 +50,9 @@ export async function POST(request: Request) {
   }
 
   const ext = EXT_BY_MIME[mimeType];
-  const key = `offer/${webinarId}/${kind}.${ext}`;
+  const key = kind === "logo"
+    ? `logo/${webinarId}.${ext}`
+    : `offer/${webinarId}/${kind}.${ext}`;
   const uploadUrl = await presignPut(HLS_BUCKET, key, mimeType, 15 * 60);
   const publicBase = process.env.S3_PUBLIC_BASE_URL ?? "";
   const publicUrl = `${publicBase}/${HLS_BUCKET}/${key}`;

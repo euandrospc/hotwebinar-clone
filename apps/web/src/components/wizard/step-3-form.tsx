@@ -1,10 +1,10 @@
 "use client";
-import { useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Upload } from "lucide-react";
 import { step3Schema, type Step3Input } from "@/lib/validations/webinar";
 import { updateWebinarStep3 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,39 @@ const FIELD_LABEL: Record<"name" | "email" | "phone", string> = {
 export function Step3Form({ webinarId, initial }: Step3FormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<Step3Input>({
     resolver: zodResolver(step3Schema),
     defaultValues: initial
   });
+
+  async function uploadLogo(file: File) {
+    setLogoUploading(true);
+    try {
+      const presignRes = await fetch("/api/upload/offer-image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ webinarId, kind: "logo", mimeType: file.type, sizeBytes: file.size })
+      });
+      if (!presignRes.ok) {
+        const err = await presignRes.json().catch(() => ({}));
+        toast.error(err.message ?? "Falha ao iniciar upload");
+        return;
+      }
+      const { uploadUrl, publicUrl } = await presignRes.json();
+      const putRes = await fetch(uploadUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
+      if (!putRes.ok) {
+        toast.error("Falha ao enviar imagem");
+        return;
+      }
+      setValue("logoUrl", publicUrl, { shouldDirty: true });
+      toast.success("Logo enviado");
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  }
 
   function onSubmit(values: Step3Input) {
     startTransition(async () => {
@@ -77,7 +106,30 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="logoUrl">Logo do webinar (URL)</Label>
-              <Input id="logoUrl" {...register("logoUrl")} placeholder="https://..." />
+              <div className="flex gap-2">
+                <Input id="logoUrl" {...register("logoUrl")} placeholder="https://..." className="flex-1" />
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadLogo(f);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={logoUploading}
+                  onClick={() => logoInputRef.current?.click()}
+                  aria-label="Enviar logo"
+                  title="Enviar logo"
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
               {errors.logoUrl && <p className="text-sm text-destructive">{errors.logoUrl.message}</p>}
             </div>
             <div className="space-y-2">
