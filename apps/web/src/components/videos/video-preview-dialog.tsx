@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle
@@ -13,35 +13,44 @@ interface Props {
 }
 
 export function VideoPreviewDialog({ open, onOpenChange, name, hlsUrl }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) { setError(null); return; }
-    if (!hlsUrl || !videoRef.current) return;
-    const video = videoRef.current;
-    let hls: Hls | undefined;
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    if (videoElRef.current && videoElRef.current !== el) {
+      try { videoElRef.current.pause(); videoElRef.current.removeAttribute("src"); videoElRef.current.load(); } catch {}
+    }
+    videoElRef.current = el;
+    if (!el || !hlsUrl) return;
+    setError(null);
     if (Hls.isSupported()) {
-      hls = new Hls({ debug: false });
+      const hls = new Hls({ debug: false });
+      hlsRef.current = hls;
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (data.fatal) {
           setError(`${data.type}/${data.details}${data.response ? " (HTTP " + data.response.code + ")" : ""}`);
         }
       });
       hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
+      hls.attachMedia(el);
+    } else if (el.canPlayType("application/vnd.apple.mpegurl")) {
+      el.src = hlsUrl;
     } else {
       setError("HLS não suportado neste browser");
     }
-    return () => {
-      hls?.destroy();
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-    };
-  }, [open, hlsUrl]);
+  }, [hlsUrl]);
+
+  useEffect(() => {
+    if (!open) {
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      setError(null);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,7 +61,7 @@ export function VideoPreviewDialog({ open, onOpenChange, name, hlsUrl }: Props) 
         {hlsUrl ? (
           <>
             <video
-              ref={videoRef}
+              ref={setVideoRef}
               controls
               autoPlay
               playsInline
