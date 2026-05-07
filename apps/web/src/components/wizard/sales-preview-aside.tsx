@@ -1,9 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Download, Search, Trash2, Rocket } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SecondsInput } from "@/components/ui/seconds-input";
 
 export interface SaleRowValue {
   id?: string;
@@ -22,12 +21,25 @@ export interface SalesPreviewAsideProps {
   onDeleteAll: () => void;
 }
 
-export function SalesPreviewAside({ webinarId, slug, notifications, onUpdate, onDelete, onDeleteAll }: SalesPreviewAsideProps) {
+function formatHms(total: number): string {
+  const t = Math.max(0, Math.floor(total));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function buildText(n: SaleRowValue): string {
+  if (!n.productName) return n.buyerName;
+  return n.price ? `${n.buyerName} comprou ${n.productName} por ${n.price}` : `${n.buyerName} comprou ${n.productName}`;
+}
+
+export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete, onDeleteAll }: SalesPreviewAsideProps) {
   const [q, setQ] = useState("");
   const filtered = q
     ? notifications
         .map((n, i) => [n, i] as const)
-        .filter(([n]) => n.buyerName.toLowerCase().includes(q.toLowerCase()) || n.productName.toLowerCase().includes(q.toLowerCase()))
+        .filter(([n]) => buildText(n).toLowerCase().includes(q.toLowerCase()))
     : notifications.map((n, i) => [n, i] as const);
 
   return (
@@ -38,68 +50,45 @@ export function SalesPreviewAside({ webinarId, slug, notifications, onUpdate, on
           <Download className="mr-2 h-4 w-4" /> Exportar vendas em XLSX
         </a>
       </Button>
-      <div className="relative">
-        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input
-          placeholder="Buscar vendas"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-      <div className="max-h-[480px] space-y-2 overflow-y-auto pr-1">
+      <Input
+        placeholder="Buscar mensagens"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      <div className="max-h-[480px] space-y-3 overflow-y-auto pr-1">
         {filtered.map(([n, originalIdx]) => (
-          <div key={n.id ?? `idx-${originalIdx}`} className="grid grid-cols-[80px_1fr_auto] items-center gap-2 rounded-md border p-2">
-            <SecondsInput
-              value={n.showAtSec}
-              onChange={(v) => onUpdate(originalIdx, { showAtSec: v ?? 0 })}
-              aria-label="Tempo"
-            />
-            <div className="space-y-1">
-              <Input
+          <div key={n.id ?? `idx-${originalIdx}`} className="group flex items-start gap-3">
+            <span className="w-16 shrink-0 pt-2 font-mono text-xs text-muted-foreground tabular-nums">
+              {formatHms(n.showAtSec)}
+            </span>
+            <div className="relative flex-1 rounded-md bg-yellow-200/80 p-2 text-sm text-zinc-900 shadow-sm">
+              <textarea
                 value={n.buyerName}
                 onChange={(e) => onUpdate(originalIdx, { buyerName: e.target.value })}
-                placeholder="Comprador"
-                className="h-8 text-sm"
+                rows={1}
+                className="w-full resize-none border-0 bg-transparent p-0 text-sm leading-snug text-zinc-900 focus:outline-none focus:ring-0"
+                onInput={(e) => {
+                  const ta = e.currentTarget;
+                  ta.style.height = "auto";
+                  ta.style.height = `${ta.scrollHeight}px`;
+                }}
               />
-              <Input
-                value={n.productName}
-                onChange={(e) => onUpdate(originalIdx, { productName: e.target.value })}
-                placeholder="Produto"
-                className="h-8 text-sm"
-              />
-              <Input
-                value={n.price ?? ""}
-                onChange={(e) => onUpdate(originalIdx, { price: e.target.value || null })}
-                placeholder="Preço (opcional)"
-                className="h-8 text-sm"
-              />
+              <button
+                type="button"
+                onClick={() => onDelete(originalIdx)}
+                aria-label="Remover"
+                className="absolute -right-2 -top-2 hidden h-6 w-6 items-center justify-center rounded-full border bg-background text-destructive shadow group-hover:flex"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(originalIdx)}
-              aria-label="Remover"
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
           </div>
         ))}
         {filtered.length === 0 && <p className="text-center text-xs text-muted-foreground">Nenhuma venda.</p>}
       </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1 text-destructive" onClick={onDeleteAll}>
-          <Trash2 className="mr-2 h-4 w-4" /> Excluir todas as vendas
-        </Button>
-        {slug ? (
-          <Button asChild type="button" className="flex-1 bg-emerald-800 text-white hover:bg-emerald-900">
-            <a href={`/${slug}/live`} target="_blank" rel="noopener noreferrer">
-              <Rocket className="mr-2 h-4 w-4" /> Testar no player
-            </a>
-          </Button>
-        ) : null}
-      </div>
+      <Button type="button" variant="outline" onClick={onDeleteAll} className="w-full text-destructive">
+        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+      </Button>
     </aside>
   );
 }
