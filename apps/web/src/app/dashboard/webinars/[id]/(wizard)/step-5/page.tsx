@@ -30,7 +30,9 @@ export default async function Step5Page({ params }: { params: Promise<{ id: stri
         offerPassUtms: w.offerPassUtms,
         offerDisabled: w.offerDisabled,
         offerSameWindow: w.offerSameWindow,
-        offerRaffleEnabled: w.offerRaffleEnabled
+        offerRaffleEnabled: w.offerRaffleEnabled,
+        offerRaffleAtSec: w.offerRaffleAtSec,
+        offerRaffleNumber: w.offerRaffleNumber
       }}
     />
   );

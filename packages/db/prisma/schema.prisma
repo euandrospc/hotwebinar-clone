@@ -230,6 +230,8 @@ model Webinar {
   offerDisabled          Boolean            @default(false)
   offerSameWindow        Boolean            @default(false)
   offerRaffleEnabled     Boolean            @default(false)
+  offerRaffleAtSec       Int?
+  offerRaffleNumber      String?
   webhookOnOfferView     Boolean            @default(false)
   webhookOnOfferClick    Boolean            @default(false)
   webhookOnRaffleEntry   Boolean            @default(false)

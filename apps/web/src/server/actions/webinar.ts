@@ -248,7 +248,9 @@ export async function updateWebinarStep5(id: string, input: Step5Input): Promise
       offerPassUtms: d.offerPassUtms,
       offerDisabled: d.offerDisabled,
       offerSameWindow: d.offerSameWindow,
-      offerRaffleEnabled: d.offerRaffleEnabled
+      offerRaffleEnabled: d.offerRaffleEnabled,
+      offerRaffleAtSec: d.offerRaffleAtSec ?? null,
+      offerRaffleNumber: d.offerRaffleNumber ?? null
     }
   });
   revalidatePath(`/dashboard/webinars/${id}`);
@@ -373,6 +375,8 @@ export async function duplicateWebinar(id: string): Promise<{ newId: string } | 
       offerDisabled: src.offerDisabled,
       offerSameWindow: src.offerSameWindow,
       offerRaffleEnabled: src.offerRaffleEnabled,
+      offerRaffleAtSec: src.offerRaffleAtSec,
+      offerRaffleNumber: src.offerRaffleNumber,
       status: "DRAFT"
     }
   });

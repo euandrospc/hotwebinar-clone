@@ -203,6 +203,34 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
               />
             );
           })}
+
+          {watched.offerRaffleEnabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Hora de início do sorteio</Label>
+                <Controller
+                  control={control}
+                  name="offerRaffleAtSec"
+                  render={({ field }) => (
+                    <SecondsInput
+                      value={field.value ?? 0}
+                      onChange={(v) => field.onChange(v === 0 ? null : v)}
+                      aria-label="Hora de início do sorteio"
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="offerRaffleNumber">Escolha o número do sorteio</Label>
+                <Input
+                  id="offerRaffleNumber"
+                  {...register("offerRaffleNumber")}
+                  placeholder=""
+                />
+                {errors.offerRaffleNumber && <p className="text-xs text-destructive">{errors.offerRaffleNumber.message}</p>}
+              </div>
+            </div>
+          )}
         </section>
 
         <WizardNav webinarId={webinarId} step={5} submitting={pending} />

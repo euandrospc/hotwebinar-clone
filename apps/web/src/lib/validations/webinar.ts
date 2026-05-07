@@ -101,7 +101,9 @@ export const step5Schema = z.object({
   offerPassUtms: z.boolean(),
   offerDisabled: z.boolean(),
   offerSameWindow: z.boolean(),
-  offerRaffleEnabled: z.boolean()
+  offerRaffleEnabled: z.boolean(),
+  offerRaffleAtSec: z.number().int().min(0).optional().nullable(),
+  offerRaffleNumber: z.string().max(50).optional().nullable()
 }).refine(
   (d) => d.offerHideAtSec == null || d.offerShowAtSec == null || d.offerHideAtSec >= d.offerShowAtSec,
   { message: "Tempo fim deve ser ≥ tempo início", path: ["offerHideAtSec"] }
