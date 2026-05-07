@@ -24,7 +24,7 @@ async function setProgress(videoId: string, pct: number) {
 export const transcodeVideoTask = task({
   id: "transcode-video",
   maxDuration: 3600,
-  machine: "large-1x",
+  machine: "large-2x",
   run: async (payload: TranscodePayload, { ctx }) => {
     const { videoId } = payload;
     const video = await prisma.video.findUnique({ where: { id: videoId } });
@@ -75,7 +75,8 @@ export const transcodeVideoTask = task({
           "-map", "0:v:0",
           "-map", "0:a:0?",
           "-c:v", "libx264",
-          "-preset", "veryfast",
+          "-threads", "2",
+          "-preset", "ultrafast",
           "-vf", `scale=-2:${v.height}`,
           "-b:v", v.bitrate,
           "-c:a", "aac",
@@ -130,6 +131,7 @@ export const transcodeVideoTask = task({
       await setProgress(videoId, 85);
 
       const entries = await fs.readdir(tmp.path);
+      const uploadable: Array<{ local: string; key: string; contentType: string }> = [];
       for (const entry of entries) {
         if (entry === "raw") continue;
         if (entry === "key.bin" || entry === "key_info.txt") continue;
@@ -143,8 +145,28 @@ export const transcodeVideoTask = task({
             : entry.endsWith(".jpg")
               ? "image/jpeg"
               : "application/octet-stream";
-        await uploadFileToObject(getTriggerConfig().s3BucketHls, `${videoId}/${entry}`, local, contentType);
+        uploadable.push({ local, key: `${videoId}/${entry}`, contentType });
       }
+
+      const bucket = getTriggerConfig().s3BucketHls;
+      const CONCURRENCY = 16;
+      let cursor = 0;
+      let completed = 0;
+      const total = uploadable.length;
+      async function worker() {
+        while (true) {
+          const idx = cursor++;
+          if (idx >= total) return;
+          const it = uploadable[idx];
+          await uploadFileToObject(bucket, it.key, it.local, it.contentType);
+          completed += 1;
+          if (completed % 50 === 0 || completed === total) {
+            const pct = 85 + Math.round((completed / total) * 14); // 85 → 99
+            void setProgress(videoId, pct);
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, () => worker()));
 
       await prisma.video.update({
         where: { id: videoId },
