@@ -1,14 +1,13 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import dynamic from "next/dynamic";
-import "react-phone-number-input/style.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { submitOptin } from "@/server/actions/public";
 import type { PublicWebinar } from "@/lib/public-dto";
+import { PhoneInput } from "./phone-input";
 
-const PhoneInput = dynamic(() => import("react-phone-number-input"), { ssr: false });
 
 const ALIGN_CLASS: Record<"LEFT" | "CENTER" | "RIGHT", string> = {
   LEFT: "justify-start",
@@ -74,7 +73,7 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
       <div className={`mb-6 flex w-full ${ALIGN_CLASS[w.loginLogoAlign]}`}>
-        {w.logoUrl ? <img src={w.logoUrl} alt="" className="h-14 object-contain" /> : null}
+        {w.logoUrl ? <img src={w.logoUrl} alt="" className="h-auto object-contain" /> : null}
       </div>
       {w.progressEnabled ? <ProgressBar w={w} /> : null}
       <h1 className="text-center text-3xl font-semibold">{w.title}</h1>
@@ -109,13 +108,17 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
 }
 
 function ProgressBar({ w }: { w: import("@/lib/public-dto").PublicWebinar }) {
-  const pct = w.progressStartPct;
+  const pct = Math.max(0, Math.min(100, w.progressStartPct));
   const text = w.progressText.replace(/\{pct\}/g, String(pct));
   return (
-    <div className="mb-4 overflow-hidden rounded-full" style={{ background: w.progressBarColor }}>
-      <div className="px-3 py-1.5 text-center text-xs font-semibold" style={{ color: w.progressTextColor }}>
+    <div className="relative mb-3 flex h-8 rounded-full border border-zinc-300 bg-zinc-100 p-1">
+      <div
+        className="flex rounded-full px-5 py-1 text-xs font-medium"
+        style={{ width: `${pct}%`, backgroundColor: w.progressBarColor, color: w.progressTextColor }}
+      />
+      <p className="absolute left-5 top-[7px] text-xs" style={{ color: w.progressTextColor }}>
         {text}
-      </div>
+      </p>
     </div>
   );
 }

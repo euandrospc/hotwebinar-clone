@@ -41,7 +41,7 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
   if (w.waitingTemplate === "FEATURES") {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-10">
-        {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+        {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
         <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
         <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -68,7 +68,7 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
           />
         ) : null}
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+          {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
           <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
           <p className="mt-2 text-white/80">{w.waitingSubtitle}</p>
           <p className="mt-8 font-mono text-6xl tabular-nums" aria-live="polite">{fmt(remaining)}</p>
@@ -83,7 +83,7 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
       <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
       <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
       {thumb ? (

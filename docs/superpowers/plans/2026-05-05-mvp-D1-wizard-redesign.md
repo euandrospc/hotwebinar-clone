@@ -71,6 +71,7 @@ packages/db/prisma/
 ## Task 1: Prisma migration `d1_wizard_redesign`
 
 **Files:**
+
 - Modify: `packages/db/prisma/schema.prisma`
 
 - [ ] **Step 1: Add enums + Webinar fields**
@@ -144,6 +145,7 @@ git commit -m "feat(db): add WaitingTemplate + LogoAlign enums + 10 D1 webinar f
 ## Task 2: `lib/timezones.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/timezones.ts`
 - Create: `apps/web/src/test/lib/timezones.test.ts`
 
@@ -155,7 +157,9 @@ import { TIMEZONES, AUTO_TIMEZONE_VALUE } from "@/lib/timezones";
 
 describe("timezones", () => {
   it("includes São Paulo as default", () => {
-    expect(TIMEZONES.find((t) => t.value === "America/Sao_Paulo")).toBeDefined();
+    expect(
+      TIMEZONES.find((t) => t.value === "America/Sao_Paulo"),
+    ).toBeDefined();
   });
 
   it("first option is auto detect sentinel", () => {
@@ -210,12 +214,14 @@ export const TIMEZONES: ReadonlyArray<TimezoneOption> = [
   { value: "America/New_York", label: "New York" },
   { value: "America/Los_Angeles", label: "Los Angeles" },
   { value: "Asia/Tokyo", label: "Tokyo" },
-  { value: "Australia/Sydney", label: "Sydney" }
+  { value: "Australia/Sydney", label: "Sydney" },
 ];
 
 export function resolveAutoTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo";
+    return (
+      Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo"
+    );
   } catch {
     return "America/Sao_Paulo";
   }
@@ -242,6 +248,7 @@ git commit -m "feat(web): add timezones list + auto-detect helper"
 ## Task 3: `lib/waiting-templates.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/waiting-templates.ts`
 - Create: `apps/web/src/test/lib/waiting-templates.test.ts`
 
@@ -249,7 +256,10 @@ git commit -m "feat(web): add timezones list + auto-detect helper"
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { WAITING_TEMPLATES, type WaitingTemplateId } from "@/lib/waiting-templates";
+import {
+  WAITING_TEMPLATES,
+  type WaitingTemplateId,
+} from "@/lib/waiting-templates";
 
 describe("waiting-templates", () => {
   it("has 5 templates", () => {
@@ -258,7 +268,13 @@ describe("waiting-templates", () => {
 
   it("includes DEFAULT, WITH_THUMB, IMMERSIVE, MINIMAL, FEATURES", () => {
     const ids = WAITING_TEMPLATES.map((t) => t.id);
-    expect(ids).toEqual(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"]);
+    expect(ids).toEqual([
+      "DEFAULT",
+      "WITH_THUMB",
+      "IMMERSIVE",
+      "MINIMAL",
+      "FEATURES",
+    ]);
   });
 
   it("each template has label + description", () => {
@@ -282,7 +298,12 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Implement `apps/web/src/lib/waiting-templates.ts`**
 
 ```ts
-export type WaitingTemplateId = "DEFAULT" | "WITH_THUMB" | "IMMERSIVE" | "MINIMAL" | "FEATURES";
+export type WaitingTemplateId =
+  | "DEFAULT"
+  | "WITH_THUMB"
+  | "IMMERSIVE"
+  | "MINIMAL"
+  | "FEATURES";
 
 export interface WaitingTemplate {
   id: WaitingTemplateId;
@@ -291,11 +312,31 @@ export interface WaitingTemplate {
 }
 
 export const WAITING_TEMPLATES: ReadonlyArray<WaitingTemplate> = [
-  { id: "DEFAULT", label: "Padrão", description: "Logo + título + countdown centralizados." },
-  { id: "WITH_THUMB", label: "Com thumbnail", description: "Padrão + thumbnail do vídeo." },
-  { id: "IMMERSIVE", label: "Imersivo", description: "Vídeo de fundo silenciado + countdown sobreposto." },
-  { id: "MINIMAL", label: "Minimalista", description: "Apenas relógio gigante. Sem título/subtítulo." },
-  { id: "FEATURES", label: "Com benefícios", description: "Lista de benefícios + countdown ao lado." }
+  {
+    id: "DEFAULT",
+    label: "Padrão",
+    description: "Logo + título + countdown centralizados.",
+  },
+  {
+    id: "WITH_THUMB",
+    label: "Com thumbnail",
+    description: "Padrão + thumbnail do vídeo.",
+  },
+  {
+    id: "IMMERSIVE",
+    label: "Imersivo",
+    description: "Vídeo de fundo silenciado + countdown sobreposto.",
+  },
+  {
+    id: "MINIMAL",
+    label: "Minimalista",
+    description: "Apenas relógio gigante. Sem título/subtítulo.",
+  },
+  {
+    id: "FEATURES",
+    label: "Com benefícios",
+    description: "Lista de benefícios + countdown ao lado.",
+  },
 ];
 ```
 
@@ -319,6 +360,7 @@ git commit -m "feat(web): add waiting-room template descriptors (5 templates)"
 ## Task 4: Validation schema extensions
 
 **Files:**
+
 - Modify: `apps/web/src/lib/validations/webinar.ts`
 - Create: `apps/web/src/test/lib/validations/d1.test.ts`
 
@@ -326,11 +368,19 @@ git commit -m "feat(web): add waiting-room template descriptors (5 templates)"
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { step1Schema, step2Schema, step3Schema } from "@/lib/validations/webinar";
+import {
+  step1Schema,
+  step2Schema,
+  step3Schema,
+} from "@/lib/validations/webinar";
 
 const step1Base = {
-  name: "n", title: "t", slug: "abc", language: "pt-BR",
-  accessFacilitated: false, videoSyncWithStart: true
+  name: "n",
+  title: "t",
+  slug: "abc",
+  language: "pt-BR",
+  accessFacilitated: false,
+  videoSyncWithStart: true,
 };
 
 const step2Base = {
@@ -338,21 +388,33 @@ const step2Base = {
   startDate: new Date("2026-06-01T10:00:00Z"),
   endDate: new Date("2026-06-01T11:00:00Z"),
   timezone: "America/Sao_Paulo",
-  waitingTitle: "Sala", waitingSubtitle: "",
-  waitingShowThumb: false, waitingTemplate: "DEFAULT" as const
+  waitingTitle: "Sala",
+  waitingSubtitle: "",
+  waitingShowThumb: false,
+  waitingTemplate: "DEFAULT" as const,
 };
 
 const step3Base = {
-  logoUrl: "", primaryColor: "",
-  loginButtonText: "Entrar", loginButtonColor: "#16a34a",
-  nameEnabled: true, nameRequired: true, namePlaceholder: "Nome",
-  emailEnabled: true, emailRequired: true, emailPlaceholder: "Email",
-  phoneEnabled: true, phoneRequired: false, phonePlaceholder: "Tel",
+  logoUrl: "",
+  primaryColor: "",
+  loginButtonText: "Entrar",
+  loginButtonColor: "#16a34a",
+  nameEnabled: true,
+  nameRequired: true,
+  namePlaceholder: "Nome",
+  emailEnabled: true,
+  emailRequired: true,
+  emailPlaceholder: "Email",
+  phoneEnabled: true,
+  phoneRequired: false,
+  phonePlaceholder: "Tel",
   loginLogoAlign: "CENTER" as const,
-  progressEnabled: false, progressStartPct: 50,
-  progressBarColor: "#dc2626", progressTextColor: "#ffffff",
+  progressEnabled: false,
+  progressStartPct: 50,
+  progressBarColor: "#dc2626",
+  progressTextColor: "#ffffff",
   progressText: "{pct}% das vagas preenchidas...",
-  formFieldOrder: ["name", "email", "phone"]
+  formFieldOrder: ["name", "email", "phone"],
 };
 
 describe("step1Schema D1 extensions", () => {
@@ -370,10 +432,15 @@ describe("step2Schema D1 extensions", () => {
     expect(step2Schema.safeParse(step2Base).success).toBe(true);
   });
   it("accepts WITH_THUMB", () => {
-    expect(step2Schema.safeParse({ ...step2Base, waitingTemplate: "WITH_THUMB" }).success).toBe(true);
+    expect(
+      step2Schema.safeParse({ ...step2Base, waitingTemplate: "WITH_THUMB" })
+        .success,
+    ).toBe(true);
   });
   it("rejects unknown template id", () => {
-    expect(step2Schema.safeParse({ ...step2Base, waitingTemplate: "FOO" }).success).toBe(false);
+    expect(
+      step2Schema.safeParse({ ...step2Base, waitingTemplate: "FOO" }).success,
+    ).toBe(false);
   });
 });
 
@@ -382,11 +449,17 @@ describe("step3Schema D1 extensions", () => {
     expect(step3Schema.safeParse(step3Base).success).toBe(true);
   });
   it("rejects formFieldOrder duplicates", () => {
-    const r = step3Schema.safeParse({ ...step3Base, formFieldOrder: ["name", "name", "email"] });
+    const r = step3Schema.safeParse({
+      ...step3Base,
+      formFieldOrder: ["name", "name", "email"],
+    });
     expect(r.success).toBe(false);
   });
   it("rejects formFieldOrder with unknown value", () => {
-    const r = step3Schema.safeParse({ ...step3Base, formFieldOrder: ["name", "address"] });
+    const r = step3Schema.safeParse({
+      ...step3Base,
+      formFieldOrder: ["name", "address"],
+    });
     expect(r.success).toBe(false);
   });
   it("rejects bad progressStartPct", () => {
@@ -419,7 +492,7 @@ export const step1Schema = z.object({
   slug: slugSchema,
   language: z.string().min(2).max(10),
   accessFacilitated: z.boolean(),
-  videoSyncWithStart: z.boolean()
+  videoSyncWithStart: z.boolean(),
 });
 export type Step1Input = z.infer<typeof step1Schema>;
 ```
@@ -436,11 +509,13 @@ export const step2Schema = z
     waitingTitle: z.string().min(1).max(80),
     waitingSubtitle: z.string().max(200),
     waitingShowThumb: z.boolean().default(false),
-    waitingTemplate: z.enum(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"]).default("DEFAULT")
+    waitingTemplate: z
+      .enum(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"])
+      .default("DEFAULT"),
   })
   .refine((v) => v.endDate > v.startDate, {
     message: "Fim deve ser após início",
-    path: ["endDate"]
+    path: ["endDate"],
   });
 export type Step2Input = z.infer<typeof step2Schema>;
 ```
@@ -450,7 +525,11 @@ Find `step3Schema`. Replace with the extended version:
 ```ts
 export const step3Schema = z.object({
   logoUrl: z.string().url().optional().or(z.literal("")),
-  primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i).optional().or(z.literal("")),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/i)
+    .optional()
+    .or(z.literal("")),
   loginButtonText: z.string().min(1).max(40),
   loginButtonColor: z.string().regex(/^#[0-9a-f]{6}$/i),
   nameEnabled: z.boolean(),
@@ -472,7 +551,9 @@ export const step3Schema = z.object({
     .array(z.enum(["name", "email", "phone"]))
     .min(1)
     .max(3)
-    .refine((arr) => new Set(arr).size === arr.length, { message: "Sem duplicatas em formFieldOrder" })
+    .refine((arr) => new Set(arr).size === arr.length, {
+      message: "Sem duplicatas em formFieldOrder",
+    }),
 });
 export type Step3Input = z.infer<typeof step3Schema>;
 ```
@@ -498,6 +579,7 @@ git commit -m "feat(web): extend step1/step2/step3 schemas with D1 fields"
 ## Task 5: `<ToggleCard>` component
 
 **Files:**
+
 - Create: `apps/web/src/components/wizard/toggle-card.tsx`
 
 - [ ] **Step 1: Implement**
@@ -516,15 +598,28 @@ export interface ToggleCardProps {
   disabled?: boolean;
 }
 
-export function ToggleCard({ title, description, info, checked, onCheckedChange, disabled }: ToggleCardProps) {
+export function ToggleCard({
+  title,
+  description,
+  info,
+  checked,
+  onCheckedChange,
+  disabled,
+}: ToggleCardProps) {
   return (
     <div className="rounded-md border bg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">{title}</h3>
-          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+          {description ? (
+            <p className="text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
-        <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
+        <Switch
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          disabled={disabled}
+        />
       </div>
       {info ? (
         <div className="flex gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -557,6 +652,7 @@ git commit -m "feat(web): add ToggleCard reusable component"
 ## Task 6: `<TimezoneSelect>` component (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/components/wizard/timezone-select.tsx`
 - Create: `apps/web/src/test/components/timezone-select.test.tsx`
 
@@ -571,7 +667,10 @@ describe("TimezoneSelect", () => {
   beforeEach(() => {
     // jsdom doesn't provide a stable TZ; mock to known one.
     vi.spyOn(Intl, "DateTimeFormat").mockImplementation(
-      () => ({ resolvedOptions: () => ({ timeZone: "America/Sao_Paulo" } as any) }) as any
+      () =>
+        ({
+          resolvedOptions: () => ({ timeZone: "America/Sao_Paulo" }) as any,
+        }) as any,
     );
   });
 
@@ -609,9 +708,13 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
-import { TIMEZONES, AUTO_TIMEZONE_VALUE, resolveAutoTimezone } from "@/lib/timezones";
+import {
+  TIMEZONES,
+  AUTO_TIMEZONE_VALUE,
+  resolveAutoTimezone,
+} from "@/lib/timezones";
 
 export interface TimezoneSelectProps {
   value: string;
@@ -634,7 +737,9 @@ export function TimezoneSelect({ value, onChange }: TimezoneSelectProps) {
       </SelectTrigger>
       <SelectContent>
         {TIMEZONES.map((t) => (
-          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+          <SelectItem key={t.value} value={t.value}>
+            {t.label}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -662,6 +767,7 @@ git commit -m "feat(web): add TimezoneSelect with auto-detect"
 ## Task 7: `<WaitingTemplatePicker>` component (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/components/wizard/waiting-template-picker.tsx`
 - Create: `apps/web/src/test/components/waiting-template-picker.test.tsx`
 
@@ -692,7 +798,9 @@ describe("WaitingTemplatePicker", () => {
   it("highlights selected card via aria-pressed", () => {
     render(<WaitingTemplatePicker value="MINIMAL" onChange={() => {}} />);
     const cards = screen.getAllByRole("button");
-    const minimalCard = cards.find((c) => c.textContent?.includes("Minimalista"));
+    const minimalCard = cards.find((c) =>
+      c.textContent?.includes("Minimalista"),
+    );
     expect(minimalCard).toHaveAttribute("aria-pressed", "true");
   });
 });
@@ -712,14 +820,20 @@ Expected: FAIL — module not found.
 "use client";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
-import { WAITING_TEMPLATES, type WaitingTemplateId } from "@/lib/waiting-templates";
+import {
+  WAITING_TEMPLATES,
+  type WaitingTemplateId,
+} from "@/lib/waiting-templates";
 
 export interface WaitingTemplatePickerProps {
   value: WaitingTemplateId;
   onChange: (v: WaitingTemplateId) => void;
 }
 
-export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePickerProps) {
+export function WaitingTemplatePicker({
+  value,
+  onChange,
+}: WaitingTemplatePickerProps) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
       {WAITING_TEMPLATES.map((t) => {
@@ -732,11 +846,13 @@ export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePicker
             aria-pressed={selected}
             className={cn(
               "relative rounded-md border bg-card p-4 text-left transition",
-              selected ? "ring-2 ring-primary" : "hover:border-primary/50"
+              selected ? "ring-2 ring-primary" : "hover:border-primary/50",
             )}
           >
             <p className="text-sm font-semibold">{t.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t.description}
+            </p>
             {selected ? (
               <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
             ) : null}
@@ -768,6 +884,7 @@ git commit -m "feat(web): add WaitingTemplatePicker (5 template cards)"
 ## Task 8: `<LoginPreview>` component
 
 **Files:**
+
 - Create: `apps/web/src/components/wizard/login-preview.tsx`
 
 - [ ] **Step 1: Implement**
@@ -801,7 +918,7 @@ export interface LoginPreviewProps {
 const ALIGN_CLASS: Record<LoginPreviewProps["loginLogoAlign"], string> = {
   LEFT: "justify-start",
   CENTER: "justify-center",
-  RIGHT: "justify-end"
+  RIGHT: "justify-end",
 };
 
 export function LoginPreview(props: LoginPreviewProps) {
@@ -814,22 +931,34 @@ export function LoginPreview(props: LoginPreviewProps) {
     return () => clearInterval(id);
   }, [props.progressEnabled]);
 
-  const fieldsByKey: Record<"name" | "email" | "phone", { enabled: boolean; placeholder: string }> = {
+  const fieldsByKey: Record<
+    "name" | "email" | "phone",
+    { enabled: boolean; placeholder: string }
+  > = {
     name: { enabled: props.nameEnabled, placeholder: props.namePlaceholder },
     email: { enabled: props.emailEnabled, placeholder: props.emailPlaceholder },
-    phone: { enabled: props.phoneEnabled, placeholder: props.phonePlaceholder }
+    phone: { enabled: props.phoneEnabled, placeholder: props.phonePlaceholder },
   };
 
   const progressMessage = props.progressText.replace(/\{pct\}/g, String(pct));
 
   return (
     <div className="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">Prévia</p>
+      <p className="text-xs font-semibold uppercase text-muted-foreground">
+        Prévia
+      </p>
       <div className={cn("flex w-full", ALIGN_CLASS[props.loginLogoAlign])}>
-        {props.logoUrl ? <img src={props.logoUrl} alt="" className="h-12 object-contain" /> : <div className="h-12" />}
+        {props.logoUrl ? (
+          <img src={props.logoUrl} alt="" className="h-auto object-contain" />
+        ) : (
+          <div className="h-12" />
+        )}
       </div>
       {props.progressEnabled ? (
-        <div className="overflow-hidden rounded-full" style={{ background: props.progressBarColor }}>
+        <div
+          className="overflow-hidden rounded-full"
+          style={{ background: props.progressBarColor }}
+        >
           <div
             className="px-3 py-1.5 text-center text-xs font-semibold"
             style={{ color: props.progressTextColor }}
@@ -888,6 +1017,7 @@ git commit -m "feat(web): add LoginPreview live mini-form for step 3"
 ## Task 9: WizardShell redesign (9-step horizontal nav)
 
 **Files:**
+
 - Modify: `apps/web/src/components/wizard/wizard-shell.tsx`
 
 - [ ] **Step 1: Read current file**
@@ -914,7 +1044,7 @@ import {
   DollarSign,
   Eye,
   Plug2,
-  type LucideIcon
+  type LucideIcon,
 } from "lucide-react";
 
 interface StepDef {
@@ -926,15 +1056,69 @@ interface StepDef {
 }
 
 const STEPS: ReadonlyArray<StepDef> = [
-  { num: 1, label: "Início", Icon: Flag, href: (id) => `/dashboard/webinars/${id}/step-1`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-1` },
-  { num: 2, label: "Webinar", Icon: MonitorPlay, href: (id) => `/dashboard/webinars/${id}/step-2`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-2` },
-  { num: 3, label: "Login", Icon: LogIn, href: (id) => `/dashboard/webinars/${id}/step-3`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-3` },
-  { num: 4, label: "Vídeo", Icon: Video, href: (id) => `/dashboard/webinars/${id}/step-4`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-4` },
-  { num: 5, label: "Oferta", Icon: Gift, href: (id) => `/dashboard/webinars/${id}/step-5`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-5` },
-  { num: 6, label: "Chat", Icon: MessageCircle, href: (id) => `/dashboard/webinars/${id}/step-6`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-6` },
-  { num: 7, label: "Vendas", Icon: DollarSign, href: (id) => `/dashboard/webinars/${id}/step-7`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-7` },
-  { num: 8, label: "Audiência", Icon: Eye, href: (id) => `/dashboard/webinars/${id}/step-8`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-8` },
-  { num: 9, label: "Integrações", Icon: Plug2, href: (id) => `/dashboard/webinars/${id}/integrations`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/integrations` }
+  {
+    num: 1,
+    label: "Início",
+    Icon: Flag,
+    href: (id) => `/dashboard/webinars/${id}/step-1`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-1`,
+  },
+  {
+    num: 2,
+    label: "Webinar",
+    Icon: MonitorPlay,
+    href: (id) => `/dashboard/webinars/${id}/step-2`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-2`,
+  },
+  {
+    num: 3,
+    label: "Login",
+    Icon: LogIn,
+    href: (id) => `/dashboard/webinars/${id}/step-3`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-3`,
+  },
+  {
+    num: 4,
+    label: "Vídeo",
+    Icon: Video,
+    href: (id) => `/dashboard/webinars/${id}/step-4`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-4`,
+  },
+  {
+    num: 5,
+    label: "Oferta",
+    Icon: Gift,
+    href: (id) => `/dashboard/webinars/${id}/step-5`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-5`,
+  },
+  {
+    num: 6,
+    label: "Chat",
+    Icon: MessageCircle,
+    href: (id) => `/dashboard/webinars/${id}/step-6`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-6`,
+  },
+  {
+    num: 7,
+    label: "Vendas",
+    Icon: DollarSign,
+    href: (id) => `/dashboard/webinars/${id}/step-7`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-7`,
+  },
+  {
+    num: 8,
+    label: "Audiência",
+    Icon: Eye,
+    href: (id) => `/dashboard/webinars/${id}/step-8`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-8`,
+  },
+  {
+    num: 9,
+    label: "Integrações",
+    Icon: Plug2,
+    href: (id) => `/dashboard/webinars/${id}/integrations`,
+    matchPath: (p, id) => p === `/dashboard/webinars/${id}/integrations`,
+  },
 ];
 
 export interface WizardShellProps {
@@ -955,14 +1139,29 @@ export async function WizardShell({ webinarId, children }: WizardShellProps) {
           {STEPS.map((s, i) => {
             const isActive = i === activeIndex;
             const isPast = activeIndex >= 0 && i < activeIndex;
-            const iconColor = isActive ? "text-red-600" : isPast ? "text-emerald-600" : "text-gray-400";
-            const labelColor = isActive ? "text-red-600 font-semibold" : isPast ? "text-emerald-700" : "text-gray-500";
-            const circleColor = isActive ? "bg-emerald-600 text-white" : isPast ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500";
+            const iconColor = isActive
+              ? "text-red-600"
+              : isPast
+                ? "text-emerald-600"
+                : "text-gray-400";
+            const labelColor = isActive
+              ? "text-red-600 font-semibold"
+              : isPast
+                ? "text-emerald-700"
+                : "text-gray-500";
+            const circleColor = isActive
+              ? "bg-emerald-600 text-white"
+              : isPast
+                ? "bg-emerald-600 text-white"
+                : "bg-gray-200 text-gray-500";
             const lineColor = isPast ? "bg-emerald-600" : "bg-gray-300";
             const showLine = i < STEPS.length - 1;
             return (
               <li key={s.num} className="flex flex-col items-center">
-                <Link href={s.href(webinarId)} className="group flex flex-col items-center px-3">
+                <Link
+                  href={s.href(webinarId)}
+                  className="group flex flex-col items-center px-3"
+                >
                   <s.Icon className={cn("h-7 w-7 mb-1", iconColor)} />
                   <span className={cn("text-xs", labelColor)}>{s.label}</span>
                 </Link>
@@ -970,7 +1169,7 @@ export async function WizardShell({ webinarId, children }: WizardShellProps) {
                   <span
                     className={cn(
                       "z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                      circleColor
+                      circleColor,
                     )}
                   >
                     {s.num}
@@ -1010,6 +1209,7 @@ git commit -m "feat(web): redesign WizardShell with 9-step horizontal icon nav"
 ## Task 10: Step 1 form extension
 
 **Files:**
+
 - Modify: `apps/web/src/components/wizard/step-1-form.tsx`
 
 - [ ] **Step 1: Read current file**
@@ -1074,6 +1274,7 @@ git commit -m "feat(web): add accessFacilitated + videoSyncWithStart toggles to 
 ## Task 11: Step 2 form extension (timezone + template)
 
 **Files:**
+
 - Modify: `apps/web/src/components/wizard/step-2-form.tsx`
 
 - [ ] **Step 1: Replace timezone Input with TimezoneSelect**
@@ -1088,27 +1289,35 @@ import { WaitingTemplatePicker } from "@/components/wizard/waiting-template-pick
 Find the timezone field block:
 
 ```tsx
-      <div className="space-y-2">
-        <Label htmlFor="timezone">Fuso horário</Label>
-        <Input id="timezone" {...register("timezone")} placeholder="America/Sao_Paulo" />
-        {errors.timezone && <p className="text-sm text-destructive">{errors.timezone.message}</p>}
-      </div>
+<div className="space-y-2">
+  <Label htmlFor="timezone">Fuso horário</Label>
+  <Input
+    id="timezone"
+    {...register("timezone")}
+    placeholder="America/Sao_Paulo"
+  />
+  {errors.timezone && (
+    <p className="text-sm text-destructive">{errors.timezone.message}</p>
+  )}
+</div>
 ```
 
 Replace with:
 
 ```tsx
-      <div className="space-y-2">
-        <Label>Fuso horário</Label>
-        <Controller
-          control={control}
-          name="timezone"
-          render={({ field }) => (
-            <TimezoneSelect value={field.value} onChange={field.onChange} />
-          )}
-        />
-        {errors.timezone && <p className="text-sm text-destructive">{errors.timezone.message}</p>}
-      </div>
+<div className="space-y-2">
+  <Label>Fuso horário</Label>
+  <Controller
+    control={control}
+    name="timezone"
+    render={({ field }) => (
+      <TimezoneSelect value={field.value} onChange={field.onChange} />
+    )}
+  />
+  {errors.timezone && (
+    <p className="text-sm text-destructive">{errors.timezone.message}</p>
+  )}
+</div>
 ```
 
 - [ ] **Step 2: Add WaitingTemplatePicker**
@@ -1116,16 +1325,16 @@ Replace with:
 Inside the same form, BELOW the existing `waitingShowThumb` Switch (added in C) and ABOVE the `<input type="hidden" value={mode} ...>` (or wherever the form ends), insert:
 
 ```tsx
-      <div className="space-y-2">
-        <Label>Modelo da página de espera</Label>
-        <Controller
-          control={control}
-          name="waitingTemplate"
-          render={({ field }) => (
-            <WaitingTemplatePicker value={field.value} onChange={field.onChange} />
-          )}
-        />
-      </div>
+<div className="space-y-2">
+  <Label>Modelo da página de espera</Label>
+  <Controller
+    control={control}
+    name="waitingTemplate"
+    render={({ field }) => (
+      <WaitingTemplatePicker value={field.value} onChange={field.onChange} />
+    )}
+  />
+</div>
 ```
 
 - [ ] **Step 3: Typecheck**
@@ -1148,6 +1357,7 @@ git commit -m "feat(web): add TimezoneSelect + WaitingTemplatePicker to step 2"
 ## Task 12: Step 3 form REPLACE (3-column layout + LoginPreview)
 
 **Files:**
+
 - Modify: `apps/web/src/components/wizard/step-3-form.tsx`
 
 - [ ] **Step 1: Replace entire file**
@@ -1175,19 +1385,30 @@ export interface Step3FormProps {
   initial: Step3Input & { titleHint?: string };
 }
 
-const FIELD_KEYS: ReadonlyArray<"name" | "email" | "phone"> = ["name", "email", "phone"];
+const FIELD_KEYS: ReadonlyArray<"name" | "email" | "phone"> = [
+  "name",
+  "email",
+  "phone",
+];
 const FIELD_LABEL: Record<"name" | "email" | "phone", string> = {
   name: "Nome",
   email: "E-mail",
-  phone: "WhatsApp"
+  phone: "WhatsApp",
 };
 
 export function Step3Form({ webinarId, initial }: Step3FormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<Step3Input>({
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<Step3Input>({
     resolver: zodResolver(step3Schema),
-    defaultValues: initial
+    defaultValues: initial,
   });
 
   function onSubmit(values: Step3Input) {
@@ -1212,7 +1433,10 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
     setValue("formFieldOrder", order);
   }
 
-  function toggleFieldEnabled(key: "name" | "email" | "phone", enabled: boolean) {
+  function toggleFieldEnabled(
+    key: "name" | "email" | "phone",
+    enabled: boolean,
+  ) {
     if (key === "name") setValue("nameEnabled", enabled);
     if (key === "email") setValue("emailEnabled", enabled);
     if (key === "phone") setValue("phoneEnabled", enabled);
@@ -1233,8 +1457,16 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="logoUrl">Logo do webinar (URL)</Label>
-              <Input id="logoUrl" {...register("logoUrl")} placeholder="https://..." />
-              {errors.logoUrl && <p className="text-sm text-destructive">{errors.logoUrl.message}</p>}
+              <Input
+                id="logoUrl"
+                {...register("logoUrl")}
+                placeholder="https://..."
+              />
+              {errors.logoUrl && (
+                <p className="text-sm text-destructive">
+                  {errors.logoUrl.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Alinhamento do logo</Label>
@@ -1244,7 +1476,12 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                 render={({ field }) => (
                   <div className="flex gap-2">
                     {(["LEFT", "CENTER", "RIGHT"] as const).map((a) => {
-                      const Icon = a === "LEFT" ? AlignLeft : a === "CENTER" ? AlignCenter : AlignRight;
+                      const Icon =
+                        a === "LEFT"
+                          ? AlignLeft
+                          : a === "CENTER"
+                            ? AlignCenter
+                            : AlignRight;
                       const selected = field.value === a;
                       return (
                         <Button
@@ -1267,13 +1504,18 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
           </div>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Barra de progresso</legend>
+            <legend className="px-1 text-sm font-semibold">
+              Barra de progresso
+            </legend>
             <Controller
               control={control}
               name="progressEnabled"
               render={({ field }) => (
                 <label className="flex items-center gap-3">
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
                   <span className="text-sm">Exibir barra de progresso</span>
                 </label>
               )}
@@ -1292,14 +1534,24 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="progressBarColor">Cor da barra</Label>
-                  <Input id="progressBarColor" type="color" {...register("progressBarColor")} />
+                  <Input
+                    id="progressBarColor"
+                    type="color"
+                    {...register("progressBarColor")}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="progressTextColor">Cor do texto</Label>
-                  <Input id="progressTextColor" type="color" {...register("progressTextColor")} />
+                  <Input
+                    id="progressTextColor"
+                    type="color"
+                    {...register("progressTextColor")}
+                  />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <Label htmlFor="progressText">Texto (use {"{pct}"} para o número)</Label>
+                  <Label htmlFor="progressText">
+                    Texto (use {"{pct}"} para o número)
+                  </Label>
                   <Input id="progressText" {...register("progressText")} />
                 </div>
               </div>
@@ -1313,14 +1565,21 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="loginButtonColor">Cor do botão</Label>
-              <Input id="loginButtonColor" type="color" {...register("loginButtonColor")} />
+              <Input
+                id="loginButtonColor"
+                type="color"
+                {...register("loginButtonColor")}
+              />
             </div>
           </div>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Formulário de acesso à sala</legend>
+            <legend className="px-1 text-sm font-semibold">
+              Formulário de acesso à sala
+            </legend>
             <p className="text-xs text-muted-foreground">
-              Reordene os campos com as setas. Desative campos que não deseja exibir.
+              Reordene os campos com as setas. Desative campos que não deseja
+              exibir.
             </p>
             <Controller
               control={control}
@@ -1328,19 +1587,38 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               render={({ field }) => (
                 <ol className="space-y-2">
                   {field.value.map((key, idx) => (
-                    <li key={key} className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
-                      <span className="w-24 text-sm font-medium">{FIELD_LABEL[key]}</span>
+                    <li
+                      key={key}
+                      className="flex items-center gap-2 rounded-md border bg-muted/30 p-2"
+                    >
+                      <span className="w-24 text-sm font-medium">
+                        {FIELD_LABEL[key]}
+                      </span>
                       <div className="flex flex-1 items-center gap-3">
                         <Switch
                           checked={isFieldEnabled(key)}
                           onCheckedChange={(v) => toggleFieldEnabled(key, v)}
                         />
-                        <span className="text-xs text-muted-foreground">Exibir</span>
+                        <span className="text-xs text-muted-foreground">
+                          Exibir
+                        </span>
                       </div>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, -1)} aria-label="Subir">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => moveField(idx, -1)}
+                        aria-label="Subir"
+                      >
                         ↑
                       </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, 1)} aria-label="Descer">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => moveField(idx, 1)}
+                        aria-label="Descer"
+                      >
                         ↓
                       </Button>
                     </li>
@@ -1349,34 +1627,67 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               )}
             />
             {errors.formFieldOrder && (
-              <p className="text-sm text-destructive">{errors.formFieldOrder.message as string}</p>
+              <p className="text-sm text-destructive">
+                {errors.formFieldOrder.message as string}
+              </p>
             )}
           </fieldset>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Campos obrigatórios</legend>
-            <Controller control={control} name="nameRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir Nome como requisito obrigatório</span>
-              </label>
-            )} />
-            <Controller control={control} name="emailRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir E-mail como requisito obrigatório</span>
-              </label>
-            )} />
-            <Controller control={control} name="phoneRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir WhatsApp como requisito obrigatório</span>
-              </label>
-            )} />
+            <legend className="px-1 text-sm font-semibold">
+              Campos obrigatórios
+            </legend>
+            <Controller
+              control={control}
+              name="nameRequired"
+              render={({ field }) => (
+                <label className="flex items-center gap-3">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <span className="text-sm">
+                    Incluir Nome como requisito obrigatório
+                  </span>
+                </label>
+              )}
+            />
+            <Controller
+              control={control}
+              name="emailRequired"
+              render={({ field }) => (
+                <label className="flex items-center gap-3">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <span className="text-sm">
+                    Incluir E-mail como requisito obrigatório
+                  </span>
+                </label>
+              )}
+            />
+            <Controller
+              control={control}
+              name="phoneRequired"
+              render={({ field }) => (
+                <label className="flex items-center gap-3">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <span className="text-sm">
+                    Incluir WhatsApp como requisito obrigatório
+                  </span>
+                </label>
+              )}
+            />
           </fieldset>
 
           <fieldset className="space-y-3 rounded-md border p-4">
-            <legend className="px-1 text-sm font-semibold">Campos do formulário</legend>
+            <legend className="px-1 text-sm font-semibold">
+              Campos do formulário
+            </legend>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="space-y-1">
                 <Label htmlFor="namePlaceholder">Placeholder Nome</Label>
@@ -1384,11 +1695,17 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="emailPlaceholder">Placeholder E-mail</Label>
-                <Input id="emailPlaceholder" {...register("emailPlaceholder")} />
+                <Input
+                  id="emailPlaceholder"
+                  {...register("emailPlaceholder")}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="phonePlaceholder">Placeholder WhatsApp</Label>
-                <Input id="phonePlaceholder" {...register("phonePlaceholder")} />
+                <Input
+                  id="phonePlaceholder"
+                  {...register("phonePlaceholder")}
+                />
               </div>
             </div>
           </fieldset>
@@ -1408,7 +1725,11 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
             namePlaceholder={watch("namePlaceholder")}
             emailPlaceholder={watch("emailPlaceholder")}
             phonePlaceholder={watch("phonePlaceholder")}
-            formFieldOrder={watch("formFieldOrder") as ReadonlyArray<"name" | "email" | "phone">}
+            formFieldOrder={
+              watch("formFieldOrder") as ReadonlyArray<
+                "name" | "email" | "phone"
+              >
+            }
             progressEnabled={watch("progressEnabled")}
             progressStartPct={watch("progressStartPct")}
             progressBarColor={watch("progressBarColor")}
@@ -1444,6 +1765,7 @@ git commit -m "feat(web): replace step 3 form with 3-column layout + live previe
 ## Task 13: `updateWebinarStep1` action extension
 
 **Files:**
+
 - Modify: `apps/web/src/server/actions/webinar.ts`
 
 - [ ] **Step 1: Find `updateWebinarStep1` and extend the prisma update**
@@ -1451,17 +1773,17 @@ git commit -m "feat(web): replace step 3 form with 3-column layout + live previe
 Open the file. Find `export async function updateWebinarStep1(...)`. Find the `prisma.webinar.update` call inside. Add the two new fields:
 
 ```ts
-  await prisma.webinar.update({
-    where: { id },
-    data: {
-      name: parsed.data.name,
-      title: parsed.data.title,
-      slug: parsed.data.slug,
-      language: parsed.data.language,
-      accessFacilitated: parsed.data.accessFacilitated,
-      videoSyncWithStart: parsed.data.videoSyncWithStart
-    }
-  });
+await prisma.webinar.update({
+  where: { id },
+  data: {
+    name: parsed.data.name,
+    title: parsed.data.title,
+    slug: parsed.data.slug,
+    language: parsed.data.language,
+    accessFacilitated: parsed.data.accessFacilitated,
+    videoSyncWithStart: parsed.data.videoSyncWithStart,
+  },
+});
 ```
 
 (If the existing call uses different field assignment style, preserve it — just add the two new lines.)
@@ -1486,6 +1808,7 @@ git commit -m "feat(web): persist accessFacilitated + videoSyncWithStart in upda
 ## Task 14: `updateWebinarStep2` action extension
 
 **Files:**
+
 - Modify: `apps/web/src/server/actions/webinar.ts`
 
 - [ ] **Step 1: Add `waitingTemplate` to update**
@@ -1523,6 +1846,7 @@ git commit -m "feat(web): persist waitingTemplate in updateWebinarStep2 (back-co
 ## Task 15: `updateWebinarStep3` action extension
 
 **Files:**
+
 - Modify: `apps/web/src/server/actions/webinar.ts`
 
 - [ ] **Step 1: Add new fields to update**
@@ -1559,6 +1883,7 @@ git commit -m "feat(web): persist D1 login fields in updateWebinarStep3"
 ## Task 16: Wizard step pages — pass new initial values
 
 **Files:**
+
 - Modify: `apps/web/src/app/dashboard/webinars/[id]/(wizard)/step-1/page.tsx`
 - Modify: `apps/web/src/app/dashboard/webinars/[id]/(wizard)/step-2/page.tsx`
 - Modify: `apps/web/src/app/dashboard/webinars/[id]/(wizard)/step-3/page.tsx`
@@ -1577,7 +1902,7 @@ Open the file. Find the `initial={{...}}` prop. Add at end of object:
 Find `initial={{...}}`. Add at end of object:
 
 ```tsx
-        waitingTemplate: w.waitingTemplate
+waitingTemplate: w.waitingTemplate;
 ```
 
 - [ ] **Step 3: step-3/page.tsx — extend initial**
@@ -1617,6 +1942,7 @@ git commit -m "feat(web): wire new D1 fields through wizard step pages"
 ## Task 17: `publicWebinarDto` extension
 
 **Files:**
+
 - Modify: `apps/web/src/lib/public-dto.ts`
 
 - [ ] **Step 1: Add new fields to PublicWebinar type**
@@ -1626,7 +1952,12 @@ Open the file. Find the `PublicWebinar` type. Add fields:
 ```ts
 export type PublicWebinar = {
   // ... existing fields preserved
-  waitingTemplate: "DEFAULT" | "WITH_THUMB" | "IMMERSIVE" | "MINIMAL" | "FEATURES";
+  waitingTemplate:
+    | "DEFAULT"
+    | "WITH_THUMB"
+    | "IMMERSIVE"
+    | "MINIMAL"
+    | "FEATURES";
   loginLogoAlign: "LEFT" | "CENTER" | "RIGHT";
   progressEnabled: boolean;
   progressStartPct: number;
@@ -1672,6 +2003,7 @@ git commit -m "feat(web): expose D1 visual fields in publicWebinarDto"
 ## Task 18: CaptureForm public-side updates
 
 **Files:**
+
 - Modify: `apps/web/src/app/[slug]/_components/capture-form.tsx`
 
 - [ ] **Step 1: Read current file + replace render JSX**
@@ -1688,7 +2020,7 @@ Replace the entire JSX block from `<main>` to `</main>` with:
 const ALIGN_CLASS: Record<"LEFT" | "CENTER" | "RIGHT", string> = {
   LEFT: "justify-start",
   CENTER: "justify-center",
-  RIGHT: "justify-end"
+  RIGHT: "justify-end",
 };
 ```
 
@@ -1728,7 +2060,7 @@ Then in the return statement, replace the structure with:
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
       <div className={`mb-6 flex w-full ${ALIGN_CLASS[w.loginLogoAlign]}`}>
-        {w.logoUrl ? <img src={w.logoUrl} alt="" className="h-14 object-contain" /> : null}
+        {w.logoUrl ? <img src={w.logoUrl} alt="" className="h-auto object-contain" /> : null}
       </div>
       {w.progressEnabled ? <ProgressBar w={w} /> : null}
       <h1 className="text-center text-3xl font-semibold">{w.title}</h1>
@@ -1798,6 +2130,7 @@ git commit -m "feat(web): CaptureForm honors logoAlign + progressBar + formField
 ## Task 19: CountdownView template branching
 
 **Files:**
+
 - Modify: `apps/web/src/app/[slug]/_components/countdown-view.tsx`
 
 - [ ] **Step 1: Replace JSX with template switch**
@@ -1816,7 +2149,7 @@ Open the file. After the `useEffect` that updates `remaining`, REPLACE the retur
   if (w.waitingTemplate === "FEATURES") {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-10">
-        {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+        {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
         <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
         <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -1843,7 +2176,7 @@ Open the file. After the `useEffect` that updates `remaining`, REPLACE the retur
           />
         ) : null}
         <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+          {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
           <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
           <p className="mt-2 text-white/80">{w.waitingSubtitle}</p>
           <p className="mt-8 font-mono text-6xl tabular-nums" aria-live="polite">{fmt(remaining)}</p>
@@ -1858,7 +2191,7 @@ Open the file. After the `useEffect` that updates `remaining`, REPLACE the retur
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" /> : null}
       <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
       <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
       {thumb ? (
@@ -1892,6 +2225,7 @@ git commit -m "feat(web): CountdownView branches on waitingTemplate (5 variants)
 ## Task 20: Tests — server actions D1 coverage
 
 **Files:**
+
 - Modify: `apps/web/src/test/server/actions/webinar.test.ts`
 
 - [ ] **Step 1: Update existing tests for new schema requirements**
@@ -1915,12 +2249,17 @@ At the bottom of the existing `describe` block (or a new one), add:
 ```ts
 describe("updateWebinarStep1 D1 fields", () => {
   it("persists accessFacilitated + videoSyncWithStart", async () => {
-    const { createDraftWebinar, updateWebinarStep1 } = await import("@/server/actions/webinar?" + Date.now());
+    const { createDraftWebinar, updateWebinarStep1 } = await import(
+      "@/server/actions/webinar?" + Date.now()
+    );
     const { id } = await createDraftWebinar();
     const r = await updateWebinarStep1(id, {
-      name: "X", title: "X", slug: "d1-test-1", language: "pt-BR",
+      name: "X",
+      title: "X",
+      slug: "d1-test-1",
+      language: "pt-BR",
       accessFacilitated: true,
-      videoSyncWithStart: false
+      videoSyncWithStart: false,
     });
     expect(r).toEqual({ ok: true });
     const after = await prisma.webinar.findUnique({ where: { id } });
@@ -1931,17 +2270,26 @@ describe("updateWebinarStep1 D1 fields", () => {
 
 describe("updateWebinarStep2 waitingTemplate", () => {
   it("setting WITH_THUMB also sets waitingShowThumb=true", async () => {
-    const { createDraftWebinar, updateWebinarStep1, updateWebinarStep2 } = await import("@/server/actions/webinar?" + (Date.now() + 1));
+    const { createDraftWebinar, updateWebinarStep1, updateWebinarStep2 } =
+      await import("@/server/actions/webinar?" + (Date.now() + 1));
     const { id } = await createDraftWebinar();
-    await updateWebinarStep1(id, { name: "X", title: "X", slug: "d1-test-2", language: "pt-BR", accessFacilitated: false, videoSyncWithStart: true });
+    await updateWebinarStep1(id, {
+      name: "X",
+      title: "X",
+      slug: "d1-test-2",
+      language: "pt-BR",
+      accessFacilitated: false,
+      videoSyncWithStart: true,
+    });
     await updateWebinarStep2(id, {
       mode: "UNICO",
       startDate: new Date("2026-06-01T10:00:00Z"),
       endDate: new Date("2026-06-01T11:00:00Z"),
       timezone: "America/Sao_Paulo",
-      waitingTitle: "Sala", waitingSubtitle: "",
+      waitingTitle: "Sala",
+      waitingSubtitle: "",
       waitingShowThumb: false,
-      waitingTemplate: "WITH_THUMB"
+      waitingTemplate: "WITH_THUMB",
     });
     const after = await prisma.webinar.findUnique({ where: { id } });
     expect(after?.waitingTemplate).toBe("WITH_THUMB");
@@ -1970,6 +2318,7 @@ git commit -m "test(web): cover D1 server-action additions + extend existing fix
 ## Task 21: Tests — components rendering
 
 **Files:**
+
 - Create: `apps/web/src/test/components/login-preview.test.tsx`
 
 - [ ] **Step 1: Implement test**
@@ -1997,7 +2346,7 @@ const baseProps = {
   progressStartPct: 50,
   progressBarColor: "#dc2626",
   progressTextColor: "#ffffff",
-  progressText: "{pct}% das vagas..."
+  progressText: "{pct}% das vagas...",
 };
 
 describe("LoginPreview", () => {
@@ -2008,15 +2357,29 @@ describe("LoginPreview", () => {
   });
 
   it("respects formFieldOrder excluding disabled phone", () => {
-    render(<LoginPreview {...baseProps} formFieldOrder={["phone", "name", "email"]} />);
+    render(
+      <LoginPreview
+        {...baseProps}
+        formFieldOrder={["phone", "name", "email"]}
+      />,
+    );
     const inputs = screen.getAllByRole("textbox");
     // phone disabled -> only name (text) + email (email type, not textbox role)
-    expect(inputs.some((el) => el.getAttribute("placeholder") === "Nome")).toBe(true);
+    expect(inputs.some((el) => el.getAttribute("placeholder") === "Nome")).toBe(
+      true,
+    );
     expect(screen.queryByPlaceholderText("Tel")).toBeNull();
   });
 
   it("shows progress text with pct substituted when enabled", () => {
-    render(<LoginPreview {...baseProps} progressEnabled progressStartPct={75} progressText="{pct}% feito" />);
+    render(
+      <LoginPreview
+        {...baseProps}
+        progressEnabled
+        progressStartPct={75}
+        progressText="{pct}% feito"
+      />,
+    );
     expect(screen.getByText(/75% feito/)).toBeInTheDocument();
   });
 });
@@ -2042,6 +2405,7 @@ git commit -m "test(web): cover LoginPreview render + ordering + progress"
 ## Task 22: Final acceptance + README
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Run full suite**

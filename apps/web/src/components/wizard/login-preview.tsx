@@ -43,16 +43,17 @@ export function LoginPreview(props: LoginPreviewProps) {
     <div className="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase text-muted-foreground">Prévia</p>
       <div className={cn("flex w-full", ALIGN_CLASS[props.loginLogoAlign])}>
-        {props.logoUrl ? <img src={props.logoUrl} alt="" className="h-12 object-contain" /> : <div className="h-12" />}
+        {props.logoUrl ? <img src={props.logoUrl} alt="" className="h-auto object-contain" /> : <div className="h-12" />}
       </div>
       {props.progressEnabled ? (
-        <div className="overflow-hidden rounded-full" style={{ background: props.progressBarColor }}>
+        <div className="relative flex h-8 rounded-full border border-zinc-300 bg-zinc-100 p-1">
           <div
-            className="px-3 py-1.5 text-center text-xs font-semibold"
-            style={{ color: props.progressTextColor }}
-          >
+            className="flex rounded-full px-5 py-1 text-xs font-medium"
+            style={{ width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: props.progressBarColor, color: props.progressTextColor }}
+          />
+          <p className="absolute left-5 top-[7px] text-xs" style={{ color: props.progressTextColor }}>
             {progressMessage}
-          </div>
+          </p>
         </div>
       ) : null}
       <p className="text-base font-semibold">{props.title}</p>

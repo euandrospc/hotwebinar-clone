@@ -11,6 +11,7 @@
 **Spec:** [`docs/superpowers/specs/2026-05-04-mvp-C-lead-player-design.md`](../specs/2026-05-04-mvp-C-lead-player-design.md)
 
 **Sub-plan series:**
+
 - A — Foundation ✅
 - B1 — Admin Webinar CRUD ✅
 - B2 — Video pipeline ✅
@@ -106,6 +107,7 @@ README.md                                        EXTEND
 ## Task 1: Prisma migration `c_lead_player_webhook`
 
 **Files:**
+
 - Modify: `packages/db/prisma/schema.prisma`
 
 - [ ] **Step 1: Extend `EventKind` enum**
@@ -276,6 +278,7 @@ git commit -m "feat(db): add LeadChatMessage, WebhookDelivery, CtaView + webhook
 ## Task 2: `lib/slug-blacklist.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/slug-blacklist.ts`
 - Create: `apps/web/src/test/lib/slug-blacklist.test.ts`
 - Modify: `apps/web/src/lib/validations/webinar.ts`
@@ -337,7 +340,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "static",
   "favicon.ico",
   "robots.txt",
-  "sitemap.xml"
+  "sitemap.xml",
 ]);
 
 export function isReservedSlug(slug: string): boolean {
@@ -366,7 +369,9 @@ export const slugSchema = z
   .min(3)
   .max(60)
   .regex(/^[a-z0-9-]+$/, "Slug: minúsculas, números e hífen apenas")
-  .refine((s) => !isReservedSlug(s), { message: "Slug reservado, escolha outro" });
+  .refine((s) => !isReservedSlug(s), {
+    message: "Slug reservado, escolha outro",
+  });
 ```
 
 - [ ] **Step 6: Verify existing webinar validations test still passes**
@@ -389,6 +394,7 @@ git commit -m "feat(web): add reserved slug blacklist + zod refinement"
 ## Task 3: `packages/jobs` webhook queue extension
 
 **Files:**
+
 - Modify: `packages/jobs/src/types.ts`
 - Modify: `packages/jobs/src/queue.ts`
 - Modify: `packages/jobs/src/index.ts`
@@ -460,7 +466,9 @@ export function getVideoQueue(): Queue {
 
 export function getWebhookQueue(): Queue {
   if (cachedWebhook) return cachedWebhook;
-  cachedWebhook = new Queue(QUEUE_WEBHOOK, { connection: getRedisConnection() });
+  cachedWebhook = new Queue(QUEUE_WEBHOOK, {
+    connection: getRedisConnection(),
+  });
   return cachedWebhook;
 }
 ```
@@ -495,6 +503,7 @@ git commit -m "feat(jobs): add webhook queue + dispatch-webhook job + WebhookEve
 ## Task 4: `lib/lead-session.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/lead-session.ts`
 - Create: `apps/web/src/test/lib/lead-session.test.ts`
 
@@ -561,19 +570,26 @@ import crypto from "node:crypto";
 
 function getSecret(): string {
   const v = process.env.LEAD_SESSION_SECRET;
-  if (!v || v.length < 16) throw new Error("Missing or too-short env: LEAD_SESSION_SECRET");
+  if (!v || v.length < 16)
+    throw new Error("Missing or too-short env: LEAD_SESSION_SECRET");
   return v;
 }
 
 function sign(leadId: string): string {
-  return crypto.createHmac("sha256", getSecret()).update(leadId).digest("hex").slice(0, 32);
+  return crypto
+    .createHmac("sha256", getSecret())
+    .update(leadId)
+    .digest("hex")
+    .slice(0, 32);
 }
 
 export function signLeadCookie(leadId: string): string {
   return `${sign(leadId)}.${leadId}`;
 }
 
-export function verifyLeadCookie(cookie: string | null | undefined): string | null {
+export function verifyLeadCookie(
+  cookie: string | null | undefined,
+): string | null {
   if (!cookie) return null;
   const dot = cookie.indexOf(".");
   if (dot <= 0 || dot === cookie.length - 1) return null;
@@ -609,6 +625,7 @@ git commit -m "feat(web): add HMAC-signed lead session cookie helpers"
 ## Task 5: `lib/sync.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/sync.ts`
 - Create: `apps/web/src/test/lib/sync.test.ts`
 
@@ -621,30 +638,41 @@ import { computePhase, computeInitialOffset } from "@/lib/sync";
 const baseUnico = {
   mode: "UNICO" as const,
   startDate: new Date("2026-05-04T14:00:00Z"),
-  endDate: new Date("2026-05-04T15:00:00Z")
+  endDate: new Date("2026-05-04T15:00:00Z"),
 };
 
 const baseJit = {
   mode: "JIT" as const,
   startDate: null,
-  endDate: null
+  endDate: null,
 };
 
 describe("computePhase", () => {
   it("UNICO returns 'before' before startDate", () => {
-    expect(computePhase(baseUnico, new Date("2026-05-04T13:30:00Z"))).toBe("before");
+    expect(computePhase(baseUnico, new Date("2026-05-04T13:30:00Z"))).toBe(
+      "before",
+    );
   });
 
   it("UNICO returns 'open' between start and end", () => {
-    expect(computePhase(baseUnico, new Date("2026-05-04T14:30:00Z"))).toBe("open");
+    expect(computePhase(baseUnico, new Date("2026-05-04T14:30:00Z"))).toBe(
+      "open",
+    );
   });
 
   it("UNICO returns 'closed' after endDate", () => {
-    expect(computePhase(baseUnico, new Date("2026-05-04T15:30:00Z"))).toBe("closed");
+    expect(computePhase(baseUnico, new Date("2026-05-04T15:30:00Z"))).toBe(
+      "closed",
+    );
   });
 
   it("UNICO without startDate is always 'open'", () => {
-    expect(computePhase({ ...baseUnico, startDate: null, endDate: null }, new Date())).toBe("open");
+    expect(
+      computePhase(
+        { ...baseUnico, startDate: null, endDate: null },
+        new Date(),
+      ),
+    ).toBe("open");
   });
 
   it("JIT is always 'open'", () => {
@@ -661,7 +689,7 @@ describe("computeInitialOffset", () => {
       baseUnico,
       lead,
       new Date("2026-05-04T14:30:00Z"),
-      videoDuration
+      videoDuration,
     );
     expect(offset).toBe(30 * 60); // 30 min
   });
@@ -671,7 +699,7 @@ describe("computeInitialOffset", () => {
       baseJit,
       lead,
       new Date("2026-05-04T14:25:00Z"),
-      videoDuration
+      videoDuration,
     );
     expect(offset).toBe(15 * 60); // 15 min after sessionStart
   });
@@ -681,7 +709,7 @@ describe("computeInitialOffset", () => {
       baseUnico,
       lead,
       new Date("2026-05-04T13:30:00Z"),
-      videoDuration
+      videoDuration,
     );
     expect(offset).toBe(0);
   });
@@ -691,7 +719,7 @@ describe("computeInitialOffset", () => {
       baseUnico,
       lead,
       new Date("2026-05-04T18:00:00Z"),
-      videoDuration
+      videoDuration,
     );
     expect(offset).toBe(videoDuration);
   });
@@ -738,10 +766,11 @@ export function computeInitialOffset(
   w: SyncWebinar,
   lead: SyncLead,
   now: Date,
-  videoDurationSec: number | null
+  videoDurationSec: number | null,
 ): number {
   if (videoDurationSec == null || videoDurationSec <= 0) return 0;
-  const anchor = w.mode === "UNICO" && w.startDate ? w.startDate : lead.sessionStart;
+  const anchor =
+    w.mode === "UNICO" && w.startDate ? w.startDate : lead.sessionStart;
   const diffSec = Math.floor((now.getTime() - anchor.getTime()) / 1000);
   if (diffSec <= 0) return 0;
   return Math.min(diffSec, videoDurationSec);
@@ -768,6 +797,7 @@ git commit -m "feat(web): add sync helpers (computePhase + computeInitialOffset)
 ## Task 6: `lib/public-dto.ts`
 
 **Files:**
+
 - Create: `apps/web/src/lib/public-dto.ts`
 - Create: `apps/web/src/test/lib/public-dto.test.ts`
 
@@ -775,24 +805,43 @@ git commit -m "feat(web): add sync helpers (computePhase + computeInitialOffset)
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { publicWebinarDto, publicVideoDto, publicLeadDto } from "@/lib/public-dto";
+import {
+  publicWebinarDto,
+  publicVideoDto,
+  publicLeadDto,
+} from "@/lib/public-dto";
 
 describe("publicWebinarDto", () => {
   it("excludes sensitive fields", () => {
     const w: any = {
-      id: "w1", slug: "test", title: "T", name: "N",
-      mode: "UNICO", startDate: null, endDate: null, timezone: "America/Sao_Paulo",
-      waitingTitle: "Wait", waitingSubtitle: "Sub",
-      logoUrl: null, primaryColor: "#000000",
-      loginButtonText: "Entrar", loginButtonColor: "#16a34a",
-      nameEnabled: true, nameRequired: true, namePlaceholder: "Nome",
-      emailEnabled: true, emailRequired: true, emailPlaceholder: "Email",
-      phoneEnabled: false, phoneRequired: false, phonePlaceholder: "Tel",
+      id: "w1",
+      slug: "test",
+      title: "T",
+      name: "N",
+      mode: "UNICO",
+      startDate: null,
+      endDate: null,
+      timezone: "America/Sao_Paulo",
+      waitingTitle: "Wait",
+      waitingSubtitle: "Sub",
+      logoUrl: null,
+      primaryColor: "#000000",
+      loginButtonText: "Entrar",
+      loginButtonColor: "#16a34a",
+      nameEnabled: true,
+      nameRequired: true,
+      namePlaceholder: "Nome",
+      emailEnabled: true,
+      emailRequired: true,
+      emailPlaceholder: "Email",
+      phoneEnabled: false,
+      phoneRequired: false,
+      phonePlaceholder: "Tel",
       pitchAtSec: 600,
       ownerId: "secret-owner",
       videoId: "secret-video",
       webhookUrl: "https://secret.example",
-      webhookOnOptin: true
+      webhookOnOptin: true,
     };
     const out = publicWebinarDto(w);
     expect(out.title).toBe("T");
@@ -817,7 +866,7 @@ describe("publicVideoDto", () => {
       customThumbUrl: null,
       originalUrl: "secret-key/raw.mp4",
       ownerId: "secret",
-      bytes: 12345n
+      bytes: 12345n,
     };
     const out = publicVideoDto(v);
     expect(out?.hlsUrl).toBe("https://hls.example/master.m3u8");
@@ -830,12 +879,13 @@ describe("publicVideoDto", () => {
 describe("publicLeadDto", () => {
   it("only exposes id and name", () => {
     const l: any = {
-      id: "l1", name: "Joe",
+      id: "l1",
+      name: "Joe",
       email: "joe@example.com",
       phone: "+5511999990000",
       ip: "1.2.3.4",
       watchedSec: 120,
-      pitchFired: true
+      pitchFired: true,
     };
     const out = publicLeadDto(l);
     expect(out).toEqual({ id: "l1", name: "Joe" });
@@ -871,9 +921,15 @@ export type PublicWebinar = {
   primaryColor: string | null;
   loginButtonText: string;
   loginButtonColor: string;
-  nameEnabled: boolean; nameRequired: boolean; namePlaceholder: string;
-  emailEnabled: boolean; emailRequired: boolean; emailPlaceholder: string;
-  phoneEnabled: boolean; phoneRequired: boolean; phonePlaceholder: string;
+  nameEnabled: boolean;
+  nameRequired: boolean;
+  namePlaceholder: string;
+  emailEnabled: boolean;
+  emailRequired: boolean;
+  emailPlaceholder: string;
+  phoneEnabled: boolean;
+  phoneRequired: boolean;
+  phonePlaceholder: string;
   pitchAtSec: number | null;
 };
 
@@ -893,10 +949,16 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     primaryColor: w.primaryColor,
     loginButtonText: w.loginButtonText,
     loginButtonColor: w.loginButtonColor,
-    nameEnabled: w.nameEnabled, nameRequired: w.nameRequired, namePlaceholder: w.namePlaceholder,
-    emailEnabled: w.emailEnabled, emailRequired: w.emailRequired, emailPlaceholder: w.emailPlaceholder,
-    phoneEnabled: w.phoneEnabled, phoneRequired: w.phoneRequired, phonePlaceholder: w.phonePlaceholder,
-    pitchAtSec: w.pitchAtSec
+    nameEnabled: w.nameEnabled,
+    nameRequired: w.nameRequired,
+    namePlaceholder: w.namePlaceholder,
+    emailEnabled: w.emailEnabled,
+    emailRequired: w.emailRequired,
+    emailPlaceholder: w.emailPlaceholder,
+    phoneEnabled: w.phoneEnabled,
+    phoneRequired: w.phoneRequired,
+    phonePlaceholder: w.phonePlaceholder,
+    pitchAtSec: w.pitchAtSec,
   };
 }
 
@@ -913,7 +975,7 @@ export function publicVideoDto(v: Video | null): PublicVideo | null {
     hlsUrl: v.hlsUrl,
     durationSec: v.durationSec,
     thumbUrl: v.thumbUrl,
-    customThumbUrl: v.customThumbUrl
+    customThumbUrl: v.customThumbUrl,
   };
 }
 
@@ -947,6 +1009,7 @@ git commit -m "feat(web): add public DTOs preventing data leakage"
 ## Task 7: `lib/rate-limit.ts` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/lib/rate-limit.ts`
 - Create: `apps/web/src/test/lib/rate-limit.test.ts`
 
@@ -1029,7 +1092,7 @@ export function createLimiter(opts: LimiterOptions): Limiter {
       if (b.count >= opts.max) return false;
       b.count += 1;
       return true;
-    }
+    },
   };
 }
 
@@ -1057,6 +1120,7 @@ git commit -m "feat(web): add in-memory Map rate-limiter"
 ## Task 8: `lib/webhook.ts` (TDD with mocks)
 
 **Files:**
+
 - Create: `apps/web/src/lib/webhook.ts`
 - Create: `apps/web/src/test/lib/webhook.test.ts`
 
@@ -1069,7 +1133,7 @@ import { prisma } from "db";
 const queueAddMock = vi.fn(async () => ({ id: "j1" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 const TEST_USER = { id: "wh-user", email: "wh@example.com", name: "WH" };
@@ -1092,12 +1156,14 @@ async function makeWebinar(overrides: any = {}) {
   return prisma.webinar.create({
     data: {
       ownerId: TEST_USER.id,
-      name: "T", title: "T", slug: "test-" + Math.random().toString(36).slice(2, 8),
+      name: "T",
+      title: "T",
+      slug: "test-" + Math.random().toString(36).slice(2, 8),
       status: "ACTIVE",
       webhookUrl: "https://hooks.example/x",
       webhookOnOptin: true,
-      ...overrides
-    }
+      ...overrides,
+    },
   });
 }
 
@@ -1106,7 +1172,7 @@ describe("enqueueWebhook", () => {
     const { enqueueWebhook } = await import("@/lib/webhook");
     const w = await makeWebinar();
     const lead = await prisma.lead.create({
-      data: { webinarId: w.id, name: "Joe", email: "j@e.com" }
+      data: { webinarId: w.id, name: "Joe", email: "j@e.com" },
     });
     await enqueueWebhook(w, "lead_novo", lead);
 
@@ -1118,7 +1184,7 @@ describe("enqueueWebhook", () => {
     expect(queueAddMock).toHaveBeenCalledWith(
       "dispatch-webhook",
       { deliveryId: deliveries[0].id },
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
@@ -1131,7 +1197,9 @@ describe("enqueueWebhook", () => {
   });
 
   it("skips when webhookUrl is null", async () => {
-    const { enqueueWebhook } = await import("@/lib/webhook?" + (Date.now() + 1));
+    const { enqueueWebhook } = await import(
+      "@/lib/webhook?" + (Date.now() + 1)
+    );
     const w = await makeWebinar({ webhookUrl: null });
     await enqueueWebhook(w, "lead_novo", null);
     expect(await prisma.webhookDelivery.count()).toBe(0);
@@ -1139,10 +1207,12 @@ describe("enqueueWebhook", () => {
   });
 
   it("payload includes webinarSlug + lead public dto", async () => {
-    const { enqueueWebhook } = await import("@/lib/webhook?" + (Date.now() + 2));
+    const { enqueueWebhook } = await import(
+      "@/lib/webhook?" + (Date.now() + 2)
+    );
     const w = await makeWebinar({ slug: "myhook" });
     const lead = await prisma.lead.create({
-      data: { webinarId: w.id, name: "Joe", email: "j@e.com", phone: "+5511" }
+      data: { webinarId: w.id, name: "Joe", email: "j@e.com", phone: "+5511" },
     });
     await enqueueWebhook(w, "lead_novo", lead);
     const d = await prisma.webhookDelivery.findFirst();
@@ -1179,7 +1249,7 @@ const FLAG_BY_EVENT: Record<WebhookEvent, keyof Webinar> = {
   lead_clicou_oferta: "webhookOnCtaClick",
   lead_viu_pitch: "webhookOnPitchReached",
   lead_permaneceu: "webhookOnPermanence",
-  lead_saiu: "webhookOnLeave"
+  lead_saiu: "webhookOnLeave",
 };
 
 export function isEventEnabled(w: Webinar, event: WebhookEvent): boolean {
@@ -1191,7 +1261,7 @@ export async function enqueueWebhook(
   webinar: Webinar,
   event: WebhookEvent,
   lead: Lead | null,
-  context: { videoSec?: number; ctaId?: string } = {}
+  context: { videoSec?: number; ctaId?: string } = {},
 ): Promise<void> {
   if (!webinar.webhookUrl) return;
   if (!isEventEnabled(webinar, event)) return;
@@ -1203,7 +1273,7 @@ export async function enqueueWebhook(
     leadId: lead?.id ?? null,
     lead: lead ? publicLeadDto(lead) : null,
     context,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   const delivery = await prisma.webhookDelivery.create({
@@ -1213,8 +1283,8 @@ export async function enqueueWebhook(
       event,
       url: webinar.webhookUrl,
       payload,
-      status: "PENDING"
-    }
+      status: "PENDING",
+    },
   });
 
   await getWebhookQueue().add(
@@ -1224,8 +1294,8 @@ export async function enqueueWebhook(
       attempts: 3,
       backoff: { type: "exponential", delay: 30_000 },
       removeOnComplete: 100,
-      removeOnFail: 100
-    }
+      removeOnFail: 100,
+    },
   );
 }
 ```
@@ -1250,6 +1320,7 @@ git commit -m "feat(web): add enqueueWebhook + isEventEnabled helpers"
 ## Task 9: Server action `submitOptin` (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/server/actions/public.ts`
 - Create: `apps/web/src/test/server/actions/public-optin.test.ts`
 
@@ -1268,13 +1339,13 @@ const getCookieMock = vi.fn((name: string) => cookieStore.get(name));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
     get: getCookieMock,
-    set: setCookieMock
+    set: setCookieMock,
   }),
   headers: async () =>
     new Headers({
       "x-forwarded-for": "1.2.3.4",
-      "user-agent": "TestAgent/1.0"
-    })
+      "user-agent": "TestAgent/1.0",
+    }),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -1282,7 +1353,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const queueAddMock = vi.fn(async () => ({ id: "j1" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 const redirectMock = vi.fn((url: string) => {
@@ -1313,17 +1384,23 @@ afterAll(async () => prisma.$disconnect());
 async function makeWebinar(overrides: any = {}) {
   return prisma.webinar.create({
     data: {
-      ownerId: TEST_USER.id, name: "T", title: "T",
+      ownerId: TEST_USER.id,
+      name: "T",
+      title: "T",
       slug: overrides.slug ?? "po-" + Math.random().toString(36).slice(2, 8),
       status: "ACTIVE",
-      ...overrides
-    }
+      ...overrides,
+    },
   });
 }
 
 describe("submitOptin", () => {
   it("creates new lead, sets cookie, redirects to /<slug>/live", async () => {
-    const w = await makeWebinar({ slug: "demo-1", webhookUrl: "https://x", webhookOnOptin: true });
+    const w = await makeWebinar({
+      slug: "demo-1",
+      webhookUrl: "https://x",
+      webhookOnOptin: true,
+    });
     const { submitOptin } = await import("@/server/actions/public");
 
     const fd = new FormData();
@@ -1331,16 +1408,24 @@ describe("submitOptin", () => {
     fd.set("email", "joe@example.com");
     fd.set("phone", "+5511999990000");
 
-    await expect(submitOptin("demo-1", fd)).rejects.toThrow(/__redirect:\/demo-1\/live/);
+    await expect(submitOptin("demo-1", fd)).rejects.toThrow(
+      /__redirect:\/demo-1\/live/,
+    );
 
-    const lead = await prisma.lead.findFirst({ where: { email: "joe@example.com" } });
+    const lead = await prisma.lead.findFirst({
+      where: { email: "joe@example.com" },
+    });
     expect(lead).not.toBeNull();
     expect(lead?.name).toBe("Joe");
     expect(lead?.webinarId).toBe(w.id);
     expect(setCookieMock).toHaveBeenCalledWith(
       "hw_lead",
       expect.stringMatching(/^[a-f0-9]{32}\./),
-      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/demo-1" })
+      expect.objectContaining({
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/demo-1",
+      }),
     );
     const events = await prisma.event.findMany({ where: { kind: "OPTIN" } });
     expect(events).toHaveLength(1);
@@ -1351,12 +1436,16 @@ describe("submitOptin", () => {
     const w = await makeWebinar({ slug: "demo-2" });
     const orig = await prisma.lead.create({
       data: {
-        webinarId: w.id, name: "Old Name", email: "joe@example.com",
+        webinarId: w.id,
+        name: "Old Name",
+        email: "joe@example.com",
         sessionStart: new Date("2026-05-01T00:00:00Z"),
-        lastSeenAt: new Date("2026-05-01T00:00:00Z")
-      }
+        lastSeenAt: new Date("2026-05-01T00:00:00Z"),
+      },
     });
-    const { submitOptin } = await import("@/server/actions/public?" + Date.now());
+    const { submitOptin } = await import(
+      "@/server/actions/public?" + Date.now()
+    );
 
     const fd = new FormData();
     fd.set("name", "New Name");
@@ -1367,23 +1456,32 @@ describe("submitOptin", () => {
 
     const after = await prisma.lead.findUnique({ where: { id: orig.id } });
     expect(after?.name).toBe("New Name");
-    expect(after?.lastSeenAt.getTime()).toBeGreaterThan(orig.lastSeenAt.getTime());
+    expect(after?.lastSeenAt.getTime()).toBeGreaterThan(
+      orig.lastSeenAt.getTime(),
+    );
     expect(await prisma.lead.count()).toBe(1);
   });
 
   it("returns error when slug not found", async () => {
-    const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 1));
+    const { submitOptin } = await import(
+      "@/server/actions/public?" + (Date.now() + 1)
+    );
     const fd = new FormData();
-    fd.set("name", "Joe"); fd.set("email", "j@e.com"); fd.set("phone", "+5511999990000");
+    fd.set("name", "Joe");
+    fd.set("email", "j@e.com");
+    fd.set("phone", "+5511999990000");
     const r = await submitOptin("nonexistent", fd);
     expect(r).toMatchObject({ error: { message: expect.any(String) } });
   });
 
   it("returns error when required field missing per webinar flags", async () => {
     await makeWebinar({ slug: "demo-3", phoneRequired: true });
-    const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 2));
+    const { submitOptin } = await import(
+      "@/server/actions/public?" + (Date.now() + 2)
+    );
     const fd = new FormData();
-    fd.set("name", "Joe"); fd.set("email", "j@e.com");
+    fd.set("name", "Joe");
+    fd.set("email", "j@e.com");
     const r = await submitOptin("demo-3", fd);
     expect(r).toMatchObject({ error: { field: "phone" } });
   });
@@ -1419,18 +1517,24 @@ function err(message: string, field?: string): ErrorResult {
   return { error: { message, field } };
 }
 
-export async function submitOptin(slug: string, formData: FormData): Promise<ActionResult | never> {
+export async function submitOptin(
+  slug: string,
+  formData: FormData,
+): Promise<ActionResult | never> {
   const w = await prisma.webinar.findUnique({ where: { slug } });
   if (!w || w.status !== "ACTIVE") return err("Webinar não disponível");
 
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "") || "unknown";
+  const ip =
+    (hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "") || "unknown";
   const ua = hdrs.get("user-agent") ?? "";
   if (!optinLimiter.check(ip)) return err("Muitas tentativas, aguarde");
 
   const schemaShape: Record<string, z.ZodTypeAny> = {};
   if (w.nameEnabled) {
-    schemaShape.name = w.nameRequired ? z.string().min(1, "Nome obrigatório") : z.string().optional();
+    schemaShape.name = w.nameRequired
+      ? z.string().min(1, "Nome obrigatório")
+      : z.string().optional();
   }
   if (w.emailEnabled) {
     schemaShape.email = w.emailRequired
@@ -1456,23 +1560,36 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   const phone = data.phone || null;
 
   const existing = email
-    ? await prisma.lead.findUnique({ where: { webinarId_email: { webinarId: w.id, email } } })
+    ? await prisma.lead.findUnique({
+        where: { webinarId_email: { webinarId: w.id, email } },
+      })
     : null;
 
   let lead;
   if (existing) {
     lead = await prisma.lead.update({
       where: { id: existing.id },
-      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date() }
+      data: {
+        name: name || existing.name,
+        phone: phone ?? existing.phone,
+        ip,
+        userAgent: ua,
+        lastSeenAt: new Date(),
+      },
     });
   } else {
     lead = await prisma.lead.create({
-      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua }
+      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua },
     });
   }
 
   await prisma.event.create({
-    data: { webinarId: w.id, leadId: lead.id, kind: "OPTIN", metadata: { ip, ua } }
+    data: {
+      webinarId: w.id,
+      leadId: lead.id,
+      kind: "OPTIN",
+      metadata: { ip, ua },
+    },
   });
 
   const cookie = signLeadCookie(lead.id);
@@ -1482,7 +1599,7 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 30,
-    path: `/${slug}`
+    path: `/${slug}`,
   });
 
   await enqueueWebhook(w, "lead_novo", lead);
@@ -1511,6 +1628,7 @@ git commit -m "feat(web): add submitOptin server action with cookie + webhook"
 ## Task 10: Server action `retryWebhook` (TDD)
 
 **Files:**
+
 - Modify: `apps/web/src/server/actions/public.ts`
 - Create: `apps/web/src/test/server/actions/public-retry.test.ts`
 
@@ -1524,16 +1642,23 @@ const TEST_USER = { id: "rw-user", email: "rw@example.com", name: "RW" };
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: vi.fn(), set: vi.fn() }),
-  headers: async () => new Headers()
+  headers: async () => new Headers(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth", () => ({
-  auth: { api: { getSession: async () => ({ user: TEST_USER, session: { id: "s", userId: TEST_USER.id } }) } }
+  auth: {
+    api: {
+      getSession: async () => ({
+        user: TEST_USER,
+        session: { id: "s", userId: TEST_USER.id },
+      }),
+    },
+  },
 }));
 const queueAddMock = vi.fn(async () => ({ id: "j2" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 beforeEach(async () => {
@@ -1554,12 +1679,23 @@ describe("retryWebhook", () => {
   it("creates a new delivery and enqueues", async () => {
     const w = await prisma.webinar.create({
       data: {
-        ownerId: TEST_USER.id, name: "T", title: "T", slug: "rw-1",
-        status: "ACTIVE", webhookUrl: "https://x", webhookOnOptin: true
-      }
+        ownerId: TEST_USER.id,
+        name: "T",
+        title: "T",
+        slug: "rw-1",
+        status: "ACTIVE",
+        webhookUrl: "https://x",
+        webhookOnOptin: true,
+      },
     });
     const orig = await prisma.webhookDelivery.create({
-      data: { webinarId: w.id, event: "lead_novo", url: "https://x", payload: { foo: 1 }, status: "FAILED" }
+      data: {
+        webinarId: w.id,
+        event: "lead_novo",
+        url: "https://x",
+        payload: { foo: 1 },
+        status: "FAILED",
+      },
     });
     const { retryWebhook } = await import("@/server/actions/public");
 
@@ -1575,19 +1711,35 @@ describe("retryWebhook", () => {
     expect(queueAddMock).toHaveBeenCalledWith(
       "dispatch-webhook",
       { deliveryId: newOne.id },
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
   it("returns error when delivery is for a webinar not owned by session user", async () => {
-    await prisma.user.create({ data: { id: "other", email: "o@e.com", name: "O" } });
+    await prisma.user.create({
+      data: { id: "other", email: "o@e.com", name: "O" },
+    });
     const w = await prisma.webinar.create({
-      data: { ownerId: "other", name: "T", title: "T", slug: "rw-2", status: "ACTIVE" }
+      data: {
+        ownerId: "other",
+        name: "T",
+        title: "T",
+        slug: "rw-2",
+        status: "ACTIVE",
+      },
     });
     const orig = await prisma.webhookDelivery.create({
-      data: { webinarId: w.id, event: "lead_novo", url: "https://x", payload: {}, status: "FAILED" }
+      data: {
+        webinarId: w.id,
+        event: "lead_novo",
+        url: "https://x",
+        payload: {},
+        status: "FAILED",
+      },
     });
-    const { retryWebhook } = await import("@/server/actions/public?" + Date.now());
+    const { retryWebhook } = await import(
+      "@/server/actions/public?" + Date.now()
+    );
     const r = await retryWebhook(orig.id);
     expect(r).toMatchObject({ error: { message: expect.any(String) } });
   });
@@ -1605,6 +1757,7 @@ Expected: FAIL — `retryWebhook` not exported.
 - [ ] **Step 3: Append `retryWebhook` to `apps/web/src/server/actions/public.ts`**
 
 Add imports at top:
+
 ```ts
 import { headers as nextHeaders } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -1615,15 +1768,17 @@ import { getWebhookQueue, JOB_DISPATCH_WEBHOOK } from "jobs";
 (Some of these may already exist from Task 9 — keep them deduplicated.)
 
 Append the function:
+
 ```ts
 export async function retryWebhook(deliveryId: string): Promise<ActionResult> {
   const session = await auth.api.getSession({ headers: await nextHeaders() });
   if (!session) return err("Não autorizado");
   const orig = await prisma.webhookDelivery.findUnique({
     where: { id: deliveryId },
-    include: { webinar: true }
+    include: { webinar: true },
   });
-  if (!orig || orig.webinar.ownerId !== session.user.id) return err("Não encontrado");
+  if (!orig || orig.webinar.ownerId !== session.user.id)
+    return err("Não encontrado");
 
   const next = await prisma.webhookDelivery.create({
     data: {
@@ -1632,8 +1787,8 @@ export async function retryWebhook(deliveryId: string): Promise<ActionResult> {
       event: orig.event,
       url: orig.url,
       payload: orig.payload as any,
-      status: "PENDING"
-    }
+      status: "PENDING",
+    },
   });
   await getWebhookQueue().add(
     JOB_DISPATCH_WEBHOOK,
@@ -1642,8 +1797,8 @@ export async function retryWebhook(deliveryId: string): Promise<ActionResult> {
       attempts: 3,
       backoff: { type: "exponential", delay: 30_000 },
       removeOnComplete: 100,
-      removeOnFail: 100
-    }
+      removeOnFail: 100,
+    },
   );
   revalidatePath(`/dashboard/webinars/${orig.webinarId}/webhooks`);
   return { ok: true };
@@ -1670,6 +1825,7 @@ git commit -m "feat(web): add retryWebhook server action"
 ## Task 11: API route `/api/track`
 
 **Files:**
+
 - Create: `apps/web/src/app/api/track/route.ts`
 - Create: `apps/web/src/test/api/track.test.ts`
 
@@ -1682,13 +1838,13 @@ import { signLeadCookie } from "@/lib/lead-session";
 
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: cookieGetMock })
+  cookies: async () => ({ get: cookieGetMock }),
 }));
 
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 const TEST_USER = { id: "tk-user", email: "tk@example.com", name: "TK" };
@@ -1712,14 +1868,26 @@ afterAll(async () => prisma.$disconnect());
 async function makeWebinarWithLead(overrides: any = {}) {
   const w = await prisma.webinar.create({
     data: {
-      ownerId: TEST_USER.id, name: "T", title: "T", slug: "tk-" + Math.random().toString(36).slice(2, 8),
-      status: "ACTIVE", pitchAtSec: 600,
-      webhookUrl: "https://x", webhookOnPitchReached: true, webhookOnPermanence: true,
-      permanenceThresholdSec: 300, ...overrides
-    }
+      ownerId: TEST_USER.id,
+      name: "T",
+      title: "T",
+      slug: "tk-" + Math.random().toString(36).slice(2, 8),
+      status: "ACTIVE",
+      pitchAtSec: 600,
+      webhookUrl: "https://x",
+      webhookOnPitchReached: true,
+      webhookOnPermanence: true,
+      permanenceThresholdSec: 300,
+      ...overrides,
+    },
   });
   const lead = await prisma.lead.create({
-    data: { webinarId: w.id, name: "Joe", email: "j@e.com", lastSeenAt: new Date(Date.now() - 60_000) }
+    data: {
+      webinarId: w.id,
+      name: "Joe",
+      email: "j@e.com",
+      lastSeenAt: new Date(Date.now() - 60_000),
+    },
   });
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead };
@@ -1732,13 +1900,15 @@ describe("POST /api/track", () => {
     const req = new Request("http://localhost/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.watchedSec).toBe(30);
-    const events = await prisma.event.findMany({ where: { kind: "VIDEO_TICK" } });
+    const events = await prisma.event.findMany({
+      where: { kind: "VIDEO_TICK" },
+    });
     expect(events).toHaveLength(1);
   });
 
@@ -1746,13 +1916,13 @@ describe("POST /api/track", () => {
     const { lead } = await makeWebinarWithLead();
     await prisma.lead.update({
       where: { id: lead.id },
-      data: { lastSeenAt: new Date(Date.now() - 10_000) }
+      data: { lastSeenAt: new Date(Date.now() - 10_000) },
     });
     const { POST } = await import("@/app/api/track/route?" + Date.now());
     const req = new Request("http://localhost/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(429);
@@ -1764,24 +1934,29 @@ describe("POST /api/track", () => {
     const req = new Request("http://localhost/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 700, watchedSecDelta: 30 })
+      body: JSON.stringify({ videoSec: 700, watchedSecDelta: 30 }),
     });
     await POST(req);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.pitchFired).toBe(true);
-    const pitchEvents = await prisma.event.findMany({ where: { kind: "PITCH_REACHED" } });
+    const pitchEvents = await prisma.event.findMany({
+      where: { kind: "PITCH_REACHED" },
+    });
     expect(pitchEvents).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalled();
   });
 
   it("fires permanence webhook when watchedSec crosses threshold", async () => {
     const { lead } = await makeWebinarWithLead();
-    await prisma.lead.update({ where: { id: lead.id }, data: { watchedSec: 290 } });
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { watchedSec: 290 },
+    });
     const { POST } = await import("@/app/api/track/route?" + (Date.now() + 2));
     const req = new Request("http://localhost/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 }),
     });
     await POST(req);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
@@ -1794,7 +1969,7 @@ describe("POST /api/track", () => {
     const req = new Request("http://localhost/api/track", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(401);
@@ -1822,7 +1997,7 @@ import { enqueueWebhook } from "@/lib/webhook";
 
 const inputSchema = z.object({
   videoSec: z.number().int().min(0),
-  watchedSecDelta: z.number().int().min(0).max(60)
+  watchedSecDelta: z.number().int().min(0).max(60),
 });
 
 const THROTTLE_MS = 25_000;
@@ -1830,13 +2005,18 @@ const THROTTLE_MS = 25_000;
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!leadId)
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { webinar: true },
+  });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const now = new Date();
@@ -1847,7 +2027,12 @@ export async function POST(request: Request) {
   const newWatched = lead.watchedSec + parsed.data.watchedSecDelta;
 
   await prisma.event.create({
-    data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_TICK", videoSec: parsed.data.videoSec }
+    data: {
+      webinarId: lead.webinarId,
+      leadId: lead.id,
+      kind: "VIDEO_TICK",
+      videoSec: parsed.data.videoSec,
+    },
   });
 
   const updateData: any = { watchedSec: newWatched, lastSeenAt: now };
@@ -1873,16 +2058,28 @@ export async function POST(request: Request) {
     firePermanence = true;
   }
 
-  const updated = await prisma.lead.update({ where: { id: lead.id }, data: updateData });
+  const updated = await prisma.lead.update({
+    where: { id: lead.id },
+    data: updateData,
+  });
 
   if (firePitch) {
     await prisma.event.create({
-      data: { webinarId: w.id, leadId: lead.id, kind: "PITCH_REACHED", videoSec: parsed.data.videoSec }
+      data: {
+        webinarId: w.id,
+        leadId: lead.id,
+        kind: "PITCH_REACHED",
+        videoSec: parsed.data.videoSec,
+      },
     });
-    await enqueueWebhook(w, "lead_viu_pitch", updated, { videoSec: parsed.data.videoSec });
+    await enqueueWebhook(w, "lead_viu_pitch", updated, {
+      videoSec: parsed.data.videoSec,
+    });
   }
   if (firePermanence) {
-    await enqueueWebhook(w, "lead_permaneceu", updated, { videoSec: parsed.data.videoSec });
+    await enqueueWebhook(w, "lead_permaneceu", updated, {
+      videoSec: parsed.data.videoSec,
+    });
   }
 
   return NextResponse.json({ ok: true });
@@ -1909,6 +2106,7 @@ git commit -m "feat(web): add /api/track route with throttle + pitch + permanenc
 ## Task 12: API routes `/api/cta-click` + `/api/cta-view`
 
 **Files:**
+
 - Create: `apps/web/src/app/api/cta-click/route.ts`
 - Create: `apps/web/src/app/api/cta-view/route.ts`
 - Create: `apps/web/src/test/api/cta.test.ts`
@@ -1922,13 +2120,13 @@ import { signLeadCookie } from "@/lib/lead-session";
 
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: cookieGetMock })
+  cookies: async () => ({ get: cookieGetMock }),
 }));
 
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 const TEST_USER = { id: "ct-user", email: "ct@example.com", name: "CT" };
@@ -1954,16 +2152,26 @@ afterAll(async () => prisma.$disconnect());
 async function setup() {
   const w = await prisma.webinar.create({
     data: {
-      ownerId: TEST_USER.id, name: "T", title: "T", slug: "ct-" + Math.random().toString(36).slice(2, 8),
-      status: "ACTIVE", webhookUrl: "https://x",
-      webhookOnCtaClick: true, webhookOnCtaView: true
-    }
+      ownerId: TEST_USER.id,
+      name: "T",
+      title: "T",
+      slug: "ct-" + Math.random().toString(36).slice(2, 8),
+      status: "ACTIVE",
+      webhookUrl: "https://x",
+      webhookOnCtaClick: true,
+      webhookOnCtaView: true,
+    },
   });
   const lead = await prisma.lead.create({
-    data: { webinarId: w.id, name: "Joe", email: "j@e.com" }
+    data: { webinarId: w.id, name: "Joe", email: "j@e.com" },
   });
   const cta = await prisma.cta.create({
-    data: { webinarId: w.id, label: "Comprar", url: "https://buy.example", showAtSec: 0 }
+    data: {
+      webinarId: w.id,
+      label: "Comprar",
+      url: "https://buy.example",
+      showAtSec: 0,
+    },
   });
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead, cta };
@@ -1974,14 +2182,17 @@ describe("POST /api/cta-click", () => {
     const { lead, cta } = await setup();
     const { POST } = await import("@/app/api/cta-click/route");
     const req = new Request("http://localhost/api/cta-click", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ctaId: cta.id })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ctaId: cta.id }),
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.ctaClicks).toBe(1);
-    const events = await prisma.event.findMany({ where: { kind: "CTA_CLICK" } });
+    const events = await prisma.event.findMany({
+      where: { kind: "CTA_CLICK" },
+    });
     expect(events).toHaveLength(1);
     expect(events[0].ctaId).toBe(cta.id);
     expect(queueAddMock).toHaveBeenCalled();
@@ -1989,17 +2200,25 @@ describe("POST /api/cta-click", () => {
 
   it("rejects when ctaId belongs to other webinar", async () => {
     const { lead } = await setup();
-    await prisma.user.create({ data: { id: "other", email: "o@e.com", name: "O" } });
+    await prisma.user.create({
+      data: { id: "other", email: "o@e.com", name: "O" },
+    });
     const otherW = await prisma.webinar.create({
-      data: { ownerId: "other", name: "X", title: "X", slug: "ct-other" }
+      data: { ownerId: "other", name: "X", title: "X", slug: "ct-other" },
     });
     const otherCta = await prisma.cta.create({
-      data: { webinarId: otherW.id, label: "X", url: "https://x", showAtSec: 0 }
+      data: {
+        webinarId: otherW.id,
+        label: "X",
+        url: "https://x",
+        showAtSec: 0,
+      },
     });
     const { POST } = await import("@/app/api/cta-click/route?" + Date.now());
     const req = new Request("http://localhost/api/cta-click", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ctaId: otherCta.id })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ctaId: otherCta.id }),
     });
     const res = await POST(req);
     expect(res.status).toBe(404);
@@ -2012,8 +2231,9 @@ describe("POST /api/cta-view", () => {
     const { POST } = await import("@/app/api/cta-view/route");
     const make = () =>
       new Request("http://localhost/api/cta-view", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ctaId: cta.id })
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ctaId: cta.id }),
       });
     const r1 = await POST(make());
     expect(r1.status).toBe(200);
@@ -2049,13 +2269,18 @@ const inputSchema = z.object({ ctaId: z.string().min(1) });
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!leadId)
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { webinar: true },
+  });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const cta = await prisma.cta.findUnique({ where: { id: parsed.data.ctaId } });
@@ -2064,13 +2289,20 @@ export async function POST(request: Request) {
   }
 
   await prisma.event.create({
-    data: { webinarId: lead.webinarId, leadId: lead.id, kind: "CTA_CLICK", ctaId: cta.id }
+    data: {
+      webinarId: lead.webinarId,
+      leadId: lead.id,
+      kind: "CTA_CLICK",
+      ctaId: cta.id,
+    },
   });
   const updated = await prisma.lead.update({
     where: { id: lead.id },
-    data: { ctaClicks: { increment: 1 }, lastSeenAt: new Date() }
+    data: { ctaClicks: { increment: 1 }, lastSeenAt: new Date() },
   });
-  await enqueueWebhook(lead.webinar, "lead_clicou_oferta", updated, { ctaId: cta.id });
+  await enqueueWebhook(lead.webinar, "lead_clicou_oferta", updated, {
+    ctaId: cta.id,
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -2091,13 +2323,18 @@ const inputSchema = z.object({ ctaId: z.string().min(1) });
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!leadId)
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { webinar: true },
+  });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const cta = await prisma.cta.findUnique({ where: { id: parsed.data.ctaId } });
@@ -2113,9 +2350,16 @@ export async function POST(request: Request) {
   }
 
   await prisma.event.create({
-    data: { webinarId: lead.webinarId, leadId: lead.id, kind: "CTA_VIEW", ctaId: cta.id }
+    data: {
+      webinarId: lead.webinarId,
+      leadId: lead.id,
+      kind: "CTA_VIEW",
+      ctaId: cta.id,
+    },
   });
-  await enqueueWebhook(lead.webinar, "lead_viu_oferta", lead, { ctaId: cta.id });
+  await enqueueWebhook(lead.webinar, "lead_viu_oferta", lead, {
+    ctaId: cta.id,
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -2141,6 +2385,7 @@ git commit -m "feat(web): add /api/cta-click + /api/cta-view (dedupe via CtaView
 ## Task 13: API route `/api/track-leave` (beacon)
 
 **Files:**
+
 - Create: `apps/web/src/app/api/track-leave/route.ts`
 - Create: `apps/web/src/test/api/track-leave.test.ts`
 
@@ -2153,13 +2398,13 @@ import { signLeadCookie } from "@/lib/lead-session";
 
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: cookieGetMock })
+  cookies: async () => ({ get: cookieGetMock }),
 }));
 
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
 vi.mock("jobs", async () => ({
   getWebhookQueue: () => ({ add: queueAddMock }),
-  JOB_DISPATCH_WEBHOOK: "dispatch-webhook"
+  JOB_DISPATCH_WEBHOOK: "dispatch-webhook",
 }));
 
 const TEST_USER = { id: "tl-user", email: "tl@example.com", name: "TL" };
@@ -2184,26 +2429,34 @@ describe("POST /api/track-leave", () => {
   it("fires VIDEO_END + lead_saiu webhook once", async () => {
     const w = await prisma.webinar.create({
       data: {
-        ownerId: TEST_USER.id, name: "T", title: "T", slug: "tl-1",
-        status: "ACTIVE", webhookUrl: "https://x", webhookOnLeave: true
-      }
+        ownerId: TEST_USER.id,
+        name: "T",
+        title: "T",
+        slug: "tl-1",
+        status: "ACTIVE",
+        webhookUrl: "https://x",
+        webhookOnLeave: true,
+      },
     });
     const lead = await prisma.lead.create({
-      data: { webinarId: w.id, name: "Joe", email: "j@e.com" }
+      data: { webinarId: w.id, name: "Joe", email: "j@e.com" },
     });
     cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
 
     const { POST } = await import("@/app/api/track-leave/route");
     const req = new Request("http://localhost/api/track-leave", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ videoSec: 1234 })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ videoSec: 1234 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(204);
 
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.leaveFired).toBe(true);
-    const events = await prisma.event.findMany({ where: { kind: "VIDEO_END" } });
+    const events = await prisma.event.findMany({
+      where: { kind: "VIDEO_END" },
+    });
     expect(events).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(1);
 
@@ -2241,21 +2494,33 @@ export async function POST(request: Request) {
 
   const text = await request.text().catch(() => "");
   let body: unknown = null;
-  try { body = text ? JSON.parse(text) : {}; } catch { body = {}; }
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = {};
+  }
   const parsed = inputSchema.safeParse(body);
   const videoSec = parsed.success ? parsed.data.videoSec : undefined;
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: { webinar: true },
+  });
   if (!lead) return new NextResponse(null, { status: 204 });
 
   await prisma.event.create({
-    data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_END", videoSec }
+    data: {
+      webinarId: lead.webinarId,
+      leadId: lead.id,
+      kind: "VIDEO_END",
+      videoSec,
+    },
   });
 
   if (!lead.leaveFired) {
     const updated = await prisma.lead.update({
       where: { id: lead.id },
-      data: { leaveFired: true, lastSeenAt: new Date() }
+      data: { leaveFired: true, lastSeenAt: new Date() },
     });
     await enqueueWebhook(lead.webinar, "lead_saiu", updated, { videoSec });
   }
@@ -2284,6 +2549,7 @@ git commit -m "feat(web): add /api/track-leave beacon route"
 ## Task 14: API route `/api/lead-chat`
 
 **Files:**
+
 - Create: `apps/web/src/app/api/lead-chat/route.ts`
 - Create: `apps/web/src/test/api/lead-chat.test.ts`
 
@@ -2296,7 +2562,7 @@ import { signLeadCookie } from "@/lib/lead-session";
 
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: cookieGetMock })
+  cookies: async () => ({ get: cookieGetMock }),
 }));
 
 const TEST_USER = { id: "lc-user", email: "lc@example.com", name: "LC" };
@@ -2317,10 +2583,16 @@ afterAll(async () => prisma.$disconnect());
 
 async function setup() {
   const w = await prisma.webinar.create({
-    data: { ownerId: TEST_USER.id, name: "T", title: "T", slug: "lc-1", status: "ACTIVE" }
+    data: {
+      ownerId: TEST_USER.id,
+      name: "T",
+      title: "T",
+      slug: "lc-1",
+      status: "ACTIVE",
+    },
   });
   const lead = await prisma.lead.create({
-    data: { webinarId: w.id, name: "Joe", email: "j@e.com" }
+    data: { webinarId: w.id, name: "Joe", email: "j@e.com" },
   });
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead };
@@ -2331,15 +2603,18 @@ describe("POST /api/lead-chat", () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
     const req = new Request("http://localhost/api/lead-chat", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "Olá!", videoSec: 42 })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "Olá!", videoSec: 42 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.id).toBeDefined();
     expect(data.text).toBe("Olá!");
-    const all = await prisma.leadChatMessage.findMany({ where: { leadId: lead.id } });
+    const all = await prisma.leadChatMessage.findMany({
+      where: { leadId: lead.id },
+    });
     expect(all).toHaveLength(1);
     expect(all[0].videoSec).toBe(42);
   });
@@ -2348,8 +2623,9 @@ describe("POST /api/lead-chat", () => {
     await setup();
     const { POST } = await import("@/app/api/lead-chat/route?" + Date.now());
     const req = new Request("http://localhost/api/lead-chat", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "", videoSec: 0 })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "", videoSec: 0 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(400);
@@ -2357,10 +2633,13 @@ describe("POST /api/lead-chat", () => {
 
   it("rejects 401 without cookie", async () => {
     cookieGetMock.mockReturnValue(undefined);
-    const { POST } = await import("@/app/api/lead-chat/route?" + (Date.now() + 1));
+    const { POST } = await import(
+      "@/app/api/lead-chat/route?" + (Date.now() + 1)
+    );
     const req = new Request("http://localhost/api/lead-chat", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text: "x", videoSec: 0 })
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "x", videoSec: 0 }),
     });
     const res = await POST(req);
     expect(res.status).toBe(401);
@@ -2388,13 +2667,14 @@ import { leadChatLimiter } from "@/lib/rate-limit";
 
 const inputSchema = z.object({
   text: z.string().min(1).max(500),
-  videoSec: z.number().int().min(0).optional()
+  videoSec: z.number().int().min(0).optional(),
 });
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!leadId)
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   if (!leadChatLimiter.check(leadId)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
@@ -2402,7 +2682,8 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -2412,12 +2693,15 @@ export async function POST(request: Request) {
       leadId: lead.id,
       webinarId: lead.webinarId,
       text: parsed.data.text,
-      videoSec: parsed.data.videoSec
-    }
+      videoSec: parsed.data.videoSec,
+    },
   });
 
   return NextResponse.json({
-    id: msg.id, text: msg.text, videoSec: msg.videoSec, createdAt: msg.createdAt
+    id: msg.id,
+    text: msg.text,
+    videoSec: msg.videoSec,
+    createdAt: msg.createdAt,
   });
 }
 ```
@@ -2442,6 +2726,7 @@ git commit -m "feat(web): add /api/lead-chat route (rate-limited 30/min/leadId)"
 ## Task 15: Capture page `/<slug>` + `<CaptureForm>` + `<ClosedView>`
 
 **Files:**
+
 - Create: `apps/web/src/app/[slug]/page.tsx`
 - Create: `apps/web/src/app/[slug]/_components/capture-form.tsx`
 - Create: `apps/web/src/app/[slug]/_components/closed-view.tsx`
@@ -2450,12 +2735,14 @@ git commit -m "feat(web): add /api/lead-chat route (rate-limited 30/min/leadId)"
 - [ ] **Step 1: Add dep**
 
 Append to `apps/web/package.json` `dependencies`:
+
 ```json
 "react-phone-number-input": "3.4.9",
 "libphonenumber-js": "1.11.12"
 ```
 
 Run:
+
 ```bash
 pnpm install
 ```
@@ -2468,9 +2755,13 @@ import type { PublicWebinar } from "@/lib/public-dto";
 export function ClosedView({ w }: { w: PublicWebinar }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-16 object-contain" /> : null}
+      {w.logoUrl ? (
+        <img src={w.logoUrl} alt="" className="mb-6 h-16 object-contain" />
+      ) : null}
       <h1 className="text-2xl font-semibold">{w.title}</h1>
-      <p className="mt-3 text-muted-foreground">Este webinar já foi encerrado.</p>
+      <p className="mt-3 text-muted-foreground">
+        Este webinar já foi encerrado.
+      </p>
     </main>
   );
 }
@@ -2489,7 +2780,9 @@ import { Label } from "@/components/ui/label";
 import { submitOptin } from "@/server/actions/public";
 import type { PublicWebinar } from "@/lib/public-dto";
 
-const PhoneInput = dynamic(() => import("react-phone-number-input"), { ssr: false });
+const PhoneInput = dynamic(() => import("react-phone-number-input"), {
+  ssr: false,
+});
 
 export function CaptureForm({ w }: { w: PublicWebinar }) {
   const [pending, startTransition] = useTransition();
@@ -2509,10 +2802,18 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-10">
-      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mx-auto mb-6 h-14 object-contain" /> : null}
+      {w.logoUrl ? (
+        <img
+          src={w.logoUrl}
+          alt=""
+          className="mx-auto mb-6 h-auto object-contain"
+        />
+      ) : null}
       <h1 className="text-center text-3xl font-semibold">{w.title}</h1>
       {w.waitingSubtitle ? (
-        <p className="mt-2 text-center text-sm text-muted-foreground">{w.waitingSubtitle}</p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          {w.waitingSubtitle}
+        </p>
       ) : null}
 
       <form
@@ -2522,14 +2823,25 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
         {w.nameEnabled ? (
           <div className="space-y-1">
             <Label htmlFor="name">Nome{w.nameRequired ? " *" : ""}</Label>
-            <Input id="name" name="name" placeholder={w.namePlaceholder} required={w.nameRequired} />
+            <Input
+              id="name"
+              name="name"
+              placeholder={w.namePlaceholder}
+              required={w.nameRequired}
+            />
           </div>
         ) : null}
 
         {w.emailEnabled ? (
           <div className="space-y-1">
             <Label htmlFor="email">Email{w.emailRequired ? " *" : ""}</Label>
-            <Input id="email" name="email" type="email" placeholder={w.emailPlaceholder} required={w.emailRequired} />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder={w.emailPlaceholder}
+              required={w.emailRequired}
+            />
           </div>
         ) : null}
 
@@ -2547,7 +2859,11 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
           </div>
         ) : null}
 
-        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
 
         <Button
           type="submit"
@@ -2576,14 +2892,18 @@ import { ClosedView } from "./_components/closed-view";
 
 export const dynamic = "force-dynamic";
 
-export default async function CapturePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CapturePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   if (isReservedSlug(slug)) notFound();
   const w = await prisma.webinar.findUnique({ where: { slug } });
   if (!w || w.status !== "ACTIVE") notFound();
   const phase = computePhase(
     { mode: w.mode, startDate: w.startDate, endDate: w.endDate },
-    new Date()
+    new Date(),
   );
   const dto = publicWebinarDto(w);
   if (phase === "closed" && w.mode === "UNICO") return <ClosedView w={dto} />;
@@ -2611,6 +2931,7 @@ git commit -m "feat(web): add public capture page /<slug> + CaptureForm + Closed
 ## Task 16: Player page `/<slug>/live` + helpers
 
 **Files:**
+
 - Create: `apps/web/src/app/[slug]/live/page.tsx`
 - Create: `apps/web/src/app/[slug]/_components/countdown-view.tsx`
 - Modify: `apps/web/src/lib/webhook.ts` (add `maybeFireEnterWebhook`)
@@ -2620,12 +2941,12 @@ git commit -m "feat(web): add public capture page /<slug> + CaptureForm + Closed
 ```ts
 export async function maybeFireEnterWebhook(
   webinar: import("@prisma/client").Webinar,
-  lead: import("@prisma/client").Lead
+  lead: import("@prisma/client").Lead,
 ): Promise<void> {
   if (lead.enterFired) return;
   const updated = await prisma.lead.update({
     where: { id: lead.id },
-    data: { enterFired: true, lastSeenAt: new Date() }
+    data: { enterFired: true, lastSeenAt: new Date() },
   });
   await enqueueWebhook(webinar, "lead_acessou", updated);
 }
@@ -2652,7 +2973,10 @@ export function CountdownView({ w }: { w: PublicWebinar }) {
   const router = useRouter();
   const [remaining, setRemaining] = useState<number>(() => {
     if (!w.startDate) return 0;
-    return Math.max(0, Math.floor((new Date(w.startDate).getTime() - Date.now()) / 1000));
+    return Math.max(
+      0,
+      Math.floor((new Date(w.startDate).getTime() - Date.now()) / 1000),
+    );
   });
 
   useEffect(() => {
@@ -2670,10 +2994,14 @@ export function CountdownView({ w }: { w: PublicWebinar }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-      {w.logoUrl ? <img src={w.logoUrl} alt="" className="mb-6 h-14 object-contain" /> : null}
+      {w.logoUrl ? (
+        <img src={w.logoUrl} alt="" className="mb-6 h-auto object-contain" />
+      ) : null}
       <h1 className="text-3xl font-semibold">{w.waitingTitle}</h1>
       <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
-      <p className="mt-8 font-mono text-5xl tabular-nums" aria-live="polite">{fmt(remaining)}</p>
+      <p className="mt-8 font-mono text-5xl tabular-nums" aria-live="polite">
+        {fmt(remaining)}
+      </p>
     </main>
   );
 }
@@ -2686,7 +3014,11 @@ import { redirect, notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
-import { publicWebinarDto, publicVideoDto, publicLeadDto } from "@/lib/public-dto";
+import {
+  publicWebinarDto,
+  publicVideoDto,
+  publicLeadDto,
+} from "@/lib/public-dto";
 import { computePhase, computeInitialOffset } from "@/lib/sync";
 import { maybeFireEnterWebhook } from "@/lib/webhook";
 import { isReservedSlug } from "@/lib/slug-blacklist";
@@ -2696,12 +3028,20 @@ import { PlayerShell } from "../_components/player-shell";
 
 export const dynamic = "force-dynamic";
 
-export default async function LivePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function LivePage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   if (isReservedSlug(slug)) notFound();
   const w = await prisma.webinar.findUnique({
     where: { slug },
-    include: { video: true, ctas: true, chatMessages: { orderBy: { showAtSec: "asc" } } }
+    include: {
+      video: true,
+      ctas: true,
+      chatMessages: { orderBy: { showAtSec: "asc" } },
+    },
   });
   if (!w || w.status !== "ACTIVE") notFound();
 
@@ -2713,20 +3053,22 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
 
   const phase = computePhase(
     { mode: w.mode, startDate: w.startDate, endDate: w.endDate },
-    new Date()
+    new Date(),
   );
   const wDto = publicWebinarDto(w);
-  if (phase === "before" && w.mode === "UNICO") return <CountdownView w={wDto} />;
+  if (phase === "before" && w.mode === "UNICO")
+    return <CountdownView w={wDto} />;
   if (phase === "closed" && w.mode === "UNICO") return <ClosedView w={wDto} />;
 
   const leadChat = await prisma.leadChatMessage.findMany({
-    where: { leadId: lead.id }, orderBy: { createdAt: "asc" }
+    where: { leadId: lead.id },
+    orderBy: { createdAt: "asc" },
   });
   const offset = computeInitialOffset(
     { mode: w.mode, startDate: w.startDate, endDate: w.endDate },
     { sessionStart: lead.sessionStart },
     new Date(),
-    w.video?.durationSec ?? null
+    w.video?.durationSec ?? null,
   );
 
   await maybeFireEnterWebhook(w, lead);
@@ -2736,13 +3078,24 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
       webinar={wDto}
       video={publicVideoDto(w.video)}
       ctas={w.ctas.map((c) => ({
-        id: c.id, label: c.label, url: c.url, showAtSec: c.showAtSec, hideAtSec: c.hideAtSec
+        id: c.id,
+        label: c.label,
+        url: c.url,
+        showAtSec: c.showAtSec,
+        hideAtSec: c.hideAtSec,
       }))}
       ownerChat={w.chatMessages.map((m) => ({
-        id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner
+        id: m.id,
+        authorName: m.authorName,
+        text: m.text,
+        showAtSec: m.showAtSec,
+        isOwner: m.isOwner,
       }))}
       leadChat={leadChat.map((m) => ({
-        id: m.id, text: m.text, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
+        id: m.id,
+        text: m.text,
+        videoSec: m.videoSec,
+        createdAt: m.createdAt.toISOString(),
       }))}
       lead={publicLeadDto(lead)}
       initialOffsetSec={offset}
@@ -2760,6 +3113,7 @@ Defer the commit. Hold these files locally; the import of `PlayerShell` from `..
 ## Task 17: `<HlsPlayer>` component
 
 **Files:**
+
 - Create: `apps/web/src/app/[slug]/_components/hls-player.tsx`
 - Create: `apps/web/src/app/[slug]/_lib/public-types.ts`
 - Modify: `apps/web/package.json` (add `hls.js` dep)
@@ -2767,11 +3121,13 @@ Defer the commit. Hold these files locally; the import of `PlayerShell` from `..
 - [ ] **Step 1: Add dep**
 
 Append to `apps/web/package.json` `dependencies`:
+
 ```json
 "hls.js": "1.5.17"
 ```
 
 Run:
+
 ```bash
 pnpm install
 ```
@@ -2831,7 +3187,12 @@ interface HlsPlayerProps {
   onEnded?: () => void;
 }
 
-export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded }: HlsPlayerProps) {
+export function HlsPlayer({
+  src,
+  startOffsetSec,
+  onTimeUpdate,
+  onEnded,
+}: HlsPlayerProps) {
   const ref = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
@@ -2849,8 +3210,17 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded }: HlsPla
       video.src = src;
     }
     const onLoaded = () => {
-      try { video.currentTime = Math.max(0, startOffsetSec); } catch { /* noop */ }
-      void video.play().then(() => setPlaying(true)).catch(() => { /* autoplay blocked */ });
+      try {
+        video.currentTime = Math.max(0, startOffsetSec);
+      } catch {
+        /* noop */
+      }
+      void video
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => {
+          /* autoplay blocked */
+        });
     };
     video.addEventListener("loadedmetadata", onLoaded, { once: true });
     return () => {
@@ -2862,7 +3232,13 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded }: HlsPla
   function togglePlay() {
     const v = ref.current;
     if (!v) return;
-    if (v.paused) { void v.play(); setPlaying(true); } else { v.pause(); setPlaying(false); }
+    if (v.paused) {
+      void v.play();
+      setPlaying(true);
+    } else {
+      v.pause();
+      setPlaying(false);
+    }
   }
 
   function toggleMute() {
@@ -2889,7 +3265,10 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded }: HlsPla
         playsInline
         muted={muted}
         onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
-        onEnded={() => { setPlaying(false); onEnded?.(); }}
+        onEnded={() => {
+          setPlaying(false);
+          onEnded?.();
+        }}
         className="h-full w-full"
         controls={false}
         controlsList="nodownload"
@@ -2907,11 +3286,29 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded }: HlsPla
         </button>
       ) : null}
       <div className="absolute bottom-2 left-2 flex items-center gap-2">
-        <Button size="icon" variant="ghost" onClick={togglePlay} aria-label={playing ? "Pausar" : "Tocar"}>
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={togglePlay}
+          aria-label={playing ? "Pausar" : "Tocar"}
+        >
+          {playing ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
         </Button>
-        <Button size="icon" variant="ghost" onClick={toggleMute} aria-label={muted ? "Ativar áudio" : "Silenciar"}>
-          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={toggleMute}
+          aria-label={muted ? "Ativar áudio" : "Silenciar"}
+        >
+          {muted ? (
+            <VolumeX className="h-4 w-4" />
+          ) : (
+            <Volume2 className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>
@@ -2939,6 +3336,7 @@ git commit -m "feat(web): add HlsPlayer (hls.js + custom controls, no scrubber)"
 ## Task 18: Player composition `<PlayerShell>` + `<ChatPanel>` + `<CtaBanner>` + `<Tracker>`
 
 **Files:**
+
 - Create: `apps/web/src/app/[slug]/_components/player-shell.tsx`
 - Create: `apps/web/src/app/[slug]/_components/chat-panel.tsx`
 - Create: `apps/web/src/app/[slug]/_components/owner-chat-stream.tsx`
@@ -2965,23 +3363,38 @@ export function Tracker({ currentTimeRef }: TrackerProps) {
       if (cancelled) return;
       if (document.visibilityState !== "visible") return;
       const now = currentTimeRef.current;
-      const delta = Math.min(60, Math.max(0, Math.round(now - lastSentSec.current)));
+      const delta = Math.min(
+        60,
+        Math.max(0, Math.round(now - lastSentSec.current)),
+      );
       if (delta <= 0) return;
       try {
         await fetch("/api/track", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ videoSec: Math.round(now), watchedSecDelta: delta })
+          body: JSON.stringify({
+            videoSec: Math.round(now),
+            watchedSecDelta: delta,
+          }),
         });
         lastSentSec.current = now;
-      } catch { /* swallow */ }
+      } catch {
+        /* swallow */
+      }
     }, 30_000);
 
     const onLeave = () => {
-      const data = JSON.stringify({ videoSec: Math.round(currentTimeRef.current) });
+      const data = JSON.stringify({
+        videoSec: Math.round(currentTimeRef.current),
+      });
       try {
-        navigator.sendBeacon("/api/track-leave", new Blob([data], { type: "application/json" }));
-      } catch { /* swallow */ }
+        navigator.sendBeacon(
+          "/api/track-leave",
+          new Blob([data], { type: "application/json" }),
+        );
+      } catch {
+        /* swallow */
+      }
     };
     window.addEventListener("beforeunload", onLeave);
     window.addEventListener("pagehide", onLeave);
@@ -3013,13 +3426,19 @@ interface CtaBannerProps {
 
 function pickActive(ctas: PlayerCta[], t: number): PlayerCta | null {
   const candidates = ctas.filter(
-    (c) => t >= c.showAtSec && (c.hideAtSec == null || t < c.hideAtSec)
+    (c) => t >= c.showAtSec && (c.hideAtSec == null || t < c.hideAtSec),
   );
   if (candidates.length === 0) return null;
-  return candidates.reduce((best, c) => (c.showAtSec > best.showAtSec ? c : best));
+  return candidates.reduce((best, c) =>
+    c.showAtSec > best.showAtSec ? c : best,
+  );
 }
 
-export function CtaBanner({ ctas, currentTimeSec, primaryColor }: CtaBannerProps) {
+export function CtaBanner({
+  ctas,
+  currentTimeSec,
+  primaryColor,
+}: CtaBannerProps) {
   const active = pickActive(ctas, currentTimeSec);
   const seenRef = useRef<Set<string>>(new Set());
 
@@ -3030,8 +3449,10 @@ export function CtaBanner({ ctas, currentTimeSec, primaryColor }: CtaBannerProps
     void fetch("/api/cta-view", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ctaId: active.id })
-    }).catch(() => { /* swallow */ });
+      body: JSON.stringify({ ctaId: active.id }),
+    }).catch(() => {
+      /* swallow */
+    });
   }, [active]);
 
   if (!active) return null;
@@ -3040,8 +3461,10 @@ export function CtaBanner({ ctas, currentTimeSec, primaryColor }: CtaBannerProps
     void fetch("/api/cta-click", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ctaId: active!.id })
-    }).catch(() => { /* swallow */ });
+      body: JSON.stringify({ ctaId: active!.id }),
+    }).catch(() => {
+      /* swallow */
+    });
     window.open(active!.url, "_blank", "noopener,noreferrer");
   }
 
@@ -3075,9 +3498,13 @@ function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function OwnerChatStream({ messages, currentTimeSec, leadName }: OwnerChatStreamProps) {
+export function OwnerChatStream({
+  messages,
+  currentTimeSec,
+  leadName,
+}: OwnerChatStreamProps) {
   const [shown, setShown] = useState<PlayerOwnerMsg[]>(() =>
-    messages.filter((m) => m.showAtSec <= currentTimeSec)
+    messages.filter((m) => m.showAtSec <= currentTimeSec),
   );
   const lastTimeRef = useRef<number>(currentTimeSec);
 
@@ -3085,7 +3512,9 @@ export function OwnerChatStream({ messages, currentTimeSec, leadName }: OwnerCha
     const t = currentTimeSec;
     const prev = lastTimeRef.current;
     lastTimeRef.current = t;
-    const newly = messages.filter((m) => m.showAtSec > prev && m.showAtSec <= t);
+    const newly = messages.filter(
+      (m) => m.showAtSec > prev && m.showAtSec <= t,
+    );
     if (newly.length === 0) return;
     setShown((s) => {
       const ids = new Set(s.map((m) => m.id));
@@ -3097,7 +3526,13 @@ export function OwnerChatStream({ messages, currentTimeSec, leadName }: OwnerCha
     <div className="flex flex-col gap-2">
       {shown.map((m) => (
         <div key={m.id} className="text-sm">
-          <span className={m.isOwner ? "font-semibold text-primary" : "font-semibold"}>{m.authorName}: </span>
+          <span
+            className={
+              m.isOwner ? "font-semibold text-primary" : "font-semibold"
+            }
+          >
+            {m.authorName}:{" "}
+          </span>
           <span>{personalize(m.text, leadName)}</span>
         </div>
       ))}
@@ -3134,7 +3569,7 @@ export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
       id: "tmp-" + Date.now(),
       text: trimmed,
       videoSec: Math.round(currentTimeSec),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
     setMessages((m) => [...m, optimistic]);
     setText("");
@@ -3142,11 +3577,16 @@ export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
       const res = await fetch("/api/lead-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: trimmed, videoSec: Math.round(currentTimeSec) })
+        body: JSON.stringify({
+          text: trimmed,
+          videoSec: Math.round(currentTimeSec),
+        }),
       });
       if (res.ok) {
         const created = (await res.json()) as PlayerLeadMsg;
-        setMessages((m) => m.map((x) => (x.id === optimistic.id ? created : x)));
+        setMessages((m) =>
+          m.map((x) => (x.id === optimistic.id ? created : x)),
+        );
       } else {
         setMessages((m) => m.filter((x) => x.id !== optimistic.id));
       }
@@ -3173,7 +3613,9 @@ export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
           placeholder="Mensagem"
           maxLength={500}
         />
-        <Button type="submit" disabled={sending || text.trim().length === 0}>Enviar</Button>
+        <Button type="submit" disabled={sending || text.trim().length === 0}>
+          Enviar
+        </Button>
       </form>
     </div>
   );
@@ -3195,12 +3637,23 @@ interface ChatPanelProps {
   leadName: string;
 }
 
-export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName }: ChatPanelProps) {
+export function ChatPanel({
+  ownerChat,
+  leadChat,
+  currentTimeSec,
+  leadName,
+}: ChatPanelProps) {
   return (
     <aside className="flex h-full flex-col rounded-md border bg-card p-4">
-      <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Chat ao vivo</h3>
+      <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">
+        Chat ao vivo
+      </h3>
       <div className="flex-1 overflow-y-auto">
-        <OwnerChatStream messages={ownerChat} currentTimeSec={currentTimeSec} leadName={leadName} />
+        <OwnerChatStream
+          messages={ownerChat}
+          currentTimeSec={currentTimeSec}
+          leadName={leadName}
+        />
       </div>
       <div className="mt-4 border-t pt-3">
         <LeadChatInput initial={leadChat} currentTimeSec={currentTimeSec} />
@@ -3222,7 +3675,13 @@ import { CtaBanner } from "./cta-banner";
 import { Tracker } from "./tracker";
 
 export function PlayerShell({
-  webinar, video, ctas, ownerChat, leadChat, lead, initialOffsetSec
+  webinar,
+  video,
+  ctas,
+  ownerChat,
+  leadChat,
+  lead,
+  initialOffsetSec,
 }: PlayerShellProps) {
   const [currentTimeSec, setCurrentTimeSec] = useState(initialOffsetSec);
   const currentTimeRef = useRef(initialOffsetSec);
@@ -3243,7 +3702,11 @@ export function PlayerShell({
   return (
     <main className="grid min-h-screen grid-rows-[auto_1fr] bg-background">
       <header className="flex items-center justify-between border-b p-4">
-        {webinar.logoUrl ? <img src={webinar.logoUrl} alt="" className="h-8 object-contain" /> : <div />}
+        {webinar.logoUrl ? (
+          <img src={webinar.logoUrl} alt="" className="h-8 object-contain" />
+        ) : (
+          <div />
+        )}
         <span className="text-sm text-muted-foreground">Olá, {lead.name}</span>
       </header>
       <div className="grid gap-4 p-4 md:grid-cols-[2fr_1fr]">
@@ -3253,7 +3716,11 @@ export function PlayerShell({
             startOffsetSec={initialOffsetSec}
             onTimeUpdate={onTimeUpdate}
           />
-          <CtaBanner ctas={ctas} currentTimeSec={currentTimeSec} primaryColor={webinar.primaryColor} />
+          <CtaBanner
+            ctas={ctas}
+            currentTimeSec={currentTimeSec}
+            primaryColor={webinar.primaryColor}
+          />
         </div>
         <ChatPanel
           ownerChat={ownerChat}
@@ -3288,6 +3755,7 @@ git commit -m "feat(web): add public player /<slug>/live with HLS + chat + CTA +
 ## Task 19: Wizard step 6 — extend with Webhook section + integrations form
 
 **Files:**
+
 - Modify: `apps/web/src/lib/validations/webinar.ts` (add `integrationsSchema`)
 - Modify: `apps/web/src/server/actions/webinar.ts` (add `updateWebinarIntegrations`)
 - Create: `apps/web/src/components/webinar/integrations-form.tsx`
@@ -3308,7 +3776,7 @@ export const integrationsSchema = z.object({
   webhookOnPitchReached: z.boolean(),
   webhookOnPermanence: z.boolean(),
   webhookOnLeave: z.boolean(),
-  permanenceThresholdSec: z.number().int().min(1).max(86_400)
+  permanenceThresholdSec: z.number().int().min(1).max(86_400),
 });
 export type IntegrationsInput = z.infer<typeof integrationsSchema>;
 ```
@@ -3321,25 +3789,43 @@ import { integrationsSchema } from "@/lib/validations/webinar";
 
 describe("integrationsSchema", () => {
   const base = {
-    webhookOnOptin: false, webhookOnEnter: false, webhookOnCtaView: false,
-    webhookOnCtaClick: false, webhookOnPitchReached: false, webhookOnPermanence: false,
-    webhookOnLeave: false, permanenceThresholdSec: 300
+    webhookOnOptin: false,
+    webhookOnEnter: false,
+    webhookOnCtaView: false,
+    webhookOnCtaClick: false,
+    webhookOnPitchReached: false,
+    webhookOnPermanence: false,
+    webhookOnLeave: false,
+    permanenceThresholdSec: 300,
   };
 
   it("accepts empty webhookUrl", () => {
-    expect(integrationsSchema.safeParse({ ...base, webhookUrl: "" }).success).toBe(true);
+    expect(
+      integrationsSchema.safeParse({ ...base, webhookUrl: "" }).success,
+    ).toBe(true);
   });
 
   it("accepts valid URL", () => {
-    expect(integrationsSchema.safeParse({ ...base, webhookUrl: "https://x.example/hook" }).success).toBe(true);
+    expect(
+      integrationsSchema.safeParse({
+        ...base,
+        webhookUrl: "https://x.example/hook",
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects malformed URL", () => {
-    expect(integrationsSchema.safeParse({ ...base, webhookUrl: "not-a-url" }).success).toBe(false);
+    expect(
+      integrationsSchema.safeParse({ ...base, webhookUrl: "not-a-url" })
+        .success,
+    ).toBe(false);
   });
 
   it("rejects threshold < 1", () => {
-    expect(integrationsSchema.safeParse({ ...base, permanenceThresholdSec: 0 }).success).toBe(false);
+    expect(
+      integrationsSchema.safeParse({ ...base, permanenceThresholdSec: 0 })
+        .success,
+    ).toBe(false);
   });
 });
 ```
@@ -3357,7 +3843,10 @@ Expected: 4 passing.
 Add `integrationsSchema, type IntegrationsInput` to the import from `@/lib/validations/webinar`. Then append the function at the bottom of the file (before the closing `}`/EOF):
 
 ```ts
-export async function updateWebinarIntegrations(id: string, input: IntegrationsInput): Promise<Result> {
+export async function updateWebinarIntegrations(
+  id: string,
+  input: IntegrationsInput,
+): Promise<Result> {
   const session = await requireSession();
   const owned = await loadOwned(id, session.user.id);
   if (!owned) return notFound();
@@ -3377,8 +3866,8 @@ export async function updateWebinarIntegrations(id: string, input: IntegrationsI
       webhookOnPitchReached: parsed.data.webhookOnPitchReached,
       webhookOnPermanence: parsed.data.webhookOnPermanence,
       webhookOnLeave: parsed.data.webhookOnLeave,
-      permanenceThresholdSec: parsed.data.permanenceThresholdSec
-    }
+      permanenceThresholdSec: parsed.data.permanenceThresholdSec,
+    },
   });
   revalidatePath(`/dashboard/webinars/${id}/integrations`);
   return { ok: true };
@@ -3394,7 +3883,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { integrationsSchema, type IntegrationsInput } from "@/lib/validations/webinar";
+import {
+  integrationsSchema,
+  type IntegrationsInput,
+} from "@/lib/validations/webinar";
 import { updateWebinarIntegrations } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3406,22 +3898,35 @@ export interface IntegrationsFormProps {
   initial: IntegrationsInput;
 }
 
-const TRIGGERS: ReadonlyArray<{ key: keyof IntegrationsInput; label: string }> = [
-  { key: "webhookOnOptin", label: "Ao captar lead novo" },
-  { key: "webhookOnEnter", label: "Quando lead acessar o webinar" },
-  { key: "webhookOnCtaView", label: "Quando lead vir a oferta" },
-  { key: "webhookOnCtaClick", label: "Quando lead clicar na oferta" },
-  { key: "webhookOnPitchReached", label: "Quando lead vir o pitch" },
-  { key: "webhookOnPermanence", label: "Quando lead permanecer (threshold abaixo)" },
-  { key: "webhookOnLeave", label: "Quando lead sair do webinar" }
-];
+const TRIGGERS: ReadonlyArray<{ key: keyof IntegrationsInput; label: string }> =
+  [
+    { key: "webhookOnOptin", label: "Ao captar lead novo" },
+    { key: "webhookOnEnter", label: "Quando lead acessar o webinar" },
+    { key: "webhookOnCtaView", label: "Quando lead vir a oferta" },
+    { key: "webhookOnCtaClick", label: "Quando lead clicar na oferta" },
+    { key: "webhookOnPitchReached", label: "Quando lead vir o pitch" },
+    {
+      key: "webhookOnPermanence",
+      label: "Quando lead permanecer (threshold abaixo)",
+    },
+    { key: "webhookOnLeave", label: "Quando lead sair do webinar" },
+  ];
 
-export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) {
+export function IntegrationsForm({
+  webinarId,
+  initial,
+}: IntegrationsFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<IntegrationsInput>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<IntegrationsInput>({
     resolver: zodResolver(integrationsSchema),
-    defaultValues: initial
+    defaultValues: initial,
   });
 
   const watchPermanence = watch("webhookOnPermanence");
@@ -3444,8 +3949,16 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
 
       <div className="space-y-2">
         <Label htmlFor="webhookUrl">URL do webhook</Label>
-        <Input id="webhookUrl" placeholder="https://..." {...register("webhookUrl")} />
-        {errors.webhookUrl && <p className="text-sm text-destructive">{errors.webhookUrl.message}</p>}
+        <Input
+          id="webhookUrl"
+          placeholder="https://..."
+          {...register("webhookUrl")}
+        />
+        {errors.webhookUrl && (
+          <p className="text-sm text-destructive">
+            {errors.webhookUrl.message}
+          </p>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -3463,7 +3976,9 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
 
       {watchPermanence ? (
         <div className="space-y-2">
-          <Label htmlFor="permanenceThresholdSec">Threshold de permanência (segundos)</Label>
+          <Label htmlFor="permanenceThresholdSec">
+            Threshold de permanência (segundos)
+          </Label>
           <Input
             id="permanenceThresholdSec"
             type="number"
@@ -3471,13 +3986,17 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
             {...register("permanenceThresholdSec", { valueAsNumber: true })}
           />
           {errors.permanenceThresholdSec && (
-            <p className="text-sm text-destructive">{errors.permanenceThresholdSec.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.permanenceThresholdSec.message}
+            </p>
           )}
         </div>
       ) : null}
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Salvando..." : "Salvar"}</Button>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar"}
+        </Button>
       </div>
     </form>
   );
@@ -3493,7 +4012,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { IntegrationsForm } from "@/components/webinar/integrations-form";
 
-export default async function IntegrationsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function IntegrationsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
@@ -3512,7 +4035,7 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ i
           webhookOnPitchReached: w.webhookOnPitchReached,
           webhookOnPermanence: w.webhookOnPermanence,
           webhookOnLeave: w.webhookOnLeave,
-          permanenceThresholdSec: w.permanenceThresholdSec
+          permanenceThresholdSec: w.permanenceThresholdSec,
         }}
       />
     </div>
@@ -3541,6 +4064,7 @@ git commit -m "feat(web): add integrations form (webhook config) on dashboard we
 ## Task 20: Worker `dispatch-webhook` job (TDD with mocks)
 
 **Files:**
+
 - Create: `apps/worker/src/jobs/dispatch-webhook.ts`
 - Create: `apps/worker/src/test/jobs/dispatch-webhook.test.ts`
 - Modify: `apps/worker/src/index.ts` (register webhook Worker)
@@ -3554,7 +4078,8 @@ import { prisma } from "db";
 const TEST_USER = { id: "dw-user", email: "dw@example.com", name: "DW" };
 
 beforeEach(async () => {
-  process.env.DATABASE_URL = "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public";
+  process.env.DATABASE_URL =
+    "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public";
   process.env.REDIS_URL = "redis://localhost:6379";
   process.env.S3_ENDPOINT = "http://localhost:9000";
   process.env.S3_ACCESS_KEY = "test";
@@ -3576,21 +4101,38 @@ afterAll(async () => prisma.$disconnect());
 
 async function makeDelivery() {
   const w = await prisma.webinar.create({
-    data: { ownerId: TEST_USER.id, name: "T", title: "T", slug: "dw-1", status: "ACTIVE" }
+    data: {
+      ownerId: TEST_USER.id,
+      name: "T",
+      title: "T",
+      slug: "dw-1",
+      status: "ACTIVE",
+    },
   });
   return prisma.webhookDelivery.create({
-    data: { webinarId: w.id, event: "lead_novo", url: "https://hooks.example/x", payload: { foo: 1 }, status: "PENDING" }
+    data: {
+      webinarId: w.id,
+      event: "lead_novo",
+      url: "https://hooks.example/x",
+      payload: { foo: 1 },
+      status: "PENDING",
+    },
   });
 }
 
 describe("dispatchWebhook", () => {
   it("marks SUCCESS on 2xx response and stores response body", async () => {
     const d = await makeDelivery();
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("OK", { status: 200 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("OK", { status: 200 })),
+    );
     const { dispatchWebhook } = await import("@/jobs/dispatch-webhook.js");
     const job: any = { data: { deliveryId: d.id } };
     await dispatchWebhook(job);
-    const after = await prisma.webhookDelivery.findUnique({ where: { id: d.id } });
+    const after = await prisma.webhookDelivery.findUnique({
+      where: { id: d.id },
+    });
     expect(after?.status).toBe("SUCCESS");
     expect(after?.responseStatus).toBe(200);
     expect(after?.responseBody).toBe("OK");
@@ -3599,11 +4141,18 @@ describe("dispatchWebhook", () => {
 
   it("marks FAILED + throws on 5xx (BullMQ retry)", async () => {
     const d = await makeDelivery();
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("server error", { status: 500 })));
-    const { dispatchWebhook } = await import("@/jobs/dispatch-webhook.js?" + Date.now());
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("server error", { status: 500 })),
+    );
+    const { dispatchWebhook } = await import(
+      "@/jobs/dispatch-webhook.js?" + Date.now()
+    );
     const job: any = { data: { deliveryId: d.id } };
     await expect(dispatchWebhook(job)).rejects.toThrow();
-    const after = await prisma.webhookDelivery.findUnique({ where: { id: d.id } });
+    const after = await prisma.webhookDelivery.findUnique({
+      where: { id: d.id },
+    });
     expect(after?.status).toBe("FAILED");
     expect(after?.errorMessage).toContain("HTTP 500");
   });
@@ -3611,16 +4160,25 @@ describe("dispatchWebhook", () => {
   it("truncates response body to 1024 chars", async () => {
     const d = await makeDelivery();
     const huge = "a".repeat(5000);
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(huge, { status: 200 })));
-    const { dispatchWebhook } = await import("@/jobs/dispatch-webhook.js?" + (Date.now() + 1));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(huge, { status: 200 })),
+    );
+    const { dispatchWebhook } = await import(
+      "@/jobs/dispatch-webhook.js?" + (Date.now() + 1)
+    );
     const job: any = { data: { deliveryId: d.id } };
     await dispatchWebhook(job);
-    const after = await prisma.webhookDelivery.findUnique({ where: { id: d.id } });
+    const after = await prisma.webhookDelivery.findUnique({
+      where: { id: d.id },
+    });
     expect(after?.responseBody?.length).toBe(1024);
   });
 
   it("returns silently when delivery not found", async () => {
-    const { dispatchWebhook } = await import("@/jobs/dispatch-webhook.js?" + (Date.now() + 2));
+    const { dispatchWebhook } = await import(
+      "@/jobs/dispatch-webhook.js?" + (Date.now() + 2)
+    );
     const job: any = { data: { deliveryId: "nonexistent" } };
     await expect(dispatchWebhook(job)).resolves.toBeUndefined();
   });
@@ -3642,28 +4200,40 @@ import { type Job } from "bullmq";
 import { prisma } from "db";
 import type { DispatchWebhookPayload } from "jobs";
 
-export async function dispatchWebhook(job: Job<DispatchWebhookPayload>): Promise<void> {
+export async function dispatchWebhook(
+  job: Job<DispatchWebhookPayload>,
+): Promise<void> {
   const { deliveryId } = job.data;
-  const d = await prisma.webhookDelivery.findUnique({ where: { id: deliveryId } });
+  const d = await prisma.webhookDelivery.findUnique({
+    where: { id: deliveryId },
+  });
   if (!d) return;
 
   await prisma.webhookDelivery.update({
     where: { id: d.id },
-    data: { attempt: { increment: 1 } }
+    data: { attempt: { increment: 1 } },
   });
 
   try {
     const res = await fetch(d.url, {
       method: "POST",
-      headers: { "content-type": "application/json", "user-agent": "hotwebinar-clone/1.0" },
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "hotwebinar-clone/1.0",
+      },
       body: JSON.stringify(d.payload),
-      signal: AbortSignal.timeout(10_000)
+      signal: AbortSignal.timeout(10_000),
     });
     const body = (await res.text()).slice(0, 1024);
     if (res.ok) {
       await prisma.webhookDelivery.update({
         where: { id: d.id },
-        data: { status: "SUCCESS", responseStatus: res.status, responseBody: body, errorMessage: null }
+        data: {
+          status: "SUCCESS",
+          responseStatus: res.status,
+          responseBody: body,
+          errorMessage: null,
+        },
       });
       return;
     }
@@ -3672,7 +4242,7 @@ export async function dispatchWebhook(job: Job<DispatchWebhookPayload>): Promise
     const msg = err instanceof Error ? err.message : String(err);
     await prisma.webhookDelivery.update({
       where: { id: d.id },
-      data: { status: "FAILED", errorMessage: msg.slice(0, 1024) }
+      data: { status: "FAILED", errorMessage: msg.slice(0, 1024) },
     });
     throw err;
   }
@@ -3692,7 +4262,7 @@ import {
   QUEUE_WEBHOOK,
   JOB_TRANSCODE,
   JOB_DELETE_ASSETS,
-  JOB_DISPATCH_WEBHOOK
+  JOB_DISPATCH_WEBHOOK,
 } from "jobs";
 import { transcodeVideo } from "./jobs/transcode-video.js";
 import { deleteVideoAssets } from "./jobs/delete-video-assets.js";
@@ -3710,7 +4280,7 @@ async function main() {
       if (job.name === JOB_DELETE_ASSETS) return deleteVideoAssets(job);
       throw new Error(`Unknown video job: ${job.name}`);
     },
-    { connection: getRedisConnection(), concurrency: config.workerConcurrency }
+    { connection: getRedisConnection(), concurrency: config.workerConcurrency },
   );
 
   const webhookWorker = new Worker(
@@ -3719,13 +4289,23 @@ async function main() {
       if (job.name === JOB_DISPATCH_WEBHOOK) return dispatchWebhook(job);
       throw new Error(`Unknown webhook job: ${job.name}`);
     },
-    { connection: getRedisConnection(), concurrency: 2 }
+    { connection: getRedisConnection(), concurrency: 2 },
   );
 
-  videoWorker.on("ready", () => console.log(`[worker:video] ready, concurrency ${config.workerConcurrency}`));
-  videoWorker.on("failed", (job, err) => console.error(`[worker:video] failed ${job?.id}: ${err.message}`));
-  webhookWorker.on("ready", () => console.log("[worker:webhook] ready, concurrency 2"));
-  webhookWorker.on("failed", (job, err) => console.error(`[worker:webhook] failed ${job?.id}: ${err.message}`));
+  videoWorker.on("ready", () =>
+    console.log(
+      `[worker:video] ready, concurrency ${config.workerConcurrency}`,
+    ),
+  );
+  videoWorker.on("failed", (job, err) =>
+    console.error(`[worker:video] failed ${job?.id}: ${err.message}`),
+  );
+  webhookWorker.on("ready", () =>
+    console.log("[worker:webhook] ready, concurrency 2"),
+  );
+  webhookWorker.on("failed", (job, err) =>
+    console.error(`[worker:webhook] failed ${job?.id}: ${err.message}`),
+  );
 
   const shutdown = async () => {
     console.log("[worker] graceful shutdown");
@@ -3763,6 +4343,7 @@ git commit -m "feat(worker): add dispatch-webhook job + register webhook Worker"
 ## Task 21: Admin UI `/dashboard/webinars/[id]/webhooks`
 
 **Files:**
+
 - Create: `apps/web/src/app/dashboard/webinars/[id]/webhooks/page.tsx`
 - Create: `apps/web/src/components/webinar/webhook-row.tsx`
 
@@ -3808,37 +4389,62 @@ export function WebhookRow({ row }: { row: WebhookRowData }) {
   }
 
   const variant: "default" | "destructive" | "outline" =
-    row.status === "SUCCESS" ? "default" : row.status === "FAILED" ? "destructive" : "outline";
+    row.status === "SUCCESS"
+      ? "default"
+      : row.status === "FAILED"
+        ? "destructive"
+        : "outline";
 
   return (
     <>
       <tr className="border-b">
         <td className="px-3 py-2 font-mono text-xs">{row.event}</td>
         <td className="px-3 py-2">{row.leadName ?? "—"}</td>
-        <td className="px-3 py-2"><Badge variant={variant}>{row.status}</Badge></td>
+        <td className="px-3 py-2">
+          <Badge variant={variant}>{row.status}</Badge>
+        </td>
         <td className="px-3 py-2 text-right tabular-nums">{row.attempt}</td>
-        <td className="px-3 py-2 text-right tabular-nums">{row.responseStatus ?? "—"}</td>
-        <td className="px-3 py-2 text-xs text-muted-foreground">{row.createdAt}</td>
+        <td className="px-3 py-2 text-right tabular-nums">
+          {row.responseStatus ?? "—"}
+        </td>
+        <td className="px-3 py-2 text-xs text-muted-foreground">
+          {row.createdAt}
+        </td>
         <td className="px-3 py-2 text-right">
-          <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>{open ? "−" : "+"}</Button>
-          <Button variant="outline" size="sm" disabled={pending} onClick={onRetry}>Reenviar</Button>
+          <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
+            {open ? "−" : "+"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={onRetry}
+          >
+            Reenviar
+          </Button>
         </td>
       </tr>
       {open ? (
         <tr>
           <td colSpan={7} className="bg-muted/30 px-3 py-3 text-xs">
             <p className="font-semibold">Payload</p>
-            <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2">{row.payloadJson}</pre>
+            <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2">
+              {row.payloadJson}
+            </pre>
             {row.responseBody ? (
               <>
                 <p className="mt-2 font-semibold">Response</p>
-                <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2">{row.responseBody}</pre>
+                <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2">
+                  {row.responseBody}
+                </pre>
               </>
             ) : null}
             {row.errorMessage ? (
               <>
                 <p className="mt-2 font-semibold text-destructive">Erro</p>
-                <pre className="mt-1 rounded bg-background p-2">{row.errorMessage}</pre>
+                <pre className="mt-1 rounded bg-background p-2">
+                  {row.errorMessage}
+                </pre>
               </>
             ) : null}
           </td>
@@ -3857,7 +4463,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
-import { WebhookRow, type WebhookRowData } from "@/components/webinar/webhook-row";
+import {
+  WebhookRow,
+  type WebhookRowData,
+} from "@/components/webinar/webhook-row";
 
 const PAGE_SIZE = 50;
 
@@ -3866,7 +4475,10 @@ interface PageProps {
   searchParams: Promise<{ status?: string; event?: string; page?: string }>;
 }
 
-export default async function WebhooksPage({ params, searchParams }: PageProps) {
+export default async function WebhooksPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id } = await params;
   const sp = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -3886,8 +4498,8 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
       include: { lead: true },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE
-    })
+      take: PAGE_SIZE,
+    }),
   ]);
   const data: WebhookRowData[] = rows.map((r) => ({
     id: r.id,
@@ -3899,7 +4511,7 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
     responseBody: r.responseBody,
     payloadJson: JSON.stringify(r.payload, null, 2),
     leadName: r.lead?.name ?? null,
-    createdAt: r.createdAt.toISOString()
+    createdAt: r.createdAt.toISOString(),
   }));
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -3908,10 +4520,30 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
     <div className="container mx-auto py-10">
       <h1 className="text-2xl font-semibold">Webhooks — {w.title}</h1>
       <div className="mt-4 flex gap-2 text-sm">
-        <FilterLink id={id} label="Todos" sp={sp} apply={{ status: undefined }} />
-        <FilterLink id={id} label="Pending" sp={sp} apply={{ status: "PENDING" }} />
-        <FilterLink id={id} label="Success" sp={sp} apply={{ status: "SUCCESS" }} />
-        <FilterLink id={id} label="Failed" sp={sp} apply={{ status: "FAILED" }} />
+        <FilterLink
+          id={id}
+          label="Todos"
+          sp={sp}
+          apply={{ status: undefined }}
+        />
+        <FilterLink
+          id={id}
+          label="Pending"
+          sp={sp}
+          apply={{ status: "PENDING" }}
+        />
+        <FilterLink
+          id={id}
+          label="Success"
+          sp={sp}
+          apply={{ status: "SUCCESS" }}
+        />
+        <FilterLink
+          id={id}
+          label="Failed"
+          sp={sp}
+          apply={{ status: "FAILED" }}
+        />
       </div>
       <table className="mt-4 w-full text-sm">
         <thead>
@@ -3927,9 +4559,18 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
         </thead>
         <tbody>
           {data.length === 0 ? (
-            <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">Nenhum disparo ainda.</td></tr>
+            <tr>
+              <td
+                colSpan={7}
+                className="px-3 py-6 text-center text-muted-foreground"
+              >
+                Nenhum disparo ainda.
+              </td>
+            </tr>
           ) : null}
-          {data.map((r) => <WebhookRow key={r.id} row={r} />)}
+          {data.map((r) => (
+            <WebhookRow key={r.id} row={r} />
+          ))}
         </tbody>
       </table>
       <div className="mt-4 flex items-center justify-between text-sm">
@@ -3937,8 +4578,22 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
           {total} entrada{total === 1 ? "" : "s"}, página {page}/{totalPages}
         </span>
         <div className="flex gap-2">
-          {page > 1 ? <Link href={`?page=${page - 1}`} className="rounded border px-3 py-1">Anterior</Link> : null}
-          {page < totalPages ? <Link href={`?page=${page + 1}`} className="rounded border px-3 py-1">Próximo</Link> : null}
+          {page > 1 ? (
+            <Link
+              href={`?page=${page - 1}`}
+              className="rounded border px-3 py-1"
+            >
+              Anterior
+            </Link>
+          ) : null}
+          {page < totalPages ? (
+            <Link
+              href={`?page=${page + 1}`}
+              className="rounded border px-3 py-1"
+            >
+              Próximo
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
@@ -3946,7 +4601,10 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
 }
 
 function FilterLink({
-  id, label, sp, apply
+  id,
+  label,
+  sp,
+  apply,
 }: {
   id: string;
   label: string;
@@ -3957,7 +4615,11 @@ function FilterLink({
   if (apply.status === undefined) delete next.status;
   const qs = new URLSearchParams(next as Record<string, string>).toString();
   const href = `/dashboard/webinars/${id}/webhooks${qs ? "?" + qs : ""}`;
-  return <Link href={href} className="rounded border px-3 py-1">{label}</Link>;
+  return (
+    <Link href={href} className="rounded border px-3 py-1">
+      {label}
+    </Link>
+  );
 }
 ```
 
@@ -3981,6 +4643,7 @@ git commit -m "feat(web): add webhook delivery log + replay UI"
 ## Task 22: env + README updates
 
 **Files:**
+
 - Modify: `.env.example`
 - Modify: `README.md` (or `apps/web/README.md`)
 
@@ -4013,6 +4676,7 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - [ ] **Step 3: Update local `apps/web/.env.local` (user task — NOT committed)**
 
 Append to local `.env.local`:
+
 ```
 LEAD_SESSION_SECRET="<generate via: openssl rand -base64 32>"
 ```
@@ -4022,6 +4686,7 @@ LEAD_SESSION_SECRET="<generate via: openssl rand -base64 32>"
 - [ ] **Step 4: Verify env validation**
 
 The `submitOptin` server action calls `signLeadCookie` which throws if `LEAD_SESSION_SECRET` is missing. Run:
+
 ```bash
 pnpm --filter web test src/test/lib/lead-session.test.ts
 ```
@@ -4040,6 +4705,7 @@ git commit -m "docs: document public routes + LEAD_SESSION_SECRET env var"
 ## Task 23: Playwright E2E specs
 
 **Files:**
+
 - Create: `apps/web/e2e/public-funnel.spec.ts`
 - Create: `apps/web/e2e/webhook-replay.spec.ts`
 - Create: `apps/web/e2e/unico-phases.spec.ts`
@@ -4049,7 +4715,10 @@ git commit -m "docs: document public routes + LEAD_SESSION_SECRET env var"
 ```ts
 import { test, expect } from "@playwright/test";
 
-test("opt-in → live page renders video element + chat panel", async ({ page, request }) => {
+test("opt-in → live page renders video element + chat panel", async ({
+  page,
+  request,
+}) => {
   // assumes a JIT webinar with slug "e2e-funnel" and an EXTERNAL HLS URL exists in seed
   // (the seed for e2e is responsibility of test setup; this test uses an existing seeded webinar)
   await page.goto("/e2e-funnel");
@@ -4099,7 +4768,9 @@ test("UNICO before startDate shows countdown view", async ({ page }) => {
 test("UNICO after endDate shows closed view", async ({ page }) => {
   // assumes seed has webinar slug "e2e-past" with endDate in the past
   await page.goto("/e2e-past");
-  await expect(page.locator("p")).toContainText("Este webinar já foi encerrado");
+  await expect(page.locator("p")).toContainText(
+    "Este webinar já foi encerrado",
+  );
 });
 ```
 
@@ -4107,29 +4778,33 @@ test("UNICO after endDate shows closed view", async ({ page }) => {
 
 Add a note in `apps/web/e2e/README.md` (create if needed):
 
-```markdown
+````markdown
 ## E2E seed expectations
 
 These specs assume the following webinars are seeded in the test DB:
+
 - `e2e-funnel` — JIT, ACTIVE, with EXTERNAL hlsUrl pointing to a small public HLS asset
 - `e2e-webhook` — id (admin must own), with one FAILED WebhookDelivery row
 - `e2e-future` — UNICO, ACTIVE, startDate +1h
 - `e2e-past` — UNICO, ACTIVE, startDate −2h, endDate −1h
 
 Run via:
+
 ```bash
 pnpm --filter web e2e
 ```
+````
 
 Specs that depend on infrastructure not present at run-time should `test.skip()` themselves; see existing B2 pattern in `apps/web/e2e/README.md` if present.
-```
+
+````
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add apps/web/e2e
 git commit -m "test(web): add E2E specs for public funnel, webhook replay, UNICO phases"
-```
+````
 
 ---
 

@@ -3,7 +3,8 @@ import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { auth } from "@/lib/auth";
 
-const SESSION_TTL_MS = 15 * 60 * 1000; // 15 minutes since last lead activity
+const MIN_TTL_MS = 15 * 60 * 1000; // floor: 15 minutes
+const TTL_BUFFER_MS = 5 * 60 * 1000; // grace beyond video duration
 
 function refererAllowed(req: Request, isAdmin: boolean): boolean {
   // Admin with valid session = trusted; no referer gate (browsers may strip
@@ -40,10 +41,13 @@ export async function GET(
     if (lead.webinar.videoId !== videoId) {
       return new Response("forbidden", { status: 403 });
     }
-    // Session TTL: 15min since last activity (lastSeenAt is bumped by /api/track,
-    // /api/offer-click, opt-in, etc.)
-    const elapsed = Date.now() - lead.lastSeenAt.getTime();
-    if (elapsed > SESSION_TTL_MS) {
+    // Session TTL = video duration + 5min buffer (floor 15min). Measured
+    // from sessionStart so reloads during playback work as long as the
+    // video itself is still in range.
+    const durMs = video.durationSec ? video.durationSec * 1000 : 0;
+    const ttl = Math.max(MIN_TTL_MS, durMs + TTL_BUFFER_MS);
+    const elapsed = Date.now() - lead.sessionStart.getTime();
+    if (elapsed > ttl) {
       return new Response("session expired", { status: 401 });
     }
   } else {
