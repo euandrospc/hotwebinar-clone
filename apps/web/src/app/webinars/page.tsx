@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "db";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Webinars disponíveis"
+};
 
 export default async function PublicWebinarsList() {
   const webinars = await prisma.webinar.findMany({
