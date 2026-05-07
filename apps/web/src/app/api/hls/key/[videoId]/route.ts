@@ -6,10 +6,12 @@ import { auth } from "@/lib/auth";
 const SESSION_TTL_MS = 15 * 60 * 1000; // 15 minutes since last lead activity
 
 function refererAllowed(req: Request, isAdmin: boolean): boolean {
+  // Admin with valid session = trusted; no referer gate (browsers may strip
+  // Referer from media requests via Referrer-Policy or extensions).
+  if (isAdmin) return true;
   const ref = req.headers.get("referer") ?? "";
   if (!ref) return false;
   if (/\/[^/]+\/live(\/|$|\?)/.test(ref)) return true;
-  if (isAdmin && /\/dashboard\//.test(ref)) return true;
   return false;
 }
 
