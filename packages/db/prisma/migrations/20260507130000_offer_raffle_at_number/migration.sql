@@ -1,2 +1,2 @@
-ALTER TABLE "Webinar" ADD COLUMN "offerRaffleAtSec" INTEGER;
-ALTER TABLE "Webinar" ADD COLUMN "offerRaffleNumber" TEXT;
+ALTER TABLE "webinar" ADD COLUMN "offerRaffleAtSec" INTEGER;
+ALTER TABLE "webinar" ADD COLUMN "offerRaffleNumber" TEXT;
