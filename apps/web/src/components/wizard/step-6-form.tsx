@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Upload } from "lucide-react";
 import { step6Schema, type Step6Input } from "@/lib/validations/webinar";
-import { updateWebinarStep6, publishWebinar } from "@/server/actions/webinar";
+import { updateWebinarStep6 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
 import { AiStubSection } from "@/components/wizard/ai-stub-section";
 import { WizardSectionAccordion } from "@/components/wizard/wizard-section-accordion";
@@ -33,17 +33,12 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
 
   function onSubmit(values: Step6Input) {
     startTransition(async () => {
-      const r1 = await updateWebinarStep6(webinarId, values);
-      if (!("ok" in r1)) {
-        toast.error(r1.error.message);
-        return;
-      }
-      const r2 = await publishWebinar(webinarId);
-      if ("ok" in r2) {
-        toast.success("Webinar publicado");
-        router.push("/dashboard/webinars");
+      const r = await updateWebinarStep6(webinarId, values);
+      if ("ok" in r) {
+        toast.success("Chat salvo");
+        router.push(`/dashboard/webinars/${webinarId}/step-7`);
       } else {
-        toast.error(r2.error.message);
+        toast.error(r.error.message);
       }
     });
   }

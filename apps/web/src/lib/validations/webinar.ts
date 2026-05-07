@@ -124,8 +124,8 @@ export type ChatItem = z.infer<typeof chatItemSchema>;
 export const saleItemSchema = z.object({
   id: z.string().optional(),
   showAtSec: z.number().int().min(0),
-  buyerName: z.string().min(1, "Nome do comprador obrigatório").max(80),
-  productName: z.string().min(1, "Nome do produto obrigatório").max(120),
+  buyerName: z.string().min(1, "Texto obrigatório").max(200),
+  productName: z.string().max(120).optional().default(""),
   price: z.string().max(20).optional().nullable()
 });
 export const step7Schema = z.object({ notifications: z.array(saleItemSchema) });

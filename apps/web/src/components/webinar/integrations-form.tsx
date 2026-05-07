@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { integrationsSchema, type IntegrationsInput } from "@/lib/validations/webinar";
-import { updateWebinarIntegrations } from "@/server/actions/webinar";
+import { updateWebinarIntegrations, publishWebinar } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,12 +39,17 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
 
   function onSubmit(values: IntegrationsInput) {
     startTransition(async () => {
-      const r = await updateWebinarIntegrations(webinarId, values);
-      if ("ok" in r) {
-        toast.success("Integrações salvas");
-        router.refresh();
+      const r1 = await updateWebinarIntegrations(webinarId, values);
+      if (!("ok" in r1)) {
+        toast.error(r1.error.message);
+        return;
+      }
+      const r2 = await publishWebinar(webinarId);
+      if ("ok" in r2) {
+        toast.success("Webinar publicado");
+        router.push("/dashboard/webinars");
       } else {
-        toast.error(r.error.message);
+        toast.error(r2.error.message);
       }
     });
   }
