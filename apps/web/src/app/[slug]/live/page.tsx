@@ -53,7 +53,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
     where: { leadId: lead.id }, orderBy: { createdAt: "asc" }
   });
   const offset = computeInitialOffset(
-    { mode: w.mode, startDate: w.startDate, endDate: w.endDate },
+    { mode: w.mode, startDate: w.startDate, endDate: w.endDate, videoSyncWithStart: w.videoSyncWithStart },
     { sessionStart: lead.sessionStart },
     new Date(),
     w.video?.durationSec ?? null

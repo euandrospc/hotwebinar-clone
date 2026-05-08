@@ -4,6 +4,7 @@ export interface SyncWebinar {
   mode: "UNICO" | "JIT";
   startDate: Date | null;
   endDate: Date | null;
+  videoSyncWithStart?: boolean;
 }
 
 export interface SyncLead {
@@ -26,7 +27,10 @@ export function computeInitialOffset(
   videoDurationSec: number | null
 ): number {
   if (videoDurationSec == null || videoDurationSec <= 0) return 0;
-  const anchor = w.mode === "UNICO" && w.startDate ? w.startDate : lead.sessionStart;
+  // Anchor = webinar start ONLY when sync is enabled in UNICO mode.
+  // With sync OFF (or JIT mode) every lead starts fresh from their session.
+  const useStartDateAnchor = w.mode === "UNICO" && w.videoSyncWithStart !== false && w.startDate;
+  const anchor = useStartDateAnchor ? (w.startDate as Date) : lead.sessionStart;
   const diffSec = Math.floor((now.getTime() - anchor.getTime()) / 1000);
   if (diffSec <= 0) return 0;
   return Math.min(diffSec, videoDurationSec);

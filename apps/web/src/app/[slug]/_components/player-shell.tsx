@@ -37,7 +37,7 @@ export function PlayerShell({
           <ThemeToggle />
         </div>
       </header>
-      <div className="grid gap-4 p-4 md:grid-cols-[2fr_1fr]">
+      <div className="grid gap-3 p-3 md:grid-cols-[2fr_1fr] md:gap-4 md:p-4">
         <div className="space-y-3">
           <HlsPlayer
             src={video.hlsUrl}

@@ -49,10 +49,25 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(leadChat);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [windowHeight, setWindowHeight] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const maxSecRef = useRef(currentTimeSec);
+  if (currentTimeSec > maxSecRef.current) maxSecRef.current = currentTimeSec;
+  const visibleSec = maxSecRef.current;
 
   const items = useMemo<StreamItem[]>(() => {
     const ownerVisible: StreamItem[] = ownerChat
-      .filter((m) => m.showAtSec <= currentTimeSec)
+      .filter((m) => m.showAtSec <= visibleSec)
       .map((m) => ({ kind: "owner", id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner }));
     const leadItems: StreamItem[] = leadMsgs.map((m) => ({
       kind: "lead",
@@ -61,7 +76,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
       showAtSec: m.videoSec ?? 0
     }));
     return [...ownerVisible, ...leadItems].sort((a, b) => a.showAtSec - b.showAtSec);
-  }, [ownerChat, leadMsgs, currentTimeSec]);
+  }, [ownerChat, leadMsgs, visibleSec]);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -98,7 +113,17 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
   useEffect(() => {
-    const el = scrollRef.current;
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+
+  useEffect(() => {
+  const el = scrollRef.current;
     if (!el) return;
     if (!initialScrollDone.current) {
       el.scrollTop = el.scrollHeight;
@@ -110,13 +135,17 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
   }, [items.length]);
 
   return (
-    <aside className="flex h-full max-h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-lg border bg-card">
-      <div className="flex items-center gap-2 border-b px-4 py-3">
+    <aside className="flex flex-col overflow-hidden rounded-lg border bg-card text-xs md:h-full md:text-sm"
+      style={{
+        maxHeight: `${isMobile ? (windowHeight -340) : (windowHeight - 94)}px`
+      }}
+    >
+      <div className="flex items-center gap-2 border-b px-2 py-2 md:px-4 md:py-3">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
-        <h3 className="text-sm font-semibold">Chat ao vivo</h3>
-        <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
+        <h3 className="truncate text-xs font-semibold md:text-sm">Chat</h3>
+        <span className="ml-auto text-[10px] text-muted-foreground">{items.length}</span>
       </div>
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {
           const ts = formatClock(baseTimestampMs, m.showAtSec);
           if (m.kind === "owner") {
@@ -124,7 +153,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
             return (
               <div key={m.id} className="group flex flex-col">
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-sm font-semibold ${nameColor}`}>{m.authorName}</span>
+                  <span className={`truncate text-xs font-semibold md:text-sm ${nameColor}`}>{m.authorName}</span>
                   <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
                 </div>
                 <p className="break-words text-sm leading-snug">{personalize(m.text, leadName)}</p>
@@ -134,7 +163,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
           return (
             <div key={m.id} className="group flex flex-col">
               <div className="flex items-baseline gap-2">
-                <span className="text-sm font-semibold text-emerald-500">{leadName} <span className="text-[10px] font-normal text-muted-foreground">(você)</span></span>
+                <span className="truncate text-xs font-semibold text-emerald-500 md:text-sm">{leadName} <span className="text-[10px] font-normal text-muted-foreground">(você)</span></span>
                 <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
               </div>
               <p className="break-words text-sm leading-snug">{m.text}</p>
@@ -142,16 +171,16 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
           );
         })}
       </div>
-      <form onSubmit={send} className="flex gap-2 border-t px-3 py-3">
+      <form onSubmit={send} className="flex gap-1 border-t px-2 py-2 md:gap-2 md:px-3 md:py-3">
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Diga algo..."
           maxLength={500}
-          className="flex-1"
+          className="h-8 flex-1 text-xs md:h-10 md:text-sm"
         />
-        <Button type="submit" size="icon" disabled={sending || text.trim().length === 0} aria-label="Enviar">
-          <Send className="h-4 w-4" />
+        <Button type="submit" size="icon" disabled={sending || text.trim().length === 0} aria-label="Enviar" className="h-8 w-8 md:h-10 md:w-10">
+          <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
         </Button>
       </form>
     </aside>
