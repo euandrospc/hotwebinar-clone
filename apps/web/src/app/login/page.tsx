@@ -1,37 +1,13 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
-import { AnimatedCharactersLoginPage } from "@/components/ui/animated-characters-login-page";
+import { prisma } from "db";
+import { LoginClient } from "./login-client";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+export const dynamic = "force-dynamic";
 
-  async function onSubmit(email: string, password: string) {
-    setError(null);
-    setLoading(true);
-    const res = await signIn.email({ email, password });
-    setLoading(false);
-    if (res.error) {
-      setError("Credenciais inválidas");
-      return;
-    }
-    const raw = new URLSearchParams(window.location.search).get("from");
-    const target = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
-    router.push(target);
-  }
-
-  return (
-    <AnimatedCharactersLoginPage
-      title="Bem-vindo de volta"
-      subtitle="Entre com seus dados"
-      submitLabel="Entrar"
-      loadingLabel="Entrando..."
-      onSubmit={onSubmit}
-      error={error}
-      loading={loading}
-    />
-  );
+export default async function LoginPage() {
+  const setting = await prisma.accountSettings.findFirst({
+    where: { brandName: { not: null } },
+    select: { brandName: true }
+  });
+  const brandName = setting?.brandName?.trim() || "HotWebinar";
+  return <LoginClient brandName={brandName} />;
 }

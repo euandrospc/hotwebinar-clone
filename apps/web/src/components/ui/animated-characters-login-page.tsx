@@ -273,7 +273,7 @@ export function AnimatedCharactersLoginPage({
       <div className="relative hidden flex-col justify-between bg-gradient-to-br from-primary/90 via-primary to-primary/80 pl-12 pr-12 pt-12 text-primary-foreground lg:flex">
         <div className="relative z-20">
           <div className="flex items-center gap-2 text-lg font-semibold">
-            <Logo color="white" />
+            <Logo/>
           </div>
         </div>
 
@@ -524,7 +524,7 @@ export function AnimatedCharactersLoginPage({
       <div className="flex items-center justify-center bg-background p-8">
         <div className="w-full max-w-[420px]">
           <div className="mb-12 flex items-center justify-center gap-2 text-lg font-semibold lg:hidden">
-            <Logo color="white" />
+            <Logo />
           </div>
 
           <div className="mb-10 text-center">
