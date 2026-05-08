@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Sparkles } from "lucide-react";
+import Logo from "../logo";
 
 interface PupilProps {
   size?: number;
@@ -146,7 +147,6 @@ const EyeBall = ({
 };
 
 export interface AnimatedCharactersLoginPageProps {
-  brand?: string;
   title?: string;
   subtitle?: string;
   submitLabel?: string;
@@ -157,7 +157,6 @@ export interface AnimatedCharactersLoginPageProps {
 }
 
 export function AnimatedCharactersLoginPage({
-  brand = "HotWebinar",
   title = "Bem-vindo de volta",
   subtitle = "Entre com seus dados",
   submitLabel = "Entrar",
@@ -274,10 +273,7 @@ export function AnimatedCharactersLoginPage({
       <div className="relative hidden flex-col justify-between bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-12 text-primary-foreground lg:flex">
         <div className="relative z-20">
           <div className="flex items-center gap-2 text-lg font-semibold">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary-foreground/10 backdrop-blur-sm">
-              <Sparkles className="size-4" />
-            </div>
-            <span>{brand}</span>
+            <Logo color="white" />
           </div>
         </div>
 
@@ -528,10 +524,7 @@ export function AnimatedCharactersLoginPage({
       <div className="flex items-center justify-center bg-background p-8">
         <div className="w-full max-w-[420px]">
           <div className="mb-12 flex items-center justify-center gap-2 text-lg font-semibold lg:hidden">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-              <Sparkles className="size-4 text-primary" />
-            </div>
-            <span>{brand}</span>
+            <Logo color="white" />
           </div>
 
           <div className="mb-10 text-center">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, TvMinimalPlay, Video, Bolt } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Logo from "../logo";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -15,7 +16,7 @@ export function Sidebar() {
   const pathname = usePathname() ?? "";
   return (
     <aside className="flex w-60 flex-1 flex-col border-r bg-card">
-      <div className="px-6 py-5 text-2xl font-bold text-destructive">HotWebinar</div>
+      <div className="px-6 py-5 text-2xl font-bold text-destructive"><Logo /></div>
       <nav className="grid gap-1 px-3">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active =

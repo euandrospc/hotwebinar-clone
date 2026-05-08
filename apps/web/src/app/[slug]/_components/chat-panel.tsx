@@ -123,16 +123,22 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
 
 
   useEffect(() => {
-  const el = scrollRef.current;
+    const el = scrollRef.current;
     if (!el) return;
-    if (!initialScrollDone.current) {
-      el.scrollTop = el.scrollHeight;
-      initialScrollDone.current = true;
-      return;
-    }
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-    if (nearBottom) el.scrollTop = el.scrollHeight;
-  }, [items.length]);
+    // Wait for layout (height set after windowHeight resolves) so scrollHeight is real.
+    const id = requestAnimationFrame(() => {
+      if (!el) return;
+      if (!initialScrollDone.current) {
+        if (items.length === 0 || el.clientHeight === 0) return;
+        el.scrollTop = el.scrollHeight;
+        initialScrollDone.current = true;
+        return;
+      }
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      if (nearBottom) el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [items.length, windowHeight]);
 
   return (
     <aside className="flex flex-col overflow-hidden rounded-lg border bg-card text-xs md:h-full md:text-sm"

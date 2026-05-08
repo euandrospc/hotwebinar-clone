@@ -25,7 +25,6 @@ export default function LoginPage() {
 
   return (
     <AnimatedCharactersLoginPage
-      brand="HotWebinar"
       title="Bem-vindo de volta"
       subtitle="Entre com seus dados"
       submitLabel="Entrar"
