@@ -2,14 +2,15 @@ export interface Variant {
   height: number;
   width: number;
   bitrate: string;
+  maxrate: string;
+  bufsize: string;
   audioBitrate: string;
 }
 
 export const LADDER: ReadonlyArray<Variant> = [
-  { height: 360, width: 640, bitrate: "800k", audioBitrate: "96k" },
-  { height: 720, width: 1280, bitrate: "2500k", audioBitrate: "128k" },
-  { height: 1080, width: 1920, bitrate: "5000k", audioBitrate: "128k" },
-  { height: 1440, width: 2560, bitrate: "8000k", audioBitrate: "192k" }
+  { height: 360, width: 640, bitrate: "800k", maxrate: "856k", bufsize: "1200k", audioBitrate: "96k" },
+  { height: 720, width: 1280, bitrate: "2500k", maxrate: "2675k", bufsize: "3750k", audioBitrate: "128k" },
+  { height: 1080, width: 1920, bitrate: "5000k", maxrate: "5350k", bufsize: "7500k", audioBitrate: "128k" }
 ];
 
 export function selectLadder(sourceHeight: number): Variant[] {
