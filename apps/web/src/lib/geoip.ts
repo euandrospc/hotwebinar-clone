@@ -8,11 +8,22 @@ const PRIVATE_IP_PREFIXES = [
   "::1", "fe80:"
 ];
 
+// Strict IPv4 / IPv6 shapes only. `ip` comes from the client-controlled
+// X-Forwarded-For header, so reject anything that isn't a bare address before
+// interpolating it into the upstream URL (blocks path/query injection).
+const IPV4_RE = /^(\d{1,3})(\.\d{1,3}){3}$/;
+const IPV6_RE = /^[0-9a-fA-F:]+$/;
+function isValidIp(ip: string): boolean {
+  if (IPV4_RE.test(ip)) return ip.split(".").every((o) => Number(o) <= 255);
+  return IPV6_RE.test(ip) && ip.includes(":");
+}
+
 export async function enrichLeadGeo(leadId: string, ip: string): Promise<void> {
   if (!ip || ip === "unknown") return;
+  if (!isValidIp(ip)) return;
   if (PRIVATE_IP_PREFIXES.some((p) => ip.startsWith(p))) return;
   try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
       signal: AbortSignal.timeout(3000),
       headers: { "user-agent": "hotwebinar-clone/1.0" }
     });

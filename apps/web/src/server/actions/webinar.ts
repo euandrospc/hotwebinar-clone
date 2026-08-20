@@ -276,8 +276,11 @@ export async function updateWebinarStep6(id: string, input: Step6Input): Promise
     prisma.chatMessage.deleteMany({ where: { id: { in: toDelete } } }),
     ...parsed.data.messages.map((m) =>
       m.id
-        ? prisma.chatMessage.update({
-            where: { id: m.id },
+        ? prisma.chatMessage.updateMany({
+            // Scope by webinarId so a caller cannot overwrite another webinar's
+            // message by passing a foreign message id (IDOR). updateMany also
+            // no-ops (0 rows) instead of throwing when the id isn't in this webinar.
+            where: { id: m.id, webinarId: id },
             data: {
               authorName: m.authorName,
               text: m.text,

@@ -7,6 +7,10 @@ export interface ParsedChatMessage {
   isOwner: boolean;
 }
 
+// Cap parsed rows so a small (zip-compressed) xlsx can't expand into millions
+// of rows and exhaust memory. 50k messages is far above any real import.
+const MAX_ROWS = 50_000;
+
 export async function parseChatXlsx(buffer: ArrayBuffer | Buffer): Promise<ParsedChatMessage[]> {
   const wb = new ExcelJS.Workbook();
   const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
@@ -17,6 +21,7 @@ export async function parseChatXlsx(buffer: ArrayBuffer | Buffer): Promise<Parse
   const rows: ParsedChatMessage[] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNum) => {
     if (rowNum === 1) return;
+    if (rows.length >= MAX_ROWS) throw new Error("too_many_rows");
     const h = String(row.getCell(1).value ?? "").trim();
     const m = String(row.getCell(2).value ?? "").trim();
     const s = String(row.getCell(3).value ?? "").trim();

@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { prisma, Prisma } from "db";
+
+/** Constant-time string compare; false on length mismatch (no early return leak). */
+function secretsMatch(a: string, b: string): boolean {
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 const inputSchema = z.object({
   externalId: z.string().min(1).max(200),
@@ -24,7 +33,7 @@ export async function POST(
     where: { id: webinarId },
     select: { id: true, salesWebhookSecret: true }
   });
-  if (!webinar || !webinar.salesWebhookSecret || webinar.salesWebhookSecret !== provided) {
+  if (!webinar || !webinar.salesWebhookSecret || !secretsMatch(webinar.salesWebhookSecret, provided)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

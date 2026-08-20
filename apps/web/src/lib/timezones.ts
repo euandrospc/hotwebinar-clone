@@ -35,3 +35,35 @@ export function resolveAutoTimezone(): string {
     return "America/Sao_Paulo";
   }
 }
+
+/**
+ * Format a UTC Date in a specific IANA timezone as "dd/MM/yyyy HH:mm".
+ *
+ * Server components run in the container's timezone (usually UTC), so plain
+ * date-fns `format(date, ...)` renders the stored UTC instant, not the webinar's
+ * local time — a 20:00 São Paulo event shows as 23:00. This converts explicitly
+ * using the webinar's timezone. `__auto__` (browser-detect) has no meaning on the
+ * server, so it falls back to São Paulo.
+ */
+export function formatWebinarDateTime(
+  date: Date,
+  timeZone: string | null | undefined
+): string {
+  const tz = !timeZone || timeZone === AUTO_TIMEZONE_VALUE ? "America/Sao_Paulo" : timeZone;
+  try {
+    const parts = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: tz,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).formatToParts(date);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return `${get("day")}/${get("month")}/${get("year")} ${get("hour")}:${get("minute")}`;
+  } catch {
+    // Invalid timezone string: fall back to São Paulo rather than throwing.
+    return formatWebinarDateTime(date, "America/Sao_Paulo");
+  }
+}

@@ -7,6 +7,10 @@ export interface ParsedSale {
   price: string | null;
 }
 
+// Cap parsed rows so a small (zip-compressed) xlsx can't expand into millions
+// of rows and exhaust memory.
+const MAX_ROWS = 50_000;
+
 export async function parseSalesXlsx(buffer: ArrayBuffer | Buffer): Promise<ParsedSale[]> {
   const wb = new ExcelJS.Workbook();
   const buf = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer;
@@ -21,6 +25,7 @@ export async function parseSalesXlsx(buffer: ArrayBuffer | Buffer): Promise<Pars
   const rows: ParsedSale[] = [];
   sheet.eachRow({ includeEmpty: false }, (row, rowNum) => {
     if (rowNum === 1) return;
+    if (rows.length >= MAX_ROWS) throw new Error("too_many_rows");
     const h = String(row.getCell(1).value ?? "").trim();
     const m = String(row.getCell(2).value ?? "").trim();
     const s = String(row.getCell(3).value ?? "").trim();

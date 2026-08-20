@@ -23,7 +23,13 @@ if (!baseURL) throw new Error("Missing env: BETTER_AUTH_URL");
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  emailAndPassword: { enabled: true, autoSignIn: true },
+  // disableSignUp: this is an internal admin panel — accounts are provisioned via
+  // the seed script, not self-service. Without this the public POST
+  // /api/auth/sign-up/email lets anyone create an account (and, with the old
+  // role default of "admin", an admin one). The seed uses the server-side
+  // auth.api.signUpEmail admin call; if a fresh deploy needs the very first
+  // admin, run the seed with this temporarily false, then re-enable.
+  emailAndPassword: { enabled: true, autoSignIn: true, disableSignUp: true },
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24

@@ -1,6 +1,7 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import type { Readable } from "node:stream";
 import { cookies, headers } from "next/headers";
+import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { getS3Client } from "@/lib/storage/s3";
 import { HLS_BUCKET } from "@/lib/storage/buckets";
@@ -32,13 +33,29 @@ export async function GET(
   const { path } = await params;
   if (!path || path.length < 2) return new Response("invalid path", { status: 400 });
 
+  const key = path.join("/");
+  // Sanity: key starts with cuid-like videoId
+  if (!/^[A-Za-z0-9_-]+\/.+/.test(key)) return new Response("invalid", { status: 400 });
+  const requestedVideoId = path[0];
+
   // Auth: lead cookie OR admin session. Check both; admin status wins
   // when both are present (e.g., stale lead cookie + active admin session).
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
   const session = await auth.api.getSession({ headers: await headers() });
   const isAdmin = Boolean(session);
-  const authorized = isAdmin || Boolean(leadId);
+
+  // A lead may only fetch assets of the video tied to THEIR webinar — otherwise
+  // any lead of any webinar could enumerate every other webinar's HLS by videoId.
+  let leadAuthorized = false;
+  if (!isAdmin && leadId) {
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { webinar: { select: { videoId: true } } }
+    });
+    leadAuthorized = lead?.webinar?.videoId === requestedVideoId;
+  }
+  const authorized = isAdmin || leadAuthorized;
 
   // Referer gate: blocks direct browser-bar URL access even with valid cookie.
   // Trade-off: cURL with -H "Referer: ..." bypasses; this is best-effort browser-only.
@@ -46,10 +63,6 @@ export async function GET(
     return new Response("forbidden", { status: 403 });
   }
   if (!authorized) return new Response("unauthorized", { status: 401 });
-
-  const key = path.join("/");
-  // Sanity: key starts with cuid-like videoId
-  if (!/^[A-Za-z0-9_-]+\/.+/.test(key)) return new Response("invalid", { status: 400 });
 
   let out;
   try {

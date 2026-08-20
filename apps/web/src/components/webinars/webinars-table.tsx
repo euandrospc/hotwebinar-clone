@@ -8,10 +8,10 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { formatWebinarDateTime } from "@/lib/timezones";
 import { RowActions } from "./row-actions";
 
-type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate">;
+type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate" | "timezone">;
 
 const STATUS_LABEL: Record<Row["status"], string> = {
   DRAFT: "Rascunho",
@@ -43,9 +43,9 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
             <TableCell>
               <div className="font-medium">{r.title || r.name || "Sem título"}</div>
               <div className="text-xs text-muted-foreground">
-                {r.startDate ? format(r.startDate, "dd/MM/yyyy HH:mm") : "—"}
+                {r.startDate ? formatWebinarDateTime(r.startDate, r.timezone) : "—"}
                 {" → "}
-                {r.endDate ? format(r.endDate, "dd/MM/yyyy HH:mm") : "—"}
+                {r.endDate ? formatWebinarDateTime(r.endDate, r.timezone) : "—"}
               </div>
             </TableCell>
             <TableCell><Badge variant={r.status === "ACTIVE" ? "default" : "outline"}>{STATUS_LABEL[r.status]}</Badge></TableCell>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "db";
+import { AUTO_TIMEZONE_VALUE } from "@/lib/timezones";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function PublicWebinarsList() {
   const webinars = await prisma.webinar.findMany({
     where: { status: "ACTIVE", slug: { not: null } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, slug: true, title: true, name: true, startDate: true }
+    select: { id: true, slug: true, title: true, name: true, startDate: true, timezone: true }
   });
 
   return (
@@ -36,7 +37,14 @@ export default async function PublicWebinarsList() {
               <p className="text-lg font-semibold">{w.title || w.name || w.slug}</p>
               {w.startDate && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" }).format(w.startDate)}
+                  {new Intl.DateTimeFormat("pt-BR", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                    timeZone:
+                      !w.timezone || w.timezone === AUTO_TIMEZONE_VALUE
+                        ? "America/Sao_Paulo"
+                        : w.timezone
+                  }).format(w.startDate)}
                 </p>
               )}
             </Link>
