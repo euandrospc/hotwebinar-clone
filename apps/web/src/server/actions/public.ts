@@ -64,39 +64,32 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   const name = data.name ?? "";
   const phone = data.phone || null;
 
-  const existing = email
-    ? await prisma.lead.findUnique({ where: { webinarId_email: { webinarId: w.id, email } } })
-    : null;
-
   let lead;
-  if (existing) {
-    lead = await prisma.lead.update({
-      where: { id: existing.id },
-      data: { name: name || existing.name, phone: phone ?? existing.phone, ip, userAgent: ua, lastSeenAt: new Date(), sessionStart: new Date(), enterFired: false, ...utm }
+  if (email) {
+    // Atomic upsert on the (webinarId, email) unique key: INSERT ... ON CONFLICT
+    // DO UPDATE. This can never raise P2002 on that constraint, so it is immune
+    // to the findUnique/create race (and any read-visibility gap) that the old
+    // create+catch path could hit under concurrency. `undefined` = leave column
+    // unchanged, preserving the previous "keep existing name/phone if blank".
+    lead = await prisma.lead.upsert({
+      where: { webinarId_email: { webinarId: w.id, email } },
+      create: { webinarId: w.id, name, email, phone, ip, userAgent: ua, ...utm },
+      update: {
+        name: name || undefined,
+        phone: phone ?? undefined,
+        ip,
+        userAgent: ua,
+        lastSeenAt: new Date(),
+        sessionStart: new Date(),
+        enterFired: false,
+        ...utm
+      }
     });
   } else {
-    try {
-      lead = await prisma.lead.create({
-        data: { webinarId: w.id, name, email, phone, ip, userAgent: ua, ...utm }
-      });
-    } catch (createErr: any) {
-      // Concurrent submitOptin race: another request created lead with same email between findUnique and create.
-      if (createErr?.code === "P2002" && email) {
-        const racedExisting = await prisma.lead.findUnique({
-          where: { webinarId_email: { webinarId: w.id, email } }
-        });
-        if (racedExisting) {
-          lead = await prisma.lead.update({
-            where: { id: racedExisting.id },
-            data: { name: name || racedExisting.name, phone: phone ?? racedExisting.phone, ip, userAgent: ua, lastSeenAt: new Date(), ...utm }
-          });
-        } else {
-          throw createErr;
-        }
-      } else {
-        throw createErr;
-      }
-    }
+    // Webinar without an email field: no unique key to conflict on, plain create.
+    lead = await prisma.lead.create({
+      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua, ...utm }
+    });
   }
 
   await prisma.event.create({
