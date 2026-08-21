@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -86,9 +87,13 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
       }
     });
   } else {
-    // Webinar without an email field: no unique key to conflict on, plain create.
+    // Webinar that doesn't collect email: `email` is "" and the DB has a NOT NULL
+    // unique (webinarId, email). Two anonymous opt-ins would both write ""  and the
+    // second one hit P2002 — the crash on the public /<slug> render. Give each
+    // anonymous lead a unique synthetic email so they stay distinct rows.
+    const anonEmail = `anon-${randomUUID()}@no-email.invalid`;
     lead = await prisma.lead.create({
-      data: { webinarId: w.id, name, email, phone, ip, userAgent: ua, ...utm }
+      data: { webinarId: w.id, name, email: anonEmail, phone, ip, userAgent: ua, ...utm }
     });
   }
 
