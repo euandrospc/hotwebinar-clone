@@ -1,7 +1,24 @@
 import type { Lead, Webinar } from "db";
 import { prisma } from "db";
 import { enqueueDispatchWebhook, type WebhookEvent } from "jobs";
-import { publicLeadDto } from "@/lib/public-dto";
+
+// Full lead snapshot for OUTBOUND webhooks only (server->server). Unlike the
+// public*Dto helpers (which reach the lead's browser), this includes email/phone
+// so downstream systems can match the lead by contact — e.g. the dashboard keys
+// leads by phone. Never send this shape to a client.
+function webhookLeadDto(l: Lead) {
+  return {
+    id: l.id,
+    name: l.name,
+    email: l.email,
+    phone: l.phone,
+    utmSource: l.utmSource,
+    utmMedium: l.utmMedium,
+    utmCampaign: l.utmCampaign,
+    utmTerm: l.utmTerm,
+    utmContent: l.utmContent
+  };
+}
 
 const FLAG_BY_EVENT: Record<WebhookEvent, keyof Webinar> = {
   lead_novo: "webhookOnOptin",
@@ -33,7 +50,7 @@ export async function enqueueWebhook(
     webinarId: webinar.id,
     webinarSlug: webinar.slug,
     leadId: lead?.id ?? null,
-    lead: lead ? publicLeadDto(lead) : null,
+    lead: lead ? webhookLeadDto(lead) : null,
     context,
     timestamp: new Date().toISOString()
   };

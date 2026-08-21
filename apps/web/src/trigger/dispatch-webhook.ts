@@ -19,9 +19,18 @@ export const dispatchWebhookTask = task({
     });
 
     try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+        "user-agent": "hotwebinar-clone/1.0"
+      };
+      // Shared secret for integrations that require it (e.g. the dashboard's
+      // /api/webinar-clone/webhook). Optional: only sent when configured.
+      if (process.env.INTEGRATION_WEBHOOK_SECRET) {
+        headers["x-webhook-secret"] = process.env.INTEGRATION_WEBHOOK_SECRET;
+      }
       const res = await fetch(d.url, {
         method: "POST",
-        headers: { "content-type": "application/json", "user-agent": "hotwebinar-clone/1.0" },
+        headers,
         body: JSON.stringify(d.payload),
         signal: AbortSignal.timeout(10_000)
       });
