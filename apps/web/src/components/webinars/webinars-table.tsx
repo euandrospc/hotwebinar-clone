@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { ArrowRight } from "lucide-react";
 import { formatWebinarDateTime } from "@/lib/timezones";
 import { RowActions } from "./row-actions";
 
@@ -42,9 +43,9 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
           <TableRow key={r.id}>
             <TableCell>
               <div className="font-medium">{r.title || r.name || "Sem título"}</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 {r.startDate ? formatWebinarDateTime(r.startDate, r.timezone) : "—"}
-                {" → "}
+                <ArrowRight className="h-3 w-3 shrink-0" />
                 {r.endDate ? formatWebinarDateTime(r.endDate, r.timezone) : "—"}
               </div>
             </TableCell>

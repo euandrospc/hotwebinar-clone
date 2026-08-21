@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SecondsInput } from "@/components/ui/seconds-input";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { LibraryPicker, type LibraryVideo } from "@/components/videos/library-picker";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { UploadDropzone } from "@/components/videos/upload-dropzone";
 
 type Mode = "external" | "upload" | "library";
@@ -132,14 +133,14 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
       {tab === "external" && <WizardNav webinarId={webinarId} step={4} submitting={pending} />}
       {tab === "library" && (
         <div className="mt-8 flex items-center justify-between border-t pt-4">
-          <a href={`/dashboard/webinars/${webinarId}/step-3`} className="rounded-md border px-4 py-2 text-sm">← Voltar</a>
+          <a href={`/dashboard/webinars/${webinarId}/step-3`} className="inline-flex items-center gap-1 rounded-md border px-4 py-2 text-sm"><ArrowLeft className="h-4 w-4" /> Voltar</a>
           <button
             type="button"
             onClick={onLibraryContinue}
             disabled={pending || !selectedVideoId}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
-            {pending ? "Salvando..." : "Continuar →"}
+            {pending ? "Salvando..." : (<>Continuar <ArrowRight className="h-4 w-4" /></>)}
           </button>
         </div>
       )}

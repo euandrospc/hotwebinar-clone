@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
@@ -150,17 +151,17 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {page > 1 && (
               <a
                 href={`${baseHref}?page=${page - 1}${qParam}`}
-                className="rounded-md border px-3 py-1.5 hover:bg-accent"
+                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-accent"
               >
-                ← Anterior
+                <ArrowLeft className="h-4 w-4" /> Anterior
               </a>
             )}
             {page < totalPages && (
               <a
                 href={`${baseHref}?page=${page + 1}${qParam}`}
-                className="rounded-md border px-3 py-1.5 hover:bg-accent"
+                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-accent"
               >
-                Próxima →
+                Próxima <ArrowRight className="h-4 w-4" />
               </a>
             )}
           </div>

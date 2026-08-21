@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, ArrowRight } from "lucide-react";
 
 export function DashboardRegionCard({ firstWebinarId }: { firstWebinarId: string | null }) {
   return (
@@ -22,9 +22,9 @@ export function DashboardRegionCard({ firstWebinarId }: { firstWebinarId: string
         {firstWebinarId ? (
           <Link
             href={`/dashboard/webinars/${firstWebinarId}/leads-map`}
-            className="text-xs text-primary underline-offset-2 hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
           >
-            Abrir mapa por webinar →
+            Abrir mapa por webinar <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         ) : (
           <p className="text-xs text-muted-foreground">Sem dados ainda.</p>

@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, Filter } from "lucide-react";
 import type { FunnelStage } from "@/lib/dashboard-stats";
 
 const fmt = new Intl.NumberFormat("pt-BR");
@@ -10,7 +10,7 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
     <section className="rounded-lg border bg-card p-5">
       <header className="flex items-center gap-2">
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M3 4h18l-7 9v6l-4 2v-8z" /></svg>
+          <Filter className="h-3.5 w-3.5" />
         </span>
         <h3 className="text-sm font-semibold">Funil de conversão</h3>
         <Info className="h-3.5 w-3.5 text-muted-foreground" />

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function WizardNav({
@@ -18,13 +19,17 @@ export function WizardNav({
     <div className="mt-8 flex items-center justify-between border-t pt-4">
       {prev ? (
         <Button asChild variant="outline" type="button">
-          <Link href={prev}>← Voltar</Link>
+          <Link href={prev}><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         </Button>
       ) : (
         <span />
       )}
       <Button type="submit" disabled={submitting}>
-        {submitting ? "Salvando..." : (submitLabel ?? "Continuar →")}
+        {submitting ? "Salvando..." : (
+          <>
+            {submitLabel ?? "Continuar"} <ArrowRight className="h-4 w-4" />
+          </>
+        )}
       </Button>
     </div>
   );
