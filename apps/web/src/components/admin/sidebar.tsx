@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, TvMinimalPlay, Video, Bolt } from "lucide-react";
+import { LayoutDashboard, TvMinimalPlay, Video, Headset, Bolt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Logo from "../logo";
 
@@ -9,6 +9,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/webinars", label: "Webinars", icon: TvMinimalPlay },
   { href: "/dashboard/videos", label: "Vídeos", icon: Video },
+  { href: "/dashboard/atendentes", label: "Atendentes", icon: Headset },
   { href: "/dashboard/settings", label: "Configurações", icon: Bolt }
 ];
 
