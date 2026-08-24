@@ -202,7 +202,6 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
                 <div className="min-w-0 flex-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-xs font-semibold text-red-500 md:text-sm">{teamChatName}</span>
-                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Equipe</span>
                     <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">{ts}</span>
                   </div>
                   <p className="mt-0.5 break-words text-sm leading-snug">{m.text}</p>
