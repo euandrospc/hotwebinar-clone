@@ -4,6 +4,7 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PlayerLeadMsg, PlayerOwnerMsg } from "../_lib/public-types";
+import { mergeLeadMessages } from "../_lib/merge-lead-messages";
 
 const TIME_FMT = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 function formatClock(baseMs: number, sec: number): string {
@@ -34,23 +35,28 @@ interface ChatPanelProps {
   leadChat: PlayerLeadMsg[];
   currentTimeSec: number;
   leadName: string;
+  teamChatName: string;
   baseTimestampMs: number;
 }
 
 type StreamItem =
   | { kind: "owner"; id: string; authorName: string; text: string; showAtSec: number; isOwner: boolean }
-  | { kind: "lead"; id: string; text: string; showAtSec: number };
+  | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team" };
 
 function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseTimestampMs }: ChatPanelProps) {
+export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs }: ChatPanelProps) {
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(leadChat);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [windowHeight, setWindowHeight] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const leadMsgsRef = useRef<PlayerLeadMsg[]>(leadMsgs);
+  useEffect(() => {
+    leadMsgsRef.current = leadMsgs;
+  }, [leadMsgs]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -73,7 +79,8 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
       kind: "lead",
       id: m.id,
       text: m.text,
-      showAtSec: m.videoSec ?? 0
+      showAtSec: m.videoSec ?? 0,
+      sender: m.sender
     }));
     return [...ownerVisible, ...leadItems].sort((a, b) => a.showAtSec - b.showAtSec);
   }, [ownerChat, leadMsgs, visibleSec]);
@@ -86,6 +93,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
     const optimistic: PlayerLeadMsg = {
       id: "tmp-" + Date.now(),
       text: trimmed,
+      sender: "lead",
       videoSec: Math.round(currentTimeSec),
       createdAt: new Date().toISOString()
     };
@@ -109,6 +117,30 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
       setSending(false);
     }
   }
+
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      const last = leadMsgsRef.current[leadMsgsRef.current.length - 1];
+      const after = last && !last.id.startsWith("tmp-") ? `?after=${last.id}` : "";
+      try {
+        const res = await fetch(`/api/lead-chat${after}`, { cache: "no-store" });
+        if (res.ok && alive) {
+          const json = (await res.json()) as { messages: PlayerLeadMsg[] };
+          if (json.messages.length) setLeadMsgs((m) => mergeLeadMessages(m, json.messages));
+        }
+      } catch {
+        /* keep state */
+      }
+      if (alive) timer = setTimeout(poll, 4000);
+    }
+    timer = setTimeout(poll, 4000);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
@@ -163,6 +195,17 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, baseT
                   <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
                 </div>
                 <p className="break-words text-sm leading-snug">{personalize(m.text, leadName)}</p>
+              </div>
+            );
+          }
+          if (m.sender === "team") {
+            return (
+              <div key={m.id} className="group flex flex-col">
+                <div className="flex items-baseline gap-2">
+                  <span className="truncate text-xs font-semibold text-primary md:text-sm">{teamChatName}</span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
+                </div>
+                <p className="break-words text-sm leading-snug">{m.text}</p>
               </div>
             );
           }

@@ -29,6 +29,7 @@ export interface PlayerOwnerMsg {
 export interface PlayerLeadMsg {
   id: string;
   text: string;
+  sender: "lead" | "team";
   videoSec: number | null;
   createdAt: string;
 }
@@ -42,4 +43,5 @@ export interface PlayerShellProps {
   lead: PublicLeadWithUtms;
   salesNotifications: PublicSaleNotification[];
   initialOffsetSec: number;
+  teamChatName: string;
 }

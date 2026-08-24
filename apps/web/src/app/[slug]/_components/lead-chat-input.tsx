@@ -22,6 +22,7 @@ export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
     const optimistic: PlayerLeadMsg = {
       id: "tmp-" + Date.now(),
       text: trimmed,
+      sender: "lead",
       videoSec: Math.round(currentTimeSec),
       createdAt: new Date().toISOString()
     };

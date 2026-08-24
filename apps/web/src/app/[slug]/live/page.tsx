@@ -86,8 +86,9 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
         id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner
       }))}
       leadChat={leadChat.map((m) => ({
-        id: m.id, text: m.text, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
+        id: m.id, text: m.text, sender: m.sender as "lead" | "team", videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
       }))}
+      teamChatName={w.teamChatName}
       lead={publicLeadWithUtmsDto(lead)}
       salesNotifications={w.saleNotifications.map((n) => ({
         id: n.id,

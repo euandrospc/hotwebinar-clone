@@ -10,7 +10,7 @@ import { AudienceBadge } from "./audience-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PlayerShell({
-  webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications
+  webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications, teamChatName
 }: PlayerShellProps) {
   const [currentTimeSec, setCurrentTimeSec] = useState(initialOffsetSec);
   const currentTimeRef = useRef(initialOffsetSec);
@@ -62,6 +62,7 @@ export function PlayerShell({
           leadChat={leadChat}
           currentTimeSec={currentTimeSec}
           leadName={lead.name}
+          teamChatName={teamChatName}
           baseTimestampMs={
             webinar.mode === "UNICO" && webinar.startDate
               ? new Date(webinar.startDate).getTime()
