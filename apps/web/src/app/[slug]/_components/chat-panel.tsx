@@ -130,9 +130,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
           const json = (await res.json()) as { messages: PlayerLeadMsg[] };
           if (json.messages.length) setLeadMsgs((m) => mergeLeadMessages(m, json.messages));
         }
-      } catch {
-        /* keep state */
-      }
+      } catch {}
       if (alive) timer = setTimeout(poll, 4000);
     }
     timer = setTimeout(poll, 4000);
