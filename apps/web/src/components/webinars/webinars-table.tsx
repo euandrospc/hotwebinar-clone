@@ -11,6 +11,7 @@ import {
 import { ArrowRight } from "lucide-react";
 import { formatWebinarDateTime } from "@/lib/timezones";
 import { RowActions } from "./row-actions";
+import { WebinarOnlineBadge } from "./webinar-online-badge";
 
 type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate" | "timezone">;
 
@@ -33,6 +34,7 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
       <TableHeader>
         <TableRow>
           <TableHead>Nome / Data e hora</TableHead>
+          <TableHead>Online</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Tipo</TableHead>
           <TableHead className="w-12" />
@@ -49,6 +51,7 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
                 {r.endDate ? formatWebinarDateTime(r.endDate, r.timezone) : "—"}
               </div>
             </TableCell>
+            <TableCell><WebinarOnlineBadge webinarId={r.id} /></TableCell>
             <TableCell><Badge variant={r.status === "ACTIVE" ? "default" : "outline"}>{STATUS_LABEL[r.status]}</Badge></TableCell>
             <TableCell><Badge variant="destructive">{r.mode === "UNICO" ? "Único" : "JIT"}</Badge></TableCell>
             <TableCell>

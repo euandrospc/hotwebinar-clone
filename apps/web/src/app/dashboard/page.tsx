@@ -11,6 +11,7 @@ import {
   avgWatchedMinutes
 } from "@/lib/dashboard-stats";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
+import { OnlineNowCard } from "@/components/dashboard/online-now-card";
 import { DashboardFunnel } from "@/components/dashboard/dashboard-funnel";
 import { DashboardParticipantesChart } from "@/components/dashboard/dashboard-participantes-chart";
 import { DashboardDispositivosChart } from "@/components/dashboard/dashboard-dispositivos-chart";
@@ -120,7 +121,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </div>
 
       <div className="mt-6 space-y-4">
-        <DashboardKpis avgMinutes={avgMin} sales={salesKpis} />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+          <OnlineNowCard />
+          <DashboardKpis avgMinutes={avgMin} sales={salesKpis} />
+        </div>
 
         <DashboardFunnel stages={funnel} />
 
