@@ -14,7 +14,8 @@ export async function AdminShell({
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect(ADMIN_LOGIN_PATH);
   const role = (session.user as { role?: string }).role;
-  if (!hasRole(role, ADMIN_ROLES) && role === "attendant") redirect("/atendimento");
+  if (role === "attendant") redirect("/atendimento");
+  if (role === "disabled") redirect(ADMIN_LOGIN_PATH);
 
   return (
     <div className="flex h-screen">

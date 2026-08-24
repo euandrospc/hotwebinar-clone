@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
+import { attendantReplyLimiter } from "@/lib/rate-limit";
 
 const schema = z.object({ leadId: z.string().min(1), text: z.string().min(1).max(500) });
 
 export async function POST(request: Request) {
   const session = await requireAttendant();
   if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (!attendantReplyLimiter.check(session.user.id)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   const lead = await prisma.lead.findUnique({ where: { id: parsed.data.leadId }, select: { id: true, webinarId: true } });

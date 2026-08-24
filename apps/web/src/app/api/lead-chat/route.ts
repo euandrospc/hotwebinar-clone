@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   const after = url.searchParams.get("after");
   let createdAtGt: Date | undefined;
   if (after) {
-    const cursor = await prisma.leadChatMessage.findUnique({ where: { id: after }, select: { createdAt: true } });
+    const cursor = await prisma.leadChatMessage.findFirst({ where: { id: after, leadId }, select: { createdAt: true } });
     createdAtGt = cursor?.createdAt;
   }
 
