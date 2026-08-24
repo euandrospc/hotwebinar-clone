@@ -25,7 +25,8 @@ export default async function Step6Page({ params }: { params: Promise<{ id: stri
           text: m.text,
           showAtSec: m.showAtSec,
           isOwner: m.isOwner
-        }))
+        })),
+        teamChatName: w.teamChatName
       }}
     />
   );

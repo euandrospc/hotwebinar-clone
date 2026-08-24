@@ -8,6 +8,8 @@ import { Plus, Upload } from "lucide-react";
 import { step6Schema, type Step6Input } from "@/lib/validations/webinar";
 import { updateWebinarStep6 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AiStubSection } from "@/components/wizard/ai-stub-section";
 import { WizardSectionAccordion } from "@/components/wizard/wizard-section-accordion";
 import { ChatPreviewAside } from "@/components/wizard/chat-preview-aside";
@@ -24,7 +26,7 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
   const [pending, startTransition] = useTransition();
   const [xlsxUploading, setXlsxUploading] = useState(false);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
-  const { handleSubmit, control, setValue } = useForm<Step6Input>({
+  const { handleSubmit, control, setValue, register } = useForm<Step6Input>({
     resolver: zodResolver(step6Schema),
     defaultValues: initial
   });
@@ -74,6 +76,11 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Chat scriptado</h2>
+
+        <div className="space-y-2">
+          <Label htmlFor="teamChatName">Nome exibido nas respostas do time</Label>
+          <Input id="teamChatName" placeholder="Suporte" {...register("teamChatName")} />
+        </div>
 
         <WizardSectionAccordion
           ai={

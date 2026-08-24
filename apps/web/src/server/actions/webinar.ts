@@ -273,6 +273,10 @@ export async function updateWebinarStep6(id: string, input: Step6Input): Promise
   const toDelete = existing.filter((e) => !incomingIds.has(e.id)).map((e) => e.id);
 
   await prisma.$transaction([
+    prisma.webinar.update({
+      where: { id },
+      data: { teamChatName: parsed.data.teamChatName || "Suporte" }
+    }),
     prisma.chatMessage.deleteMany({ where: { id: { in: toDelete } } }),
     ...parsed.data.messages.map((m) =>
       m.id

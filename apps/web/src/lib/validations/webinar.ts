@@ -117,8 +117,11 @@ export const chatItemSchema = z.object({
   showAtSec: z.number().int().min(0),
   isOwner: z.boolean().default(false)
 });
-export const step6Schema = z.object({ messages: z.array(chatItemSchema) });
-export type Step6Input = z.infer<typeof step6Schema>;
+export const step6Schema = z.object({
+  messages: z.array(chatItemSchema),
+  teamChatName: z.string().max(60).optional().default("Suporte")
+});
+export type Step6Input = z.input<typeof step6Schema>;
 export type ChatItem = z.infer<typeof chatItemSchema>;
 
 export const saleItemSchema = z.object({
