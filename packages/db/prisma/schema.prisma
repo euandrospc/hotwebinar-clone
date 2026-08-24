@@ -18,11 +18,12 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  sessions        Session[]
-  accounts        Account[]
-  webinars        Webinar[]
-  videos          Video[]
-  accountSettings AccountSettings?
+  sessions         Session[]
+  accounts         Account[]
+  webinars         Webinar[]
+  videos           Video[]
+  accountSettings  AccountSettings?
+  teamChatMessages LeadChatMessage[] @relation("TeamChatAuthor")
 
   @@map("user")
 }
@@ -188,6 +189,7 @@ model Webinar {
   endDate                DateTime?
   timezone               String             @default("America/Sao_Paulo")
   waitingTitle           String             @default("Sala de Espera")
+  teamChatName           String             @default("Suporte")
   waitingSubtitle        String             @default("Estamos prestes a começar")
   waitingShowThumb       Boolean            @default(false)
   accessFacilitated      Boolean            @default(false)
@@ -333,14 +335,17 @@ model Event {
 }
 
 model LeadChatMessage {
-  id        String   @id @default(cuid())
-  leadId    String
-  webinarId String
-  text      String
-  videoSec  Int?
-  createdAt DateTime @default(now())
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  webinar   Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  leadId       String
+  webinarId    String
+  text         String
+  videoSec     Int?
+  sender       String   @default("lead")
+  authorUserId String?
+  createdAt    DateTime @default(now())
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  webinar      Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  authorUser   User?    @relation("TeamChatAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([leadId, createdAt])
   @@map("lead_chat_message")
