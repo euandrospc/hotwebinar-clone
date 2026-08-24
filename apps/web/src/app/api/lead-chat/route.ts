@@ -39,3 +39,28 @@ export async function POST(request: Request) {
     id: msg.id, text: msg.text, videoSec: msg.videoSec, createdAt: msg.createdAt
   });
 }
+
+export async function GET(request: Request) {
+  const cookieStore = await cookies();
+  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
+  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  const after = url.searchParams.get("after");
+  let createdAtGt: Date | undefined;
+  if (after) {
+    const cursor = await prisma.leadChatMessage.findUnique({ where: { id: after }, select: { createdAt: true } });
+    createdAtGt = cursor?.createdAt;
+  }
+
+  const rows = await prisma.leadChatMessage.findMany({
+    where: { leadId, ...(createdAtGt ? { createdAt: { gt: createdAtGt } } : {}) },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, text: true, sender: true, videoSec: true, createdAt: true }
+  });
+
+  return NextResponse.json(
+    { messages: rows.map((m) => ({ id: m.id, text: m.text, sender: m.sender, videoSec: m.videoSec, createdAt: m.createdAt.toISOString() })) },
+    { headers: { "cache-control": "no-store" } }
+  );
+}
