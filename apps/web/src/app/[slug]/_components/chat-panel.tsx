@@ -41,7 +41,7 @@ interface ChatPanelProps {
 
 type StreamItem =
   | { kind: "owner"; id: string; authorName: string; text: string; showAtSec: number; isOwner: boolean }
-  | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team" };
+  | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team"; createdAt: string };
 
 function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
@@ -75,14 +75,16 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
     const ownerVisible: StreamItem[] = ownerChat
       .filter((m) => m.showAtSec <= visibleSec)
       .map((m) => ({ kind: "owner", id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner }));
+    const ownerSorted = [...ownerVisible].sort((a, b) => a.showAtSec - b.showAtSec);
     const leadItems: StreamItem[] = leadMsgs.map((m) => ({
       kind: "lead",
       id: m.id,
       text: m.text,
       showAtSec: m.videoSec ?? 0,
-      sender: m.sender
+      sender: m.sender,
+      createdAt: m.createdAt
     }));
-    return [...ownerVisible, ...leadItems].sort((a, b) => a.showAtSec - b.showAtSec);
+    return [...ownerSorted, ...leadItems];
   }, [ownerChat, leadMsgs, visibleSec]);
 
   async function send(e: React.FormEvent) {
@@ -183,7 +185,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
       </div>
       <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {
-          const ts = formatClock(baseTimestampMs, m.showAtSec);
+          const ts = m.kind === "owner" ? formatClock(baseTimestampMs, m.showAtSec) : TIME_FMT.format(new Date(m.createdAt));
           if (m.kind === "owner") {
             const nameColor = m.isOwner ? "text-primary" : colorFromName(m.authorName);
             return (
