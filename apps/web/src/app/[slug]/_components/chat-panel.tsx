@@ -222,7 +222,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  <span className={`truncate text-xs font-semibold md:text-sm ${isYou ? "text-emerald-500" : "text-zinc-400"}`}>
+                  <span className="truncate text-xs font-semibold text-zinc-400 md:text-sm">
                     {isYou ? (
                       <>
                         {leadName} <span className="text-[10px] font-normal text-muted-foreground">(você)</span>
