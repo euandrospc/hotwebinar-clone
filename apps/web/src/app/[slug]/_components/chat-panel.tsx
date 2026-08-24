@@ -41,14 +41,16 @@ interface ChatPanelProps {
 
 type StreamItem =
   | { kind: "owner"; id: string; authorName: string; text: string; showAtSec: number; isOwner: boolean }
-  | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team"; createdAt: string };
+  | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team" };
 
 function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
 export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs }: ChatPanelProps) {
-  const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(leadChat);
+  const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(() =>
+    leadChat.map((x) => (x.videoSec == null ? { ...x, videoSec: currentTimeSec } : x))
+  );
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [windowHeight, setWindowHeight] = useState(0);
@@ -75,16 +77,14 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
     const ownerVisible: StreamItem[] = ownerChat
       .filter((m) => m.showAtSec <= visibleSec)
       .map((m) => ({ kind: "owner", id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner }));
-    const ownerSorted = [...ownerVisible].sort((a, b) => a.showAtSec - b.showAtSec);
     const leadItems: StreamItem[] = leadMsgs.map((m) => ({
       kind: "lead",
       id: m.id,
       text: m.text,
       showAtSec: m.videoSec ?? 0,
-      sender: m.sender,
-      createdAt: m.createdAt
+      sender: m.sender
     }));
-    return [...ownerSorted, ...leadItems];
+    return [...ownerVisible, ...leadItems].sort((a, b) => a.showAtSec - b.showAtSec);
   }, [ownerChat, leadMsgs, visibleSec]);
 
   async function send(e: React.FormEvent) {
@@ -130,7 +130,11 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
         const res = await fetch(`/api/lead-chat${after}`, { cache: "no-store" });
         if (res.ok && alive) {
           const json = (await res.json()) as { messages: PlayerLeadMsg[] };
-          if (json.messages.length) setLeadMsgs((m) => mergeLeadMessages(m, json.messages));
+          if (json.messages.length) {
+            const at = maxSecRef.current;
+            const stamped = json.messages.map((x) => (x.videoSec == null ? { ...x, videoSec: at } : x));
+            setLeadMsgs((m) => mergeLeadMessages(m, stamped));
+          }
         }
       } catch {}
       if (alive) timer = setTimeout(poll, 4000);
@@ -185,7 +189,7 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
       </div>
       <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {
-          const ts = m.kind === "owner" ? formatClock(baseTimestampMs, m.showAtSec) : TIME_FMT.format(new Date(m.createdAt));
+          const ts = formatClock(baseTimestampMs, m.showAtSec);
           if (m.kind === "owner") {
             const nameColor = m.isOwner ? "text-primary" : colorFromName(m.authorName);
             return (
