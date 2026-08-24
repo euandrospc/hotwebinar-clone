@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Send, Menu, LogOut, ArrowLeft, Clock } from "lucide-react";
+import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 
@@ -32,6 +32,10 @@ interface InboxProps {
 const CONVERSATIONS_POLL_MS = 4000;
 const THREAD_POLL_MS = 4000;
 
+function initialOf(name: string): string {
+  return (name.trim()[0] ?? "?").toUpperCase();
+}
+
 function formatCountdown(startIso: string | null, nowMs: number): string {
   if (!startIso) return "agendado";
   const diff = new Date(startIso).getTime() - nowMs;
@@ -49,8 +53,7 @@ function formatCountdown(startIso: string | null, nowMs: number): string {
 export function Inbox({ attendantName }: InboxProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
-  const [showActive, setShowActive] = useState(true);
-  const [showPending, setShowPending] = useState(false);
+  const [filter, setFilter] = useState<string>("active");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [thread, setThread] = useState<ThreadMessage[]>([]);
   const [text, setText] = useState("");
@@ -152,38 +155,51 @@ export function Inbox({ attendantName }: InboxProps) {
     setDrawerOpen(false);
   }
 
+  const webinars = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; phase: string }>();
+    for (const c of conversations) {
+      if (!map.has(c.webinarId)) map.set(c.webinarId, { id: c.webinarId, title: c.webinarTitle, phase: c.webinarPhase });
+    }
+    return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
+  }, [conversations]);
+
   const filteredConversations = useMemo(() => {
     return conversations.filter((c) => {
-      const isActive = c.webinarPhase === "open";
-      const isPending = c.webinarPhase === "before";
-      if (showActive && isActive) return true;
-      if (showPending && isPending) return true;
-      return false;
+      if (filter === "active") return c.webinarPhase === "open";
+      if (filter === "pending") return c.webinarPhase === "before";
+      return c.webinarId === filter;
     });
-  }, [conversations, showActive, showPending]);
+  }, [conversations, filter]);
 
   const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? null;
 
   return (
-    <div className="flex h-[100dvh] flex-col">
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
-        <div className="flex items-center gap-2">
+    <div className="flex h-[100dvh] flex-col bg-background">
+      <header className="flex items-center justify-between gap-2 border-b bg-card px-4 py-3">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setDrawerOpen((v) => !v)}
             aria-label="Abrir conversas"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <h1 className="text-lg font-semibold sm:text-xl">Atendimento</h1>
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MessageSquare className="h-4 w-4" />
             </span>
-            {onlineTotal} online
-          </span>
+            <div className="leading-tight">
+              <h1 className="text-base font-semibold sm:text-lg">Atendimento</h1>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                </span>
+                {onlineTotal} online agora
+              </span>
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-muted-foreground sm:inline">Olá, {attendantName}</span>
@@ -191,7 +207,7 @@ export function Inbox({ attendantName }: InboxProps) {
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
           >
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Sair</span>
@@ -199,7 +215,7 @@ export function Inbox({ attendantName }: InboxProps) {
         </div>
       </header>
 
-      <div className="relative flex-1 overflow-hidden lg:grid lg:grid-cols-[360px_1fr]">
+      <div className="relative flex-1 overflow-hidden lg:grid lg:grid-cols-[380px_1fr]">
         {drawerOpen && (
           <button
             type="button"
@@ -210,105 +226,126 @@ export function Inbox({ attendantName }: InboxProps) {
         )}
 
         <aside
-          className={`absolute inset-y-0 left-0 z-30 flex w-[85%] max-w-[360px] flex-col border-r bg-card transition-transform lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
+          className={`absolute inset-y-0 left-0 z-30 flex w-[88%] max-w-[380px] flex-col border-r bg-card transition-transform lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <div className="space-y-3 border-b p-4">
-            <h2 className="font-medium">Conversas</h2>
-            <div className="flex flex-wrap gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <input type="checkbox" checked={showActive} onChange={(e) => setShowActive(e.target.checked)} className="accent-primary" />
-                Ativos
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
-                <input type="checkbox" checked={showPending} onChange={(e) => setShowPending(e.target.checked)} className="accent-primary" />
-                Pendentes
-              </label>
+          <div className="space-y-2 border-b p-4">
+            <label className="text-xs font-medium text-muted-foreground">Responder o webinário</label>
+            <div className="relative">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full appearance-none rounded-lg border bg-background px-3 py-2 pr-9 text-sm outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="active">Todos ativos</option>
+                <option value="pending">Todos pendentes</option>
+                {webinars.length > 0 && <option disabled>──────────</option>}
+                {webinars.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.phase === "before" ? "⏳ " : w.phase === "open" ? "🔴 " : ""}
+                    {w.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             </div>
           </div>
 
-          <div className="flex-1 divide-y overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-2">
             {conversationsLoaded && filteredConversations.length === 0 && (
-              <p className="p-4 text-sm text-muted-foreground">Nenhuma conversa neste filtro.</p>
+              <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
+                <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Nenhuma conversa neste filtro.</p>
+              </div>
             )}
-            {filteredConversations.map((c) => (
-              <button
-                key={c.leadId}
-                type="button"
-                onClick={() => selectConversation(c.leadId)}
-                className={`flex w-full flex-col gap-1 p-4 text-left transition-colors hover:bg-muted/50 ${
-                  selectedLeadId === c.leadId ? "bg-muted" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
+            <div className="space-y-1">
+              {filteredConversations.map((c) => (
+                <button
+                  key={c.leadId}
+                  type="button"
+                  onClick={() => selectConversation(c.leadId)}
+                  className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors ${
+                    selectedLeadId === c.leadId ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"
+                  }`}
+                >
+                  <span className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/70">
+                    {initialOf(c.leadName)}
                     {c.online && (
-                      <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-                      </span>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
                     )}
-                    <span className="truncate font-medium">{c.leadName}</span>
-                  </div>
-                  {c.pending && (
-                    <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
-                      pendente
-                    </span>
-                  )}
-                </div>
-                <span className="inline-flex max-w-full items-center gap-1 self-start rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/80">
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-emerald-500"}`} />
-                  <span className="truncate">{c.webinarTitle}</span>
-                </span>
-                {c.webinarPhase === "before" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-500">
-                    <Clock className="h-3 w-3" />
-                    começa em {formatCountdown(c.webinarStartDate, nowMs)}
                   </span>
-                ) : (
-                  <span className="truncate text-xs text-muted-foreground/80">{c.lastText}</span>
-                )}
-              </button>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-medium">{c.leadName}</span>
+                      {c.pending && (
+                        <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                          pendente
+                        </span>
+                      )}
+                    </div>
+                    <span className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/70">
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-emerald-500"}`} />
+                      <span className="truncate">{c.webinarTitle}</span>
+                    </span>
+                    {c.webinarPhase === "before" ? (
+                      <span className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-500">
+                        <Clock className="h-3 w-3" />
+                        começa em {formatCountdown(c.webinarStartDate, nowMs)}
+                      </span>
+                    ) : (
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{c.lastText}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
-        <section className="flex h-full flex-col overflow-hidden bg-card">
+        <section className="flex h-full flex-col overflow-hidden">
           {!selectedConversation && (
-            <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-muted-foreground">
-              Selecione uma conversa para começar.
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+                <MessageSquare className="h-6 w-6 text-muted-foreground/50" />
+              </span>
+              <p className="text-sm text-muted-foreground">Selecione uma conversa para começar.</p>
             </div>
           )}
 
           {selectedConversation && (
             <>
-              <div className="flex items-center gap-2 border-b p-4">
+              <div className="flex items-center gap-3 border-b bg-card p-4">
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(true)}
                   aria-label="Voltar às conversas"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md border lg:hidden"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/70">
+                  {initialOf(selectedConversation.leadName)}
+                </span>
                 <div className="min-w-0">
                   <p className="truncate font-medium">{selectedConversation.leadName}</p>
                   <p className="truncate text-xs text-muted-foreground">{selectedConversation.webinarTitle}</p>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              <div className="flex-1 space-y-3 overflow-y-auto bg-background p-4">
                 {thread.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "team" ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                        m.sender === "team" ? "bg-primary text-primary-foreground" : "bg-muted"
+                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
+                        m.sender === "team"
+                          ? "rounded-br-sm bg-primary text-primary-foreground"
+                          : "rounded-bl-sm border bg-card"
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words">{m.text}</p>
                       <p
-                        className={`mt-1 text-[10px] ${
+                        className={`mt-1 text-right text-[10px] ${
                           m.sender === "team" ? "text-primary-foreground/70" : "text-muted-foreground"
                         }`}
                       >
@@ -325,7 +362,7 @@ export function Inbox({ attendantName }: InboxProps) {
                   e.preventDefault();
                   handleSend();
                 }}
-                className="flex items-end gap-2 border-t p-4"
+                className="flex items-end gap-2 border-t bg-card p-4"
               >
                 <textarea
                   value={text}
@@ -337,13 +374,13 @@ export function Inbox({ attendantName }: InboxProps) {
                     }
                   }}
                   placeholder="Escreva uma resposta..."
-                  rows={2}
-                  className="flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  rows={1}
+                  className="max-h-32 flex-1 resize-none rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring"
                 />
                 <button
                   type="submit"
                   disabled={!text.trim() || sending}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                 </button>

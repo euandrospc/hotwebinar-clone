@@ -190,36 +190,52 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
       <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {
           const ts = formatClock(baseTimestampMs, m.showAtSec);
-          if (m.kind === "owner") {
-            const nameColor = m.isOwner ? "text-primary" : colorFromName(m.authorName);
+          const author = m.kind === "owner" ? m.authorName : m.sender === "team" ? teamChatName : leadName;
+          const initial = (author.trim()[0] ?? "?").toUpperCase();
+
+          if (m.kind === "lead" && m.sender === "team") {
             return (
-              <div key={m.id} className="group flex flex-col">
-                <div className="flex items-baseline gap-2">
-                  <span className={`truncate text-xs font-semibold md:text-sm ${nameColor}`}>{m.authorName}</span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
+              <div key={m.id} className="flex gap-2">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-500 text-[11px] font-semibold text-white">
+                  {initial}
+                </span>
+                <div className="min-w-0 flex-1 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-xs font-semibold text-red-500 md:text-sm">{teamChatName}</span>
+                    <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Equipe</span>
+                    <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">{ts}</span>
+                  </div>
+                  <p className="mt-0.5 break-words text-sm leading-snug">{m.text}</p>
                 </div>
-                <p className="break-words text-sm leading-snug">{personalize(m.text, leadName)}</p>
               </div>
             );
           }
-          if (m.sender === "team") {
-            return (
-              <div key={m.id} className="group flex flex-col">
-                <div className="flex items-baseline gap-2">
-                  <span className="truncate text-xs font-semibold text-primary md:text-sm">{teamChatName}</span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
-                </div>
-                <p className="break-words text-sm leading-snug">{m.text}</p>
-              </div>
-            );
-          }
+
+          const isYou = m.kind === "lead";
           return (
-            <div key={m.id} className="group flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <span className="truncate text-xs font-semibold text-emerald-500 md:text-sm">{leadName} <span className="text-[10px] font-normal text-muted-foreground">(você)</span></span>
-                <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
+            <div key={m.id} className="group flex gap-2">
+              <span
+                className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                  isYou ? "bg-emerald-500 text-white" : "bg-muted text-zinc-400"
+                }`}
+              >
+                {initial}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className={`truncate text-xs font-semibold md:text-sm ${isYou ? "text-emerald-500" : "text-zinc-400"}`}>
+                    {isYou ? (
+                      <>
+                        {leadName} <span className="text-[10px] font-normal text-muted-foreground">(você)</span>
+                      </>
+                    ) : (
+                      author
+                    )}
+                  </span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
+                </div>
+                <p className="break-words text-sm leading-snug">{m.kind === "owner" ? personalize(m.text, leadName) : m.text}</p>
               </div>
-              <p className="break-words text-sm leading-snug">{m.text}</p>
             </div>
           );
         })}
