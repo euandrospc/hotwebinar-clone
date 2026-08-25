@@ -82,6 +82,52 @@ export function buildDeviceBreakdown(input: DashboardStatsInput): DeviceBreakdow
   return { desktop, mobile, desktopPct, mobilePct };
 }
 
+export interface RetentionPoint {
+  sec: number;
+  label: string;
+  count: number;
+}
+
+function fmtClock(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+
+export function buildRetention(
+  watchedSecs: number[],
+  durationSec: number,
+  points = 42
+): RetentionPoint[] {
+  const dur = Math.max(1, durationSec);
+  const step = dur / points;
+  const out: RetentionPoint[] = [];
+  for (let i = 0; i <= points; i++) {
+    const sec = Math.round(i * step);
+    const count = watchedSecs.filter((w) => w >= sec).length;
+    out.push({ sec, label: fmtClock(sec), count });
+  }
+  return out;
+}
+
+export interface WebinarKpis {
+  visitas: number;
+  acessou: number;
+  clicouVideo: number;
+  min15: number;
+  min30: number;
+  min45: number;
+  min60: number;
+  pitch: number;
+  oferta: number;
+  cliqueOferta: number;
+  chat: number;
+  comprou: number;
+}
+
 export function avgWatchedMinutes(leads: Array<{ watchedSec: number }>): number {
   if (leads.length === 0) return 0;
   const sum = leads.reduce((acc, l) => acc + l.watchedSec, 0);
