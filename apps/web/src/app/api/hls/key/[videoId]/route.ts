@@ -30,8 +30,12 @@ export async function GET(
 
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
+  const session = await auth.api.getSession({ headers: await headers() });
   let isAdmin = false;
-  if (leadId) {
+
+  if (session && video.ownerId === session.user.id) {
+    isAdmin = true;
+  } else if (leadId) {
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
       include: { webinar: true }
@@ -51,13 +55,7 @@ export async function GET(
       return new Response("session expired", { status: 401 });
     }
   } else {
-    // Admin can preview encrypted videos (videos table, library picker)
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session) return new Response("unauthorized", { status: 401 });
-    if (video.ownerId !== session.user.id) {
-      return new Response("forbidden", { status: 403 });
-    }
-    isAdmin = true;
+    return new Response("unauthorized", { status: 401 });
   }
 
   if (!refererAllowed(req, isAdmin)) {
