@@ -113,6 +113,42 @@ export function buildRetention(
   return out;
 }
 
+export interface RegionRow {
+  label: string;
+  count: number;
+  pct: number;
+}
+
+export interface RegionBreakdown {
+  rows: RegionRow[];
+  total: number;
+  located: number;
+}
+
+export function buildRegionBreakdown(
+  leads: Array<{ region: string | null; city: string | null; country: string | null }>,
+  top = 6
+): RegionBreakdown {
+  const counts = new Map<string, number>();
+  let located = 0;
+  for (const l of leads) {
+    const label = (l.region || l.city || l.country || "").trim();
+    if (!label) continue;
+    located++;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const total = leads.length;
+  const rows = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, top)
+    .map(([label, count]) => ({
+      label,
+      count,
+      pct: located > 0 ? Math.round((count / located) * 10000) / 100 : 0
+    }));
+  return { rows, total, located };
+}
+
 export interface WebinarKpis {
   visitas: number;
   acessou: number;

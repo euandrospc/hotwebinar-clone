@@ -8,6 +8,7 @@ import {
   buildDailyParticipants,
   buildDeviceBreakdown,
   buildSalesKpis,
+  buildRegionBreakdown,
   avgWatchedMinutes
 } from "@/lib/dashboard-stats";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
@@ -60,7 +61,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         reachedPitch: true,
         ctaClicks: true,
         userAgent: true,
-        watchedSec: true
+        watchedSec: true,
+        region: true,
+        city: true,
+        country: true
       }
     }),
     prisma.webinar.findMany({
@@ -99,6 +103,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const devices = buildDeviceBreakdown(input);
   const avgMin = avgWatchedMinutes(leads);
   const salesKpis = buildSalesKpis(sales);
+  const regions = buildRegionBreakdown(
+    leads.map((l) => ({ region: l.region, city: l.city, country: l.country }))
+  );
   const scheduledIso = webinars
     .map((w) => w.startDate?.toISOString())
     .filter((s): s is string => Boolean(s));
@@ -134,7 +141,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,360px)]">
-          <DashboardRegionCard firstWebinarId={firstWebinar?.id ?? null} />
+          <DashboardRegionCard firstWebinarId={firstWebinar?.id ?? null} data={regions} />
           <DashboardCalendar scheduledDates={scheduledIso} />
         </div>
       </div>
