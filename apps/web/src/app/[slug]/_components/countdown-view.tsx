@@ -78,7 +78,7 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
   }
 
   // DEFAULT and WITH_THUMB share the same layout but WITH_THUMB shows thumb.
-  const showThumb = w.waitingTemplate === "WITH_THUMB" || w.waitingShowThumb;
+  const showThumb = w.waitingTemplate === "WITH_THUMB";
   const thumb = showThumb ? (video?.customThumbUrl ?? video?.thumbUrl ?? null) : null;
 
   return (

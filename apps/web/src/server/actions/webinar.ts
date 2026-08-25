@@ -112,11 +112,8 @@ export async function updateWebinarStep2(id: string, input: Step2Input): Promise
       waitingTitle: parsed.data.waitingTitle,
       waitingSubtitle: parsed.data.waitingSubtitle,
       waitingTemplate: parsed.data.waitingTemplate,
-      // Backwards-compat: keep waitingShowThumb in sync with template choice
-      waitingShowThumb:
-        parsed.data.waitingTemplate === "WITH_THUMB"
-          ? true
-          : parsed.data.waitingShowThumb
+      // Template is the single source of truth; the thumb only shows on WITH_THUMB.
+      waitingShowThumb: parsed.data.waitingTemplate === "WITH_THUMB"
     }
   });
   revalidatePath(`/dashboard/webinars/${id}`);
