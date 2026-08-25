@@ -8,19 +8,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { deleteVideo } from "@/server/actions/video";
+
+const CONFIRM_WORD = "excluir";
 
 export function DeleteVideoDialog({ id, name, children }: { id: string; name: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [force, setForce] = useState(false);
   const [webinars, setWebinars] = useState<Array<{ id: string; title: string }>>([]);
+  const [confirmText, setConfirmText] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  const confirmed = confirmText.trim().toLowerCase() === CONFIRM_WORD;
 
   function reset() {
     setWebinars([]);
     setForce(false);
+    setConfirmText("");
   }
 
   async function onConfirm() {
@@ -68,11 +75,33 @@ export function DeleteVideoDialog({ id, name, children }: { id: string; name: st
           </div>
         )}
 
+        <div className="space-y-1.5">
+          <label htmlFor="confirm-delete" className="text-sm text-muted-foreground">
+            Digite <strong className="text-destructive">{CONFIRM_WORD}</strong> para confirmar:
+          </label>
+          <Input
+            id="confirm-delete"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={CONFIRM_WORD}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+        </div>
+
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction asChild>
-            <Button variant="destructive" disabled={pending || (webinars.length > 0 && !force)} onClick={onConfirm}>
-              {pending ? "Excluindo..." : webinars.length > 0 ? (force ? "Forçar exclusão" : "Excluir") : "Excluir"}
+            <Button
+              variant="destructive"
+              disabled={pending || !confirmed || (webinars.length > 0 && !force)}
+              onClick={(e) => {
+                e.preventDefault();
+                onConfirm();
+              }}
+            >
+              {pending ? "Excluindo..." : webinars.length > 0 && force ? "Forçar exclusão" : "Excluir"}
             </Button>
           </AlertDialogAction>
         </AlertDialogFooter>
