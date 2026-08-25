@@ -175,7 +175,7 @@ export function Inbox({ attendantName }: InboxProps) {
   const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? null;
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-background">
+    <div className="flex h-screen [height:100dvh] flex-col bg-background">
       <header className="flex items-center justify-between gap-2 border-b bg-card px-4 py-3">
         <div className="flex items-center gap-3">
           <button
@@ -237,7 +237,7 @@ export function Inbox({ attendantName }: InboxProps) {
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-full appearance-none rounded-lg border bg-background px-3 py-2 pr-9 text-sm outline-none focus:ring-1 focus:ring-ring"
+                className="w-full appearance-none rounded-lg border bg-background px-3 py-2 pr-9 text-base outline-none focus:ring-1 focus:ring-ring sm:text-sm"
               >
                 <option value="active">Todos ativos</option>
                 <option value="pending">Todos pendentes</option>
@@ -378,7 +378,7 @@ export function Inbox({ attendantName }: InboxProps) {
                   e.preventDefault();
                   handleSend();
                 }}
-                className="flex items-end gap-2 border-t bg-card p-4"
+                className="flex items-end gap-2 border-t bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
               >
                 <textarea
                   value={text}
@@ -391,7 +391,7 @@ export function Inbox({ attendantName }: InboxProps) {
                   }}
                   placeholder="Escreva uma resposta..."
                   rows={1}
-                  className="max-h-32 flex-1 resize-none rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border bg-background px-3.5 py-2.5 text-base outline-none focus:ring-1 focus:ring-ring sm:text-sm"
                 />
                 <button
                   type="submit"
