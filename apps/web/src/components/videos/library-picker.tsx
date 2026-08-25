@@ -2,6 +2,15 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function formatDuration(sec: number): string {
+  const total = Math.floor(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
 export interface LibraryVideo {
   id: string;
   name: string;
@@ -50,7 +59,7 @@ export function LibraryPicker({
               <p className="line-clamp-1 text-sm font-medium">{v.name}</p>
               {v.durationSec ? (
                 <p className="text-xs text-muted-foreground">
-                  {Math.floor(v.durationSec / 60)}:{String(v.durationSec % 60).padStart(2, "0")}
+                  {formatDuration(v.durationSec)}
                 </p>
               ) : null}
             </div>
