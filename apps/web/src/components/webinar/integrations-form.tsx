@@ -37,11 +37,15 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
 
   const watchPermanence = watch("webhookOnPermanence");
 
-  function onSubmit(values: IntegrationsInput) {
+  function submit(values: IntegrationsInput, publish: boolean) {
     startTransition(async () => {
       const r1 = await updateWebinarIntegrations(webinarId, values);
       if (!("ok" in r1)) {
         toast.error(r1.error.message);
+        return;
+      }
+      if (!publish) {
+        toast.success("Integrações salvas");
         return;
       }
       const r2 = await publishWebinar(webinarId);
@@ -54,8 +58,11 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
     });
   }
 
+  const onSave = handleSubmit((v) => submit(v, false));
+  const onPublish = handleSubmit((v) => submit(v, true));
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
+    <form onSubmit={onSave} className="max-w-2xl space-y-6">
       <h2 className="text-2xl font-semibold">Integrações</h2>
 
       <div className="space-y-2">
@@ -92,8 +99,13 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Salvando..." : "Salvar"}</Button>
+      <div className="flex justify-end gap-2">
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? "Salvando..." : "Salvar"}
+        </Button>
+        <Button type="button" onClick={onPublish} disabled={pending}>
+          {pending ? "Salvando..." : "Salvar e publicar"}
+        </Button>
       </div>
     </form>
   );

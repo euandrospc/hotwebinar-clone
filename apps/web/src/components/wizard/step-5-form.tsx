@@ -97,7 +97,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
 
         <section className="space-y-4">
           <div className="space-y-1">
-            <Label>Imagem da oferta para desktop *</Label>
+            <Label>Imagem da oferta para desktop</Label>
             <Controller
               control={control}
               name="offerImageDesktopUrl"
@@ -145,7 +145,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
             />
           </div>
           <div className="space-y-1">
-            <Label>Tempo início da oferta *</Label>
+            <Label>Tempo início da oferta</Label>
             <Controller
               control={control}
               name="offerShowAtSec"
@@ -177,7 +177,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
 
         <section className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="offerLink">Link da oferta *</Label>
+            <Label htmlFor="offerLink">Link da oferta</Label>
             <Input id="offerLink" {...register("offerLink")} placeholder="https://" />
             {errors.offerLink && <p className="text-xs text-destructive">{errors.offerLink.message}</p>}
           </div>

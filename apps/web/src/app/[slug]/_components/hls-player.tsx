@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Hls from "hls.js";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX, Maximize, Minimize } from "lucide-react";
+import { Volume2, VolumeX } from "lucide-react";
 
 interface HlsPlayerProps {
   src: string;
@@ -14,12 +14,10 @@ interface HlsPlayerProps {
 
 export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayBadge }: HlsPlayerProps) {
   const ref = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [muted, setMuted] = useState(true);
   const [needsUnmute, setNeedsUnmute] = useState(true);
   const [volume, setVolume] = useState(1);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const video = ref.current;
@@ -43,14 +41,6 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
       if (hls) { hls.destroy(); hlsRef.current = null; }
     };
   }, [src, startOffsetSec]);
-
-  useEffect(() => {
-    function onFullscreenChange() {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    }
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
 
   function toggleMute() {
     const v = ref.current;
@@ -81,18 +71,8 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
     }
   }
 
-  function toggleFullscreen() {
-    const el = containerRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      void el.requestFullscreen().catch(() => undefined);
-    } else {
-      void document.exitFullscreen().catch(() => undefined);
-    }
-  }
-
   return (
-    <div ref={containerRef} className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
       <video
         ref={ref}
         playsInline
@@ -145,10 +125,6 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
           aria-label="Volume"
           className="h-1 w-24 cursor-pointer accent-white"
         />
-        <div className="flex-1" />
-        <Button size="icon" variant="ghost" onClick={toggleFullscreen} aria-label="Tela cheia" className="text-white hover:bg-white/10">
-          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-        </Button>
       </div>
     </div>
   );
