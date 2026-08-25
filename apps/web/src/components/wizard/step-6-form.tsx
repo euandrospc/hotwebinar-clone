@@ -73,7 +73,7 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Chat scriptado</h2>
 
