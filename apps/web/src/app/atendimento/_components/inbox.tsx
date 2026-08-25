@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown } from "lucide-react";
+import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 
 interface Conversation {
   leadId: string;
   leadName: string;
+  leadPhone: string | null;
   webinarId: string;
   webinarTitle: string;
   webinarPhase: string;
@@ -284,6 +285,12 @@ export function Inbox({ attendantName }: InboxProps) {
                         </span>
                       )}
                     </div>
+                    {c.leadPhone ? (
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Phone className="h-2.5 w-2.5" />
+                        {c.leadPhone}
+                      </span>
+                    ) : null}
                     <span className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/70">
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-emerald-500"}`} />
                       <span className="truncate">{c.webinarTitle}</span>
@@ -330,6 +337,15 @@ export function Inbox({ attendantName }: InboxProps) {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{selectedConversation.leadName}</p>
                   <p className="truncate text-xs text-muted-foreground">{selectedConversation.webinarTitle}</p>
+                  {selectedConversation.leadPhone ? (
+                    <a
+                      href={`tel:${selectedConversation.leadPhone}`}
+                      className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Phone className="h-3 w-3" />
+                      {selectedConversation.leadPhone}
+                    </a>
+                  ) : null}
                 </div>
               </div>
 

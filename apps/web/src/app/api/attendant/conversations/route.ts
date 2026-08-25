@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const leads = await prisma.lead.findMany({
     where: { ...(webinarId ? { webinarId } : {}), leadChatMessages: { some: {} } },
     select: {
-      id: true, name: true, webinarId: true, lastSeenAt: true, leaveFired: true,
+      id: true, name: true, phone: true, webinarId: true, lastSeenAt: true, leaveFired: true,
       webinar: { select: { title: true, name: true, mode: true, startDate: true, endDate: true } },
       leadChatMessages: { orderBy: { createdAt: "desc" }, take: 1, select: { text: true, sender: true, createdAt: true } }
     }
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
       return {
         leadId: l.id,
         leadName: l.name,
+        leadPhone: l.phone,
         webinarId: l.webinarId,
         webinarTitle: l.webinar.title || l.webinar.name || "Webinar",
         webinarPhase: phase,
