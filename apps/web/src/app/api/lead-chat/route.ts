@@ -56,11 +56,11 @@ export async function GET(request: Request) {
   const rows = await prisma.leadChatMessage.findMany({
     where: { leadId, ...(createdAtGt ? { createdAt: { gt: createdAtGt } } : {}) },
     orderBy: { createdAt: "asc" },
-    select: { id: true, text: true, sender: true, videoSec: true, createdAt: true }
+    select: { id: true, text: true, sender: true, videoSec: true, createdAt: true, authorUser: { select: { name: true } } }
   });
 
   return NextResponse.json(
-    { messages: rows.map((m) => ({ id: m.id, text: m.text, sender: m.sender, videoSec: m.videoSec, createdAt: m.createdAt.toISOString() })) },
+    { messages: rows.map((m) => ({ id: m.id, text: m.text, sender: m.sender, teamName: m.authorUser?.name ?? null, videoSec: m.videoSec, createdAt: m.createdAt.toISOString() })) },
     { headers: { "cache-control": "no-store" } }
   );
 }

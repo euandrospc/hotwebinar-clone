@@ -30,6 +30,7 @@ export interface PlayerLeadMsg {
   id: string;
   text: string;
   sender: "lead" | "team";
+  teamName?: string | null;
   videoSec: number | null;
   createdAt: string;
 }

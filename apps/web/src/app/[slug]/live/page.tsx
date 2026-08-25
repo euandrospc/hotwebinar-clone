@@ -50,7 +50,9 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   if (phase === "closed") return <ClosedView w={wDto} />;
 
   const leadChat = await prisma.leadChatMessage.findMany({
-    where: { leadId: lead.id }, orderBy: { createdAt: "asc" }
+    where: { leadId: lead.id },
+    orderBy: { createdAt: "asc" },
+    include: { authorUser: { select: { name: true } } }
   });
   const offset = computeInitialOffset(
     { mode: w.mode, startDate: w.startDate, endDate: w.endDate, videoSyncWithStart: w.videoSyncWithStart },
@@ -86,7 +88,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
         id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner
       }))}
       leadChat={leadChat.map((m) => ({
-        id: m.id, text: m.text, sender: m.sender as "lead" | "team", videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
+        id: m.id, text: m.text, sender: m.sender as "lead" | "team", teamName: m.authorUser?.name ?? null, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
       }))}
       teamChatName={w.teamChatName}
       lead={publicLeadWithUtmsDto(lead)}
