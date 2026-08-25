@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import dynamic from "next/dynamic";
+import { ShieldCheck, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,17 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
           {pending ? "Aguarde..." : w.loginButtonText}
         </Button>
       </form>
+
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <ShieldCheck className="h-4 w-4 text-emerald-600" />
+          SITE SEGURO
+        </span>
+        <span className="flex items-center gap-1.5">
+          <LockKeyhole className="h-4 w-4 text-emerald-600" />
+          PRIVACIDADE PROTEGIDA
+        </span>
+      </div>
     </main>
   );
 }
