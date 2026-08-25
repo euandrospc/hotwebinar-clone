@@ -48,7 +48,7 @@ export function WizardShell({ webinarId, children }: WizardShellProps) {
   return (
     <div>
       <nav className="sticky top-0 z-20 overflow-x-auto border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <ol className="mx-auto flex min-w-max items-end justify-center gap-0">
+        <ol className="mx-auto flex min-w-max justify-center">
           {STEPS.map((s, i) => {
             const isActive = i === activeIndex;
             const isPast = activeIndex >= 0 && i < activeIndex;
@@ -58,23 +58,23 @@ export function WizardShell({ webinarId, children }: WizardShellProps) {
             const lineColor = isPast ? "bg-emerald-600" : "bg-gray-300";
             const showLine = i < STEPS.length - 1;
             return (
-              <li key={s.num} className="flex flex-col items-center">
-                <Link href={s.href(webinarId)} className="group flex flex-col items-center px-3">
-                  <s.Icon className={cn("h-7 w-7 mb-1", iconColor)} />
-                  <span className={cn("text-xs", labelColor)}>{s.label}</span>
+              <li key={s.num} className="flex w-20 flex-col items-center sm:w-24">
+                <Link href={s.href(webinarId)} className="group flex flex-col items-center">
+                  <s.Icon className={cn("mb-1 h-7 w-7", iconColor)} />
+                  <span className={cn("text-center text-xs", labelColor)}>{s.label}</span>
                 </Link>
-                <div className="flex items-center">
+                <div className="relative mt-2 flex h-7 w-full items-center justify-center">
+                  {showLine ? (
+                    <span className={cn("absolute left-1/2 top-1/2 h-0.5 w-full -translate-y-1/2", lineColor)} />
+                  ) : null}
                   <span
                     className={cn(
-                      "z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
+                      "relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
                       circleColor
                     )}
                   >
                     {s.num}
                   </span>
-                  {showLine ? (
-                    <span className={cn("h-0.5 w-12 sm:w-16", lineColor)} />
-                  ) : null}
                 </div>
               </li>
             );
