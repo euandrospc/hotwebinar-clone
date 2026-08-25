@@ -26,16 +26,18 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
         ))}
       </div>
 
-      <div className="mt-4 flex h-32 items-stretch">
+      <div className="mt-5 flex h-36 items-stretch gap-1.5">
         {stages.map((s, i) => {
-          const startH = i === 0 ? 100 : Math.max(8, (stages[i - 1].count / max) * 100);
-          const endH = Math.max(6, (s.count / max) * 100);
+          const heightFor = (idx: number) => 12 + 88 * ((stages[idx]?.count ?? 0) / max);
+          const leftH = heightFor(i);
+          const rightH = i + 1 < stages.length ? heightFor(i + 1) : leftH;
+          const fill = `hsl(0 ${55 + i * 9}% ${74 - i * 8}%)`;
           return (
-            <div key={s.label} className="relative flex-1 overflow-hidden">
+            <div key={s.label} className="relative flex-1 overflow-hidden rounded-sm">
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
                 <polygon
-                  points={`0,${50 - startH / 2} 100,${50 - endH / 2} 100,${50 + endH / 2} 0,${50 + startH / 2}`}
-                  fill={`hsl(0 ${100 - i * 18}% ${55 + i * 5}%)`}
+                  points={`0,${50 - leftH / 2} 100,${50 - rightH / 2} 100,${50 + rightH / 2} 0,${50 + leftH / 2}`}
+                  fill={fill}
                 />
               </svg>
             </div>
