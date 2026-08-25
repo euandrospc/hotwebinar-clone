@@ -60,6 +60,14 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
     submit({ mode: "external", ...values });
   }
 
+  function onFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (tab !== "external") {
+      e.preventDefault();
+      return;
+    }
+    void externalForm.handleSubmit(onSubmitExternal)(e);
+  }
+
   function onLibrarySelect(videoId: string) {
     setSelectedVideoId(videoId);
   }
@@ -86,7 +94,7 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
   }
 
   return (
-    <form onSubmit={externalForm.handleSubmit(onSubmitExternal)} className="max-w-3xl space-y-6">
+    <form onSubmit={onFormSubmit} className="max-w-3xl space-y-6">
       <h2 className="text-2xl font-semibold">Vídeo</h2>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)}>

@@ -86,6 +86,7 @@ export function Step8Form({ webinarId, durationSec, seed, initial }: Step8FormPr
               min={0}
               {...register("audienceMin", { valueAsNumber: true })}
             />
+            {errors.audienceMin && <p className="text-xs text-destructive">{errors.audienceMin.message}</p>}
           </div>
           <div className="space-y-1">
             <Label htmlFor="audienceMax">Máximo de participantes</Label>

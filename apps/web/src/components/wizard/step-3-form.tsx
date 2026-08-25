@@ -229,6 +229,16 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                 )}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Cor primária</Label>
+              <Controller
+                control={control}
+                name="primaryColor"
+                render={({ field }) => (
+                  <ColorPicker value={field.value || "#16a34a"} onChange={field.onChange} aria-label="Cor primária" />
+                )}
+              />
+            </div>
           </div>
 
           <fieldset className="space-y-3 rounded-md border p-4">
