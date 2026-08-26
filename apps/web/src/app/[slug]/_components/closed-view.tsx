@@ -8,7 +8,7 @@ export function ClosedView({ w }: { w: PublicWebinar }) {
       <p className="mt-3 text-muted-foreground">Você chegou tarde... Essa aula já foi encerrada!</p>
       {w.closedGroupUrl ? (
         <>
-          <p className="mt-6 text-sm font-medium">Para participar da próxima, entre no nosso grupo:</p>
+          <p className="mt-6 text-sm font-medium">Para participar da próxima entre no nosso grupo</p>
           <a
             href={w.closedGroupUrl}
             target="_blank"
