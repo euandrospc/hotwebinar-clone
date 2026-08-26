@@ -27,7 +27,8 @@ export const step2Schema = z
     waitingTitle: z.string().min(1).max(80),
     waitingSubtitle: z.string().max(200),
     waitingShowThumb: z.boolean().default(false),
-    waitingTemplate: z.enum(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"]).default("DEFAULT")
+    waitingTemplate: z.enum(["DEFAULT", "WITH_THUMB", "IMMERSIVE", "MINIMAL", "FEATURES"]).default("DEFAULT"),
+    closedGroupUrl: z.string().url().optional().nullable().or(z.literal(""))
   })
   .refine((v) => v.endDate > v.startDate, {
     message: "Fim deve ser após início",

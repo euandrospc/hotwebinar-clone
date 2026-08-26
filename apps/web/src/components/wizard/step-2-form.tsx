@@ -129,6 +129,14 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="closedGroupUrl">Link do grupo (exibido após o encerramento)</Label>
+        <Input id="closedGroupUrl" placeholder="https://chat.whatsapp.com/..." {...register("closedGroupUrl")} />
+        <p className="text-xs text-muted-foreground">
+          Aparece na página de webinar encerrado com um botão para entrar no grupo.
+        </p>
+      </div>
+
       <input type="hidden" value={mode} {...register("mode")} />
 
       <WizardNav webinarId={webinarId} step={2} submitting={pending} />

@@ -195,6 +195,7 @@ model Webinar {
   accessFacilitated      Boolean            @default(false)
   videoSyncWithStart     Boolean            @default(true)
   waitingTemplate        WaitingTemplate    @default(DEFAULT)
+  closedGroupUrl         String?
   loginLogoAlign         LogoAlign          @default(CENTER)
   progressEnabled        Boolean            @default(false)
   progressStartPct       Int                @default(50)

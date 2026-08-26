@@ -21,6 +21,7 @@ export type PublicWebinar = {
   phoneEnabled: boolean; phoneRequired: boolean; phonePlaceholder: string;
   pitchAtSec: number | null;
   waitingTemplate: "DEFAULT" | "WITH_THUMB" | "IMMERSIVE" | "MINIMAL" | "FEATURES";
+  closedGroupUrl: string | null;
   loginLogoAlign: "LEFT" | "CENTER" | "RIGHT";
   progressEnabled: boolean;
   progressStartPct: number;
@@ -71,6 +72,7 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     phoneEnabled: w.phoneEnabled, phoneRequired: w.phoneRequired, phonePlaceholder: w.phonePlaceholder,
     pitchAtSec: w.pitchAtSec,
     waitingTemplate: w.waitingTemplate,
+    closedGroupUrl: w.closedGroupUrl,
     loginLogoAlign: w.loginLogoAlign,
     progressEnabled: w.progressEnabled,
     progressStartPct: w.progressStartPct,
