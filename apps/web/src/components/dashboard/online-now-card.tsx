@@ -11,7 +11,7 @@ const POLL_MS = 15_000;
 
 // Live "online now" count for the admin, polled from /api/dashboard/online.
 // Reflects real player heartbeats (see /api/track), not the simulated audience.
-export function OnlineNowCard() {
+export function OnlineNowCard({ webinarId }: { webinarId?: string } = {}) {
   const [data, setData] = useState<OnlinePayload | null>(null);
   const [stale, setStale] = useState(false);
 
@@ -40,8 +40,9 @@ export function OnlineNowCard() {
     };
   }, []);
 
-  const online = data?.online ?? 0;
-  const top = data?.byWebinar?.slice(0, 3) ?? [];
+  const scoped = webinarId ? data?.byWebinar?.find((w) => w.webinarId === webinarId) : null;
+  const online = webinarId ? (scoped?.online ?? 0) : (data?.online ?? 0);
+  const top = webinarId ? [] : (data?.byWebinar?.slice(0, 3) ?? []);
 
   return (
     <div className="rounded-lg border bg-card p-5">

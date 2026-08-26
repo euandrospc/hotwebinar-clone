@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
+import { OnlineNowCard } from "@/components/dashboard/online-now-card";
 import { DashboardParticipantesChart } from "@/components/dashboard/dashboard-participantes-chart";
 import { DashboardDispositivosChart } from "@/components/dashboard/dashboard-dispositivos-chart";
 import { MetricsVideoRetention } from "@/components/dashboard/metrics-video-retention";
@@ -173,7 +174,10 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
-        <MetricsKpiList kpis={kpis} />
+        <div className="space-y-2.5">
+          <OnlineNowCard webinarId={id} />
+          <MetricsKpiList kpis={kpis} />
+        </div>
       </div>
     </div>
   );
