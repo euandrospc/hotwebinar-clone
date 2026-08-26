@@ -34,12 +34,17 @@ function buildUrl(link: string, lead: PublicLeadWithUtms, passUtms: boolean): st
 
 export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
   const seenRef = useRef(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const active = isActive(offer, currentTimeSec);
 
   useEffect(() => {
     if (!active || seenRef.current) return;
     seenRef.current = true;
     void fetch("/api/offer-view", { method: "POST" }).catch(() => {});
+    const t = setTimeout(() => {
+      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    return () => clearTimeout(t);
   }, [active]);
 
   if (!active) return null;
@@ -52,7 +57,7 @@ export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4 shadow">
+    <div ref={rootRef} className="scroll-mt-4 space-y-3 rounded-lg border bg-card p-4 shadow">
       {offer.imageDesktopUrl ? (
         <img src={offer.imageDesktopUrl} alt="" className="hidden w-full rounded-md object-cover md:block" />
       ) : null}
