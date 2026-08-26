@@ -227,7 +227,7 @@ export function Inbox({ attendantName }: InboxProps) {
         )}
 
         <aside
-          className={`absolute inset-y-0 left-0 z-30 flex w-[88%] max-w-[380px] flex-col border-r bg-card transition-transform lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
+          className={`absolute inset-y-0 left-0 z-30 flex min-h-0 w-[88%] max-w-[380px] flex-col border-r bg-card transition-transform lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
@@ -253,7 +253,7 @@ export function Inbox({ attendantName }: InboxProps) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {conversationsLoaded && filteredConversations.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
                 <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
@@ -310,7 +310,7 @@ export function Inbox({ attendantName }: InboxProps) {
           </div>
         </aside>
 
-        <section className="flex h-full flex-col overflow-hidden">
+        <section className="flex h-full min-h-0 flex-col overflow-hidden">
           {!selectedConversation && (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
@@ -349,7 +349,7 @@ export function Inbox({ attendantName }: InboxProps) {
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto bg-background p-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-background p-4">
                 {thread.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "team" ? "justify-end" : "justify-start"}`}>
                     <div
