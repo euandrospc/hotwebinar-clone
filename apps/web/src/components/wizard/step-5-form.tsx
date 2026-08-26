@@ -129,7 +129,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-3 sm:items-end">
           <div className="space-y-1">
             <Label>Início da pitch</Label>
             <Controller
