@@ -48,7 +48,7 @@ function ArrowStraight({ long = false }: { long?: boolean }) {
 
 function ArrowSplit() {
   return (
-    <svg width="90" height="120" viewBox="0 0 226 120" fill="none" preserveAspectRatio="none" className={ARROW}>
+    <svg viewBox="0 0 226 120" fill="none" preserveAspectRatio="none" className={`${ARROW} h-full w-full`}>
       <path
         d="M225.707 8.07136C226.098 7.68084 226.098 7.04768 225.707 6.65715L219.343 0.29319C218.953 -0.0973344 218.319 -0.0973344 217.929 0.29319C217.538 0.683714 217.538 1.31688 217.929 1.7074L223.586 7.36426L217.929 13.0211C217.538 13.4116 217.538 14.0448 217.929 14.4353C218.319 14.8259 218.953 14.8259 219.343 14.4353L225.707 8.07136ZM0 59.6067V60.6067C63.0449 60.6067 95.0245 47.4952 123.441 34.3936C151.76 21.3366 176.406 8.36426 225 8.36426V7.36426V6.36426C175.932 6.36426 150.939 19.5131 122.603 32.5774C94.365 45.5969 62.6752 58.6067 0 58.6067V59.6067Z"
         fill="currentColor"
@@ -63,7 +63,7 @@ function ArrowSplit() {
 
 function ArrowMerge() {
   return (
-    <svg width="46" height="120" viewBox="0 0 58 107" fill="none" preserveAspectRatio="none" className={ARROW}>
+    <svg viewBox="0 0 58 107" fill="none" preserveAspectRatio="none" className={`${ARROW} h-full w-full`}>
       <path
         d="M57.1886 52.5353C57.5791 52.9259 57.5791 53.559 57.1886 53.9495L50.8246 60.3135C50.4341 60.704 49.8009 60.704 49.4104 60.3135C49.0199 59.923 49.0199 59.2898 49.4104 58.8993L55.0672 53.2424L49.4104 47.5856C49.0199 47.1951 49.0199 46.5619 49.4104 46.1714C49.8009 45.7808 50.4341 45.7808 50.8246 46.1714L57.1886 52.5353ZM1 2C0.447716 2 0 1.55228 0 1C0 0.447715 0.447716 0 1 0V1V2ZM56.4814 53.2424V54.2424C48.4038 54.2424 42.3212 50.8226 37.4044 45.7775C32.5201 40.7657 28.753 34.116 25.2643 27.5928C21.7455 21.0134 18.5229 14.5932 14.6874 9.78661C10.8752 5.00936 6.5925 2 1 2V1V0C7.44836 0 12.2462 3.52094 16.2506 8.53915C20.2317 13.5281 23.5617 20.1684 27.028 26.6496C30.5243 33.1871 34.1748 39.598 38.8367 44.3816C43.4663 49.132 49.0588 52.2424 56.4814 52.2424V53.2424Z"
         fill="currentColor"
@@ -131,16 +131,16 @@ export function MetricsConversionFunnel({ data }: { data: ConversionFunnelData }
           <StraightWithCaption long top="Taxa de inscrição" bottom={pct(data.participantes, data.visitantes)} />
           <Node icon={<UserCheck className="h-5 w-5" />} label="Participantes" value={fmt.format(data.participantes)} />
 
-          <div className="relative flex items-center">
+          <div className="relative flex w-[96px] shrink-0 self-stretch">
             <ArrowSplit />
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex w-full flex-col items-center justify-center text-center text-[10px] font-medium text-muted-foreground">
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center text-[10px] font-medium leading-none text-muted-foreground">
               <span>{pct(data.assistiuVivo, data.participantes)}</span>
               <span className="text-[9px] uppercase tracking-wide">Show up</span>
               <span>{pct(data.assistiuReplay, data.participantes)}</span>
             </div>
           </div>
 
-          <div className="flex flex-col justify-center gap-8">
+          <div className="flex flex-col justify-center gap-10">
             <div className="flex items-center gap-2">
               <Node icon={<MonitorPlay className="h-5 w-5" />} label="Assistiu ao vivo" value={fmt.format(data.assistiuVivo)} />
               <StraightWithCaption bottom={pct(data.clicouVivo, data.assistiuVivo)} />
@@ -153,7 +153,9 @@ export function MetricsConversionFunnel({ data }: { data: ConversionFunnelData }
             </div>
           </div>
 
-          <ArrowMerge />
+          <div className="flex w-[52px] shrink-0 self-stretch">
+            <ArrowMerge />
+          </div>
           <Node icon={<DollarSign className="h-5 w-5" />} label="Comprou" value={fmt.format(data.comprou)} />
         </div>
       </div>
