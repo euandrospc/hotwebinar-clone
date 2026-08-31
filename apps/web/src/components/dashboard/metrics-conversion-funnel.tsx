@@ -131,7 +131,7 @@ export function MetricsConversionFunnel({ data }: { data: ConversionFunnelData }
           <StraightWithCaption long top="Taxa de inscrição" bottom={pct(data.participantes, data.visitantes)} />
           <Node icon={<UserCheck className="h-5 w-5" />} label="Participantes" value={fmt.format(data.participantes)} />
 
-          <div className="relative flex w-[96px] shrink-0 self-stretch">
+          <div className="relative flex h-[160px] top-[10px] w-[96px] shrink-0 self-stretch">
             <ArrowSplit />
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-center text-[10px] font-medium leading-none text-muted-foreground">
               <span>{pct(data.assistiuVivo, data.participantes)}</span>
@@ -153,7 +153,7 @@ export function MetricsConversionFunnel({ data }: { data: ConversionFunnelData }
             </div>
           </div>
 
-          <div className="flex w-[52px] shrink-0 self-stretch">
+          <div className="flex w-[52px] top-[12px] h-[155px] shrink-0 self-stretch">
             <ArrowMerge />
           </div>
           <Node icon={<DollarSign className="h-5 w-5" />} label="Comprou" value={fmt.format(data.comprou)} />
