@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { hasRole, ADMIN_ROLES } from "@/lib/roles";
-import { createAttendant, listAttendants, setAttendantDisabled } from "@/lib/attendants";
+import { createAttendant, listAttendants, setAttendantDisabled, deleteAttendant } from "@/lib/attendants";
 
 type Result = { ok: true } | { error: string };
 
@@ -41,6 +41,17 @@ export async function createAttendantAction(input: {
 export async function toggleAttendantAction(userId: string, disabled: boolean): Promise<Result> {
   await requireAdmin();
   await setAttendantDisabled(userId, disabled);
+  revalidatePath("/dashboard/atendentes");
+  return { ok: true };
+}
+
+export async function deleteAttendantAction(userId: string): Promise<Result> {
+  await requireAdmin();
+  try {
+    await deleteAttendant(userId);
+  } catch {
+    return { error: "delete_failed" };
+  }
   revalidatePath("/dashboard/atendentes");
   return { ok: true };
 }

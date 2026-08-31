@@ -25,3 +25,12 @@ export async function setAttendantDisabled(userId: string, disabled: boolean): P
     data: { role: disabled ? "disabled" : "attendant" }
   });
 }
+
+export async function deleteAttendant(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!user || !["attendant", "disabled"].includes(user.role)) {
+    throw new Error("not_an_attendant");
+  }
+  // Cascades sessions/accounts/settings; past chat replies keep with authorUserId set null.
+  await prisma.user.delete({ where: { id: userId } });
+}

@@ -10,7 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { createAttendantAction, toggleAttendantAction } from "@/server/actions/attendants";
+import { Trash2 } from "lucide-react";
+import { createAttendantAction, toggleAttendantAction, deleteAttendantAction } from "@/server/actions/attendants";
 
 export interface AttendantRow {
   id: string;
@@ -25,6 +26,7 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleCreate(e: React.FormEvent) {
@@ -43,6 +45,19 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
       } else {
         toast.error("Não foi possível criar o atendente");
       }
+    });
+  }
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const result = await deleteAttendantAction(id);
+      if ("ok" in result) {
+        toast.success("Atendente excluído");
+        setRows((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        toast.error("Não foi possível excluir o atendente");
+      }
+      setConfirmId(null);
     });
   }
 
@@ -104,6 +119,7 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
               <TableHead>E-mail</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-24">Ativo</TableHead>
+              <TableHead className="w-40 text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -122,6 +138,28 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
                     disabled={isPending}
                     onCheckedChange={(checked) => handleToggle(r.id, !checked)}
                   />
+                </TableCell>
+                <TableCell className="text-right">
+                  {confirmId === r.id ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Button size="sm" variant="destructive" disabled={isPending} onClick={() => handleDelete(r.id)}>
+                        Confirmar
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setConfirmId(null)}>
+                        Cancelar
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Excluir atendente"
+                      onClick={() => setConfirmId(r.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
