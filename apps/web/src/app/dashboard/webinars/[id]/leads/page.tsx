@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, MousePointerClick } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
@@ -11,7 +11,7 @@ const PAGE_SIZE = 50;
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; clicked?: string }>;
 }
 
 const fmtNum = new Intl.NumberFormat("pt-BR");
@@ -33,10 +33,12 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   if (!w || w.ownerId !== session.user.id) notFound();
 
   const q = (sp.q ?? "").trim();
+  const clicked = sp.clicked === "1";
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const where = {
     webinarId: id,
+    ...(clicked && { ctaClicks: { gt: 0 } }),
     ...(q && {
       OR: [
         { name: { contains: q, mode: "insensitive" as const } },
@@ -70,7 +72,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const baseHref = `/dashboard/webinars/${id}/leads`;
-  const qParam = q ? `&q=${encodeURIComponent(q)}` : "";
+  const qParam = `${q ? `&q=${encodeURIComponent(q)}` : ""}${clicked ? "&clicked=1" : ""}`;
 
   return (
     <div className="container mx-auto py-6">
@@ -83,7 +85,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         </p>
       </div>
 
-      <form action={baseHref} method="get" className="mt-4">
+      <form action={baseHref} method="get" className="mt-4 flex flex-wrap items-center gap-3">
         <input
           type="search"
           name="q"
@@ -91,7 +93,28 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           placeholder="Buscar por nome / email / cidade…"
           className="h-10 w-full max-w-md rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        {clicked ? <input type="hidden" name="clicked" value="1" /> : null}
       </form>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <a
+          href={`${baseHref}${q ? `?q=${encodeURIComponent(q)}` : ""}`}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
+            clicked ? "hover:bg-accent" : "border-primary bg-primary/10 font-medium text-primary"
+          }`}
+        >
+          Todos
+        </a>
+        <a
+          href={`${baseHref}?clicked=1${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
+            clicked ? "border-primary bg-primary/10 font-medium text-primary" : "hover:bg-accent"
+          }`}
+        >
+          <MousePointerClick className="h-3.5 w-3.5" />
+          Clicaram na oferta
+        </a>
+      </div>
 
       <div className="mt-4 overflow-hidden rounded-lg border bg-card">
         <Table>
@@ -110,7 +133,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum lead {q ? "para essa busca" : "ainda"}.
+                  {clicked ? "Nenhum lead clicou na oferta ainda." : `Nenhum lead ${q ? "para essa busca" : "ainda"}.`}
                 </TableCell>
               </TableRow>
             )}
@@ -132,7 +155,16 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
                 <TableCell>
                   {r.reachedPitch ? <Badge variant="default">Sim</Badge> : <span className="text-muted-foreground">—</span>}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{r.ctaClicks}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {r.ctaClicks > 0 ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-primary">
+                      <MousePointerClick className="h-3.5 w-3.5" />
+                      {r.ctaClicks}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">0</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {fmtDate.format(r.sessionStart)}
                 </TableCell>
