@@ -153,7 +153,7 @@ export function MetricsConversionFunnel({ data }: { data: ConversionFunnelData }
             </div>
           </div>
 
-          <div className="flex w-[52px] top-[12px] h-[155px] shrink-0 self-stretch">
+          <div className="flex w-[52px] relative top-[12px] h-[155px] shrink-0 self-stretch">
             <ArrowMerge />
           </div>
           <Node icon={<DollarSign className="h-5 w-5" />} label="Comprou" value={fmt.format(data.comprou)} />
