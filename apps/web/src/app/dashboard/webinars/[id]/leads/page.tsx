@@ -140,7 +140,13 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.name || "—"}</TableCell>
-                <TableCell className="text-sm">{r.email}</TableCell>
+                <TableCell className="text-sm">
+                  {r.email && !r.email.endsWith("@no-email.invalid") ? (
+                    r.email
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{r.phone ?? "—"}</TableCell>
                 <TableCell className="text-sm">
                   {r.country || r.city ? (

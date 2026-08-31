@@ -176,7 +176,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
 
         <div className="space-y-2.5">
           <OnlineNowCard webinarId={id} />
-          <MetricsKpiList kpis={kpis} />
+          <MetricsKpiList kpis={kpis} webinarId={id} />
         </div>
       </div>
     </div>
