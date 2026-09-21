@@ -67,6 +67,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
         enterFired: true,
         reachedPitch: true,
         pitchFired: true,
+        leaveFired: true,
         ctaClicks: true,
         watchedSec: true,
         userAgent: true
@@ -105,6 +106,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
     min45: watchedAtLeast(2700),
     min60: watchedAtLeast(3600),
     pitch: leads.filter((l) => l.reachedPitch || l.pitchFired).length,
+    saiuAntesPitch: leads.filter((l) => l.leaveFired && !l.pitchFired && !l.reachedPitch).length,
     oferta:
       distinctLeadsFor("OFFER_VIEW") ||
       (offerShowSec != null ? leads.filter((l) => l.watchedSec >= offerShowSec).length : 0),

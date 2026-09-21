@@ -158,6 +158,7 @@ export interface WebinarKpis {
   min45: number;
   min60: number;
   pitch: number;
+  saiuAntesPitch: number;
   oferta: number;
   cliqueOferta: number;
   chat: number;

@@ -8,6 +8,7 @@ import {
   DollarSign,
   CheckCircle2,
   MessageSquare,
+  LogOut,
   Info,
   ArrowUpRight,
   type LucideIcon
@@ -60,6 +61,7 @@ export function MetricsKpiList({ kpis, webinarId }: { kpis: WebinarKpis; webinar
       <Row icon={Hourglass} label="Assistiu 45min" value={kpis.min45} />
       <Row icon={Hourglass} label="Assistiu 60min" value={kpis.min60} />
       <Row icon={Target} label="Estava no pitch" value={kpis.pitch} />
+      <Row icon={LogOut} label="Saiu antes do pitch" value={kpis.saiuAntesPitch} />
       <Row icon={DollarSign} label="Estava na oferta" value={kpis.oferta} />
       <Row
         icon={CheckCircle2}

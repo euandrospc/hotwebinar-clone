@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       select: {
         sessionStart: true,
         enterFired: true,
-        reachedPitch: true,
+        pitchFired: true,
         ctaClicks: true,
         userAgent: true,
         watchedSec: true,
@@ -89,7 +89,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     leads: leads.map((l) => ({
       sessionStart: l.sessionStart,
       enterFired: l.enterFired,
-      reachedPitch: l.reachedPitch,
+      reachedPitch: l.pitchFired,
       ctaClicks: l.ctaClicks,
       userAgent: l.userAgent
     })),

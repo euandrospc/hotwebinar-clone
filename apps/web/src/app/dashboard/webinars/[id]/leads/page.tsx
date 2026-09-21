@@ -64,7 +64,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         region: true,
         country: true,
         sessionStart: true,
-        reachedPitch: true,
+        pitchFired: true,
         ctaClicks: true
       }
     })
@@ -159,7 +159,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
                   )}
                 </TableCell>
                 <TableCell>
-                  {r.reachedPitch ? <Badge variant="default">Sim</Badge> : <span className="text-muted-foreground">—</span>}
+                  {r.pitchFired ? <Badge variant="default">Sim</Badge> : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {r.ctaClicks > 0 ? (
