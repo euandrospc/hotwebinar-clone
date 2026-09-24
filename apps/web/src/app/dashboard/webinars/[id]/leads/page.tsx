@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, MousePointerClick } from "lucide-react";
+import { ArrowLeft, ArrowRight, MousePointerClick, Download } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
@@ -78,11 +78,23 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
     <div className="container mx-auto py-6">
       <WebinarTabs webinarId={id} />
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold">Leads</h1>
-        <p className="text-sm text-muted-foreground">
-          {fmtNum.format(total)} {total === 1 ? "lead" : "leads"}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            {fmtNum.format(total)} {total === 1 ? "lead" : "leads"}
+          </p>
+          <a
+            href={`/api/webinars/${id}/leads/export?${new URLSearchParams({
+              ...(q ? { q } : {}),
+              ...(clicked ? { clicked: "1" } : {})
+            }).toString()}`}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </a>
+        </div>
       </div>
 
       <form action={baseHref} method="get" className="mt-4 flex flex-wrap items-center gap-3">
