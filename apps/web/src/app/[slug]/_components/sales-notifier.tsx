@@ -9,7 +9,10 @@ interface Props {
 }
 
 export function SalesNotifier({ notifications, currentTimeRef }: Props) {
-  const firedRef = useRef<Set<string>>(new Set());
+  // Late joiners skip sales already in the past instead of getting them all at once.
+  const firedRef = useRef<Set<string>>(
+    new Set(notifications.filter((n) => n.showAtSec < (currentTimeRef.current ?? 0)).map((n) => n.id))
+  );
 
   useEffect(() => {
     const id = setInterval(() => {

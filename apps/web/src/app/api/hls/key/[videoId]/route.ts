@@ -47,10 +47,13 @@ export async function GET(
     }
     // Session TTL = video duration + 5min buffer (floor 15min). Measured
     // from sessionStart so reloads during playback work as long as the
-    // video itself is still in range.
+    // video itself is still in range. UNICO: a lead who opted in hours before
+    // the start must still play, so the window opens at startDate at the earliest.
     const durMs = video.durationSec ? video.durationSec * 1000 : 0;
     const ttl = Math.max(MIN_TTL_MS, durMs + TTL_BUFFER_MS);
-    const elapsed = Date.now() - lead.sessionStart.getTime();
+    const start = lead.webinar.mode === "UNICO" ? lead.webinar.startDate : null;
+    const anchor = start && start > lead.sessionStart ? start : lead.sessionStart;
+    const elapsed = Date.now() - anchor.getTime();
     if (elapsed > ttl) {
       return new Response("session expired", { status: 401 });
     }

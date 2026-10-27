@@ -38,6 +38,18 @@ export async function GET(
   if (!/^[A-Za-z0-9_-]+\/.+/.test(key)) return new Response("invalid", { status: 400 });
   const requestedVideoId = path[0];
 
+  // Segments are AES-128 encrypted (the key route stays gated), so they can be
+  // served straight from a public CDN bucket (e.g. Cloudflare R2) instead of
+  // streaming every byte through this process. Unset = proxy as before.
+  // shortcut: the CDN bucket must be synced from the HLS bucket by hand (rclone); upgrade by making transcode upload there.
+  const segmentBase = process.env.HLS_SEGMENT_BASE_URL;
+  if (segmentBase && key.endsWith(".ts")) {
+    return new Response(null, {
+      status: 302,
+      headers: { location: `${segmentBase.replace(/\/$/, "")}/${key}`, "cache-control": "public, max-age=86400" }
+    });
+  }
+
   // Auth: lead cookie OR admin session. Check both; admin status wins
   // when both are present (e.g., stale lead cookie + active admin session).
   const cookieStore = await cookies();

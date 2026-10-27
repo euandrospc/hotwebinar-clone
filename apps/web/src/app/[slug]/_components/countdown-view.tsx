@@ -20,10 +20,15 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
   useEffect(() => {
     if (!w.startDate) return;
     const end = new Date(w.startDate).getTime();
+    let lastRefresh = 0;
     const tick = () => {
       const r = Math.max(0, Math.floor((end - Date.now()) / 1000));
       setRemaining(r);
-      if (r === 0) router.refresh();
+      // Client clock may run ahead of the server: retry every 5s, not every second.
+      if (r === 0 && Date.now() - lastRefresh >= 5000) {
+        lastRefresh = Date.now();
+        router.refresh();
+      }
     };
     tick();
     const id = setInterval(tick, 1000);

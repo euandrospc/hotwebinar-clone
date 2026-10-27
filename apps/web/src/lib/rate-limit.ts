@@ -42,7 +42,8 @@ export function createLimiter(opts: LimiterOptions): Limiter {
   };
 }
 
-export const optinLimiter = createLimiter({ max: 5, windowMs: 60_000 });
+// Per IP: mobile carriers (CGNAT) and office Wi-Fi put many real leads behind one IP.
+export const optinLimiter = createLimiter({ max: 30, windowMs: 60_000 });
 export const leadChatLimiter = createLimiter({ max: 30, windowMs: 60_000 });
 export const offerClickLimiter = createLimiter({ max: 10, windowMs: 60_000 });
 export const attendantReplyLimiter = createLimiter({ max: 60, windowMs: 60_000 });

@@ -17,12 +17,13 @@ export function Tracker({ currentTimeRef }: TrackerProps) {
       const delta = Math.min(60, Math.max(0, Math.round(now - lastSentSec.current)));
       if (delta <= 0) return;
       try {
-        await fetch("/api/track", {
+        const res = await fetch("/api/track", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ videoSec: Math.round(now), watchedSecDelta: delta })
         });
-        lastSentSec.current = now;
+        // 429 (throttled) didn't record the delta: keep it for the next tick.
+        if (res.ok) lastSentSec.current = now;
       } catch { /* swallow */ }
     }, 30_000);
 

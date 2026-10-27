@@ -55,18 +55,24 @@ export async function enqueueWebhook(
     timestamp: new Date().toISOString()
   };
 
-  const delivery = await prisma.webhookDelivery.create({
-    data: {
-      webinarId: webinar.id,
-      leadId: lead?.id,
-      event,
-      url: webinar.webhookUrl,
-      payload,
-      status: "PENDING"
-    }
-  });
+  // Never let webhook plumbing (Trigger.dev outage / 429) fail the lead's page or
+  // opt-in. A delivery left PENDING can be resent from the webhooks dashboard.
+  try {
+    const delivery = await prisma.webhookDelivery.create({
+      data: {
+        webinarId: webinar.id,
+        leadId: lead?.id,
+        event,
+        url: webinar.webhookUrl,
+        payload,
+        status: "PENDING"
+      }
+    });
 
-  await enqueueDispatchWebhook({ deliveryId: delivery.id });
+    await enqueueDispatchWebhook({ deliveryId: delivery.id });
+  } catch (err) {
+    console.error(`[webhook] enqueue failed (${event}, webinar ${webinar.id})`, err);
+  }
 }
 
 export async function maybeFireEnterWebhook(

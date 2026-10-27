@@ -35,10 +35,11 @@ export async function POST(request: Request) {
     data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_TICK", videoSec: parsed.data.videoSec }
   });
 
-  // Always update watchedSec + lastSeenAt
+  // Always update watchedSec + lastSeenAt. A heartbeat proves the lead is still
+  // watching, so undo a leaveFired set by a page reload's pagehide beacon.
   await prisma.lead.update({
     where: { id: lead.id },
-    data: { watchedSec: newWatched, lastSeenAt: now }
+    data: { watchedSec: newWatched, lastSeenAt: now, leaveFired: false }
   });
 
   const w = lead.webinar;

@@ -28,6 +28,13 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
+      // hls.js gives up after its own retries; without this a load spike freezes
+      // the player until the lead reloads.
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (!data.fatal || !hls) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = src;
     }
