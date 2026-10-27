@@ -11,7 +11,12 @@ export const metadata: Metadata = {
 
 export default async function PublicWebinarsList() {
   const webinars = await prisma.webinar.findMany({
-    where: { status: "ACTIVE", slug: { not: null } },
+    // Hide webinars already over (same rule as computePhase's "closed").
+    where: {
+      status: "ACTIVE",
+      slug: { not: null },
+      OR: [{ endDate: null }, { endDate: { gt: new Date() } }]
+    },
     orderBy: { createdAt: "desc" },
     select: { id: true, slug: true, title: true, name: true, startDate: true, timezone: true }
   });
