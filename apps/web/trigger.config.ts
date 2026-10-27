@@ -3,7 +3,7 @@ import { ffmpeg } from "@trigger.dev/build/extensions/core";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 
 export default defineConfig({
-  project: "proj_rtkavlxxpignxohjklfu",
+  project: "proj_ozosajkpldojwdugbrdh",
   runtime: "node",
   logLevel: "log",
   maxDuration: 3600,
