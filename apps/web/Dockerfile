@@ -11,6 +11,8 @@ RUN pnpm --filter web build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
+# Dashboard date ranges and day buckets are naive local times; read them as Brasília.
+ENV TZ=America/Sao_Paulo
 RUN apk add --no-cache openssl libc6-compat ca-certificates tini
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 ENV NODE_ENV=production

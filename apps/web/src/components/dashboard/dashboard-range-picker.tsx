@@ -1,7 +1,7 @@
 "use client";
 import "react-day-picker/style.css";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { ptBR } from "date-fns/locale";
 import { CalendarRange } from "lucide-react";
@@ -19,6 +19,7 @@ interface Props {
 
 export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [range, setRange] = useState<DateRange | undefined>({
     from: new Date(initialFrom),
     to: new Date(initialTo)
@@ -32,7 +33,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
     const fromIso = `${toIsoDate(range.from)}T${fromTime}:00`;
     const toIso = `${toIsoDate(range.to)}T${toTime}:00`;
     const params = new URLSearchParams({ from: fromIso, to: toIso });
-    router.push(`/dashboard?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
     setOpen(false);
   }
 
