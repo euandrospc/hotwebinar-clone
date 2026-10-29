@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { prisma, Prisma } from "db";
+import { leadIdFromUtm } from "@/lib/kirvano-link";
 
 // Inbound sales webhook for Kirvano. Kirvano POSTs the raw sale payload here on
 // every checkout event. We only act on approved purchases: look up which webinar
@@ -49,13 +50,20 @@ interface KirvanoBody {
   customer?: { name?: string; email?: string; phone_number?: string };
   products?: Array<{ name?: string }>;
   fiscal?: { total_value?: number };
+  utm?: { utm_content?: string };
   [k: string]: unknown;
 }
 
 async function findWebinarLead(
+  taggedLeadId: string | null,
   email: string | null,
   phone: string | null
 ): Promise<{ id: string; webinarId: string } | null> {
+  // 0) Checkout link sent in the chat carries the lead id (utm_content=lead_<id>).
+  if (taggedLeadId) {
+    const tagged = await prisma.lead.findUnique({ where: { id: taggedLeadId }, select: { id: true, webinarId: true } });
+    if (tagged) return tagged;
+  }
   // 1) Exact email match (case-insensitive), most recent lead wins.
   if (email) {
     const byEmail = await prisma.lead.findFirst({
@@ -111,7 +119,7 @@ export async function POST(request: Request) {
   const buyerName = body.customer?.name || null;
   const productName = body.products?.[0]?.name || null;
 
-  const match = await findWebinarLead(email, phone);
+  const match = await findWebinarLead(leadIdFromUtm(body.utm?.utm_content), email, phone);
 
   try {
     const sale = await prisma.sale.create({

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
 import { attendantReplyLimiter } from "@/lib/rate-limit";
+import { tagKirvanoLinks } from "@/lib/kirvano-link";
 
 const schema = z.object({ leadId: z.string().min(1), text: z.string().min(1).max(500) });
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   const lead = await prisma.lead.findUnique({ where: { id: parsed.data.leadId }, select: { id: true, webinarId: true } });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const msg = await prisma.leadChatMessage.create({
-    data: { leadId: lead.id, webinarId: lead.webinarId, text: parsed.data.text, sender: "team", authorUserId: session.user.id }
+    data: { leadId: lead.id, webinarId: lead.webinarId, text: tagKirvanoLinks(parsed.data.text, lead.id), sender: "team", authorUserId: session.user.id }
   });
   return NextResponse.json({ id: msg.id }, { status: 201 });
 }
