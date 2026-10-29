@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Radio } from "lucide-react";
 
 interface OnlinePayload {
@@ -45,7 +46,10 @@ export function OnlineNowCard({ webinarId }: { webinarId?: string } = {}) {
   const top = webinarId ? [] : (data?.byWebinar?.slice(0, 3) ?? []);
 
   return (
-    <div className="rounded-lg border bg-card p-5">
+    <Link
+      href={webinarId ? `/dashboard/online?webinarId=${webinarId}` : "/dashboard/online"}
+      className="block rounded-lg border bg-card p-5 transition-colors hover:bg-accent/40"
+    >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
           <Radio className="h-3.5 w-3.5" />
@@ -72,6 +76,6 @@ export function OnlineNowCard({ webinarId }: { webinarId?: string } = {}) {
           ))}
         </ul>
       )}
-    </div>
+    </Link>
   );
 }

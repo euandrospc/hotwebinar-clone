@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState } from "react";
 import { Radio } from "lucide-react";
@@ -45,12 +46,15 @@ export function WebinarOnlineBadge({ webinarId }: { webinarId: string }) {
   if (online === 0) return <span className="text-xs text-muted-foreground/60">—</span>;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
+    <Link
+      href={`/dashboard/online?webinarId=${webinarId}`}
+      className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-500/20"
+    >
       <span className="relative flex h-1.5 w-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
       </span>
       {online} online
-    </span>
+    </Link>
   );
 }

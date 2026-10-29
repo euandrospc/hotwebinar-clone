@@ -2,22 +2,17 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
+import { onlineLeadWhere } from "@/lib/online";
 
 // Real "online now" count for the admin: leads whose player sent a heartbeat
 // (/api/track updates lastSeenAt, throttled to 25s) within the recent window and
 // haven't fired the leave event. Scoped to the signed-in owner's webinars.
-const ONLINE_WINDOW_MS = 45_000; // ~2 heartbeat intervals of tolerance
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const since = new Date(Date.now() - ONLINE_WINDOW_MS);
-  const where = {
-    lastSeenAt: { gte: since },
-    leaveFired: false,
-    webinar: { ownerId: session.user.id }
-  } as const;
+  const where = { ...onlineLeadWhere(), webinar: { ownerId: session.user.id } };
 
   const [online, grouped] = await Promise.all([
     prisma.lead.count({ where }),
