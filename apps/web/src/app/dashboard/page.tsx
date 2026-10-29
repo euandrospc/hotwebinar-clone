@@ -98,11 +98,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     scheduledDates: webinars.map((w) => w.startDate!).filter(Boolean)
   };
 
-  const funnel = buildFunnel(input);
+  const salesKpis = buildSalesKpis(sales);
+  const funnel = buildFunnel(input, salesKpis.uniqueBuyers);
   const participantes = buildDailyParticipants(input);
   const devices = buildDeviceBreakdown(input);
   const avgMin = avgWatchedMinutes(leads);
-  const salesKpis = buildSalesKpis(sales);
   const regions = buildRegionBreakdown(
     leads.map((l) => ({ region: l.region, city: l.city, country: l.country }))
   );

@@ -29,12 +29,12 @@ export interface DashboardStatsInput {
   scheduledDates: Date[];
 }
 
-export function buildFunnel(input: DashboardStatsInput): FunnelStage[] {
+/** `comprou` = unique buyers of sales attributed to the owner's webinars in the range. */
+export function buildFunnel(input: DashboardStatsInput, comprou = 0): FunnelStage[] {
   const total = input.leads.length;
   const acessou = input.leads.filter((l) => l.enterFired).length;
   const pitch = input.leads.filter((l) => l.reachedPitch).length;
   const cliques = input.leads.filter((l) => l.ctaClicks > 0).length;
-  const comprou = 0; // No purchase tracking yet — Firepay paywall stub
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 10000) / 100 : 0);
   return [
     { label: "Visitas", count: total, pct: pct(total) },
