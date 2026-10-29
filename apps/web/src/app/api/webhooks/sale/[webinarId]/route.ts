@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { prisma, Prisma } from "db";
+import { fireSaleWebhook } from "@/lib/webhook";
 
 /** Constant-time string compare; false on length mismatch (no early return leak). */
 function secretsMatch(a: string, b: string): boolean {
@@ -74,6 +75,7 @@ export async function POST(
         payload: body as Prisma.InputJsonValue
       }
     });
+    await fireSaleWebhook(sale);
     return NextResponse.json({ ok: true, saleId: sale.id }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

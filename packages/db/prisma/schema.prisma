@@ -242,6 +242,7 @@ model Webinar {
   webhookOnOfferView     Boolean            @default(false)
   webhookOnOfferClick    Boolean            @default(false)
   webhookOnRaffleEntry   Boolean            @default(false)
+  webhookOnSale          Boolean            @default(false)
   webhookUrl             String?
   webhookOnOptin         Boolean            @default(false)
   webhookOnEnter         Boolean            @default(false)

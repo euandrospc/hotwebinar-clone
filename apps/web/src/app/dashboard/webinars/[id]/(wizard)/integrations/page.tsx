@@ -22,6 +22,7 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ i
           webhookOnOfferView: w.webhookOnOfferView,
           webhookOnOfferClick: w.webhookOnOfferClick,
           webhookOnRaffleEntry: w.webhookOnRaffleEntry,
+          webhookOnSale: w.webhookOnSale,
           webhookOnPitchReached: w.webhookOnPitchReached,
           webhookOnPermanence: w.webhookOnPermanence,
           webhookOnLeave: w.webhookOnLeave,

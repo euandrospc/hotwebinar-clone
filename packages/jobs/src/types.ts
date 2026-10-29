@@ -26,7 +26,8 @@ export type WebhookEvent =
   | "lead_viu_pitch"
   | "lead_permaneceu"
   | "lead_saiu"
-  | "lead_entrou_sorteio";
+  | "lead_entrou_sorteio"
+  | "lead_comprou";
 
 export type JobStage =
   | "downloading"

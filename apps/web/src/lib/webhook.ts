@@ -1,4 +1,4 @@
-import type { Lead, Webinar } from "db";
+import type { Lead, Prisma, Webinar } from "db";
 import { prisma } from "db";
 import { enqueueDispatchWebhook, type WebhookEvent } from "jobs";
 
@@ -28,7 +28,8 @@ const FLAG_BY_EVENT: Record<WebhookEvent, keyof Webinar> = {
   lead_viu_pitch: "webhookOnPitchReached",
   lead_permaneceu: "webhookOnPermanence",
   lead_saiu: "webhookOnLeave",
-  lead_entrou_sorteio: "webhookOnRaffleEntry"
+  lead_entrou_sorteio: "webhookOnRaffleEntry",
+  lead_comprou: "webhookOnSale"
 };
 
 export function isEventEnabled(w: Webinar, event: WebhookEvent): boolean {
@@ -40,7 +41,7 @@ export async function enqueueWebhook(
   webinar: Webinar,
   event: WebhookEvent,
   lead: Lead | null,
-  context: { videoSec?: number; ctaId?: string } = {}
+  context: Prisma.InputJsonObject = {}
 ): Promise<void> {
   if (!webinar.webhookUrl) return;
   if (!isEventEnabled(webinar, event)) return;
@@ -92,4 +93,23 @@ export async function maybeFireEnterWebhook(
   const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
   if (!updated) return;
   await enqueueWebhook(webinar, "lead_acessou", updated);
+}
+
+/** `lead_comprou` for a newly recorded sale attributed to a lead (no-op otherwise). */
+export async function fireSaleWebhook(sale: {
+  leadId: string | null;
+  externalId: string;
+  amount: number;
+  currency: string;
+  productName: string | null;
+}): Promise<void> {
+  if (!sale.leadId) return;
+  const lead = await prisma.lead.findUnique({ where: { id: sale.leadId }, include: { webinar: true } });
+  if (!lead) return;
+  await enqueueWebhook(lead.webinar, "lead_comprou", lead, {
+    saleId: sale.externalId,
+    amount: sale.amount,
+    currency: sale.currency,
+    productName: sale.productName
+  });
 }

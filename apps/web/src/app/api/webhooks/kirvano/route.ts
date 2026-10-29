@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { prisma, Prisma } from "db";
 import { leadIdFromUtm } from "@/lib/kirvano-link";
+import { fireSaleWebhook } from "@/lib/webhook";
 
 // Inbound sales webhook for Kirvano. Kirvano POSTs the raw sale payload here on
 // every checkout event. We only act on approved purchases: look up which webinar
@@ -136,6 +137,7 @@ export async function POST(request: Request) {
         payload: body as Prisma.InputJsonValue
       }
     });
+    await fireSaleWebhook(sale);
     return NextResponse.json(
       { ok: true, matched: Boolean(match), saleId: sale.id, webinarId: match?.webinarId ?? null },
       { status: 201 }

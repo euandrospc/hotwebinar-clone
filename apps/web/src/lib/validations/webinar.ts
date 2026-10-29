@@ -164,6 +164,7 @@ export const integrationsSchema = z.object({
   webhookOnOfferView: z.boolean(),
   webhookOnOfferClick: z.boolean(),
   webhookOnRaffleEntry: z.boolean(),
+  webhookOnSale: z.boolean(),
   webhookOnPitchReached: z.boolean(),
   webhookOnPermanence: z.boolean(),
   webhookOnLeave: z.boolean(),

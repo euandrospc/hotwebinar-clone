@@ -4,7 +4,7 @@ import { integrationsSchema } from "@/lib/validations/webinar";
 describe("integrationsSchema", () => {
   const base = {
     webhookOnOptin: false, webhookOnEnter: false, webhookOnOfferView: false,
-    webhookOnOfferClick: false, webhookOnRaffleEntry: false, webhookOnPitchReached: false,
+    webhookOnOfferClick: false, webhookOnRaffleEntry: false, webhookOnSale: false, webhookOnPitchReached: false,
     webhookOnPermanence: false, webhookOnLeave: false, permanenceThresholdSec: 300
   };
 

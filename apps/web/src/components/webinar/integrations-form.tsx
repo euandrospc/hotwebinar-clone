@@ -24,7 +24,8 @@ const TRIGGERS: ReadonlyArray<{ key: keyof IntegrationsInput; label: string }> =
   { key: "webhookOnRaffleEntry", label: "Quando lead entrar no sorteio" },
   { key: "webhookOnPitchReached", label: "Quando lead vir o pitch" },
   { key: "webhookOnPermanence", label: "Quando lead permanecer (threshold abaixo)" },
-  { key: "webhookOnLeave", label: "Quando lead sair do webinar" }
+  { key: "webhookOnLeave", label: "Quando lead sair do webinar" },
+  { key: "webhookOnSale", label: "Quando lead comprar" }
 ];
 
 export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) {

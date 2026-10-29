@@ -490,6 +490,7 @@ export async function updateWebinarIntegrations(id: string, input: IntegrationsI
       webhookOnOfferView: parsed.data.webhookOnOfferView,
       webhookOnOfferClick: parsed.data.webhookOnOfferClick,
       webhookOnRaffleEntry: parsed.data.webhookOnRaffleEntry,
+      webhookOnSale: parsed.data.webhookOnSale,
       webhookOnPitchReached: parsed.data.webhookOnPitchReached,
       webhookOnPermanence: parsed.data.webhookOnPermanence,
       webhookOnLeave: parsed.data.webhookOnLeave,
