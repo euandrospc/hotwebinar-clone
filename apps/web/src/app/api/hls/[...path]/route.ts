@@ -15,6 +15,20 @@ function contentTypeFor(key: string): string {
   return "application/octet-stream";
 }
 
+// shortcut: never evicted; fine for a handful of VOD videos, add a size cap if the library grows large.
+const playlistCache = new Map<string, string>();
+
+function playlistResponse(text: string): Response {
+  return new Response(text, {
+    status: 200,
+    headers: {
+      "content-type": "application/vnd.apple.mpegurl",
+      "cache-control": "private, max-age=300",
+      "x-content-type-options": "nosniff"
+    }
+  });
+}
+
 function refererAllowed(req: Request, isAdmin: boolean): boolean {
   // Admin with valid session = trusted; no referer gate (browsers may omit Referer
   // on cross-context fetches like dialog portals or when Referrer-Policy strips it).
@@ -76,6 +90,11 @@ export async function GET(
   }
   if (!authorized) return new Response("unauthorized", { status: 401 });
 
+  // VOD playlists are tiny and never change: serve them from memory so a crowd
+  // opening the player doesn't hold one storage socket per request.
+  const cached = playlistCache.get(key);
+  if (cached) return playlistResponse(cached);
+
   let out;
   try {
     out = await getS3Client().send(new GetObjectCommand({ Bucket: HLS_BUCKET, Key: key }));
@@ -86,6 +105,12 @@ export async function GET(
     throw err;
   }
   if (!out.Body) return new Response("empty body", { status: 404 });
+
+  if (key.endsWith(".m3u8")) {
+    const text = await out.Body.transformToString();
+    playlistCache.set(key, text);
+    return playlistResponse(text);
+  }
 
   // AWS SDK v3 Body in Node = Readable stream; convert to web Response stream.
   const nodeStream = out.Body as unknown as Readable;
