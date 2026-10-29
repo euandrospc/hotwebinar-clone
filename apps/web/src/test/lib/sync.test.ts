@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePhase, computeInitialOffset } from "@/lib/sync";
+import { computePhase, computeInitialOffset, withOccurrence } from "@/lib/sync";
 
 const baseUnico = {
   mode: "UNICO" as const,
@@ -82,5 +82,52 @@ describe("computeInitialOffset", () => {
   it("returns 0 when video duration is null", () => {
     const offset = computeInitialOffset(baseJit, lead, new Date(), null);
     expect(offset).toBe(0);
+  });
+});
+
+describe("withOccurrence", () => {
+  // Wed 2026-10-28 20:00-22:10 São Paulo (UTC-3) = 23:00-01:10 UTC.
+  const rec = {
+    mode: "UNICO" as const,
+    startDate: new Date("2026-10-28T23:00:00Z"),
+    endDate: new Date("2026-10-29T01:10:00Z"),
+    recurring: true,
+    recurringDays: [0, 1, 2, 3, 4, 5, 6],
+    timezone: "America/Sao_Paulo"
+  };
+
+  it("leaves non-recurring webinars untouched", () => {
+    const w = { ...rec, recurring: false };
+    expect(withOccurrence(w, new Date("2026-11-05T12:00:00Z"))).toBe(w);
+  });
+
+  it("moves to today's occurrence at the same local time", () => {
+    const o = withOccurrence(rec, new Date("2026-11-02T12:00:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-11-02T23:00:00.000Z");
+    expect(o.endDate?.toISOString()).toBe("2026-11-03T01:10:00.000Z");
+  });
+
+  it("keeps the occurrence that is still running past midnight", () => {
+    const o = withOccurrence(rec, new Date("2026-11-03T00:30:00Z")); // 21:30 local on the 2nd
+    expect(o.startDate?.toISOString()).toBe("2026-11-02T23:00:00.000Z");
+    expect(computePhase(o, new Date("2026-11-03T00:30:00Z"))).toBe("open");
+  });
+
+  it("skips weekdays that are not selected", () => {
+    const monFri = { ...rec, recurringDays: [1, 2, 3, 4, 5] };
+    // Sat 2026-10-31 noon local -> next is Mon 2026-11-02
+    const o = withOccurrence(monFri, new Date("2026-10-31T15:00:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-11-02T23:00:00.000Z");
+    expect(computePhase(o, new Date("2026-10-31T15:00:00Z"))).toBe("before");
+  });
+
+  it("never schedules before the first startDate", () => {
+    const o = withOccurrence(rec, new Date("2026-10-27T12:00:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-10-28T23:00:00.000Z");
+  });
+
+  it("closes when no weekday is selected", () => {
+    const none = { ...rec, recurringDays: [] };
+    expect(computePhase(withOccurrence(none, new Date("2026-11-05T12:00:00Z")), new Date("2026-11-05T12:00:00Z"))).toBe("closed");
   });
 });

@@ -18,6 +18,8 @@ export default async function Step2Page({ params }: { params: Promise<{ id: stri
         mode: w.mode,
         startDate: w.startDate ?? new Date(Date.now() + 24 * 60 * 60 * 1000),
         endDate: w.endDate ?? new Date(Date.now() + 25 * 60 * 60 * 1000),
+        recurring: w.recurring,
+        recurringDays: w.recurringDays.length ? w.recurringDays : [0, 1, 2, 3, 4, 5, 6],
         timezone: w.timezone,
         waitingTitle: w.waitingTitle,
         waitingSubtitle: w.waitingSubtitle,

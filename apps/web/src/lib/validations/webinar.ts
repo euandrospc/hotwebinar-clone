@@ -23,6 +23,8 @@ export const step2Schema = z
     mode: z.enum(["UNICO", "JIT"]),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
+    recurring: z.boolean().default(false),
+    recurringDays: z.array(z.number().int().min(0).max(6)).default([]),
     timezone: z.string().min(1),
     waitingTitle: z.string().min(1).max(80),
     waitingSubtitle: z.string().max(200),
@@ -33,7 +35,15 @@ export const step2Schema = z
   .refine((v) => v.endDate > v.startDate, {
     message: "Fim deve ser após início",
     path: ["endDate"]
-  });
+  })
+  .refine((v) => v.mode !== "UNICO" || !v.recurring || v.recurringDays.length > 0, {
+    message: "Escolha pelo menos um dia da semana",
+    path: ["recurringDays"]
+  })
+  .refine(
+    (v) => v.mode !== "UNICO" || !v.recurring || v.endDate.getTime() - v.startDate.getTime() < 24 * 60 * 60 * 1000,
+    { message: "Webinar recorrente precisa durar menos de 24 horas", path: ["endDate"] }
+  );
 export type Step2Input = z.infer<typeof step2Schema>;
 
 export const step3Schema = z.object({

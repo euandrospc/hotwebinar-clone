@@ -8,11 +8,15 @@ import { step2Schema, type Step2Input } from "@/lib/validations/webinar";
 import { updateWebinarStep2 } from "@/server/actions/webinar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { TimezoneSelect } from "@/components/wizard/timezone-select";
 import { WaitingTemplatePicker } from "@/components/wizard/waiting-template-picker";
+
+// Index = JS getDay() (0 = domingo).
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
 
 export interface Step2FormProps {
   webinarId: string;
@@ -35,6 +39,7 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
   });
 
   const mode = watch("mode");
+  const recurring = watch("recurring");
 
   function onSubmit(values: Step2Input) {
     startTransition(async () => {
@@ -96,6 +101,60 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
           {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
         </div>
       </div>
+
+      {mode === "UNICO" ? (
+        <div className="space-y-3">
+          <Controller
+            control={control}
+            name="recurring"
+            render={({ field }) => (
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="recurring"
+                  checked={field.value}
+                  onCheckedChange={(v) => field.onChange(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="recurring">Webinar recorrente</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Repete no mesmo horário nos dias da semana escolhidos, a partir da data de início.
+                  </p>
+                </div>
+              </div>
+            )}
+          />
+          {recurring ? (
+            <Controller
+              control={control}
+              name="recurringDays"
+              render={({ field }) => (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Dias da semana">
+                  {WEEKDAYS.map((label, day) => {
+                    const on = field.value.includes(day);
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() =>
+                          field.onChange(on ? field.value.filter((d) => d !== day) : [...field.value, day].sort())
+                        }
+                        className={`h-9 min-w-12 rounded-md border px-3 text-sm font-medium transition-colors ${
+                          on ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-accent"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+          ) : null}
+          {errors.recurringDays && <p className="text-sm text-destructive">{errors.recurringDays.message}</p>}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label>Fuso horário</Label>

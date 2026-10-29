@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { auth } from "@/lib/auth";
+import { withOccurrence } from "@/lib/sync";
 
 const MIN_TTL_MS = 15 * 60 * 1000; // floor: 15 minutes
 const TTL_BUFFER_MS = 5 * 60 * 1000; // grace beyond video duration
@@ -51,7 +52,8 @@ export async function GET(
     // the start must still play, so the window opens at startDate at the earliest.
     const durMs = video.durationSec ? video.durationSec * 1000 : 0;
     const ttl = Math.max(MIN_TTL_MS, durMs + TTL_BUFFER_MS);
-    const start = lead.webinar.mode === "UNICO" ? lead.webinar.startDate : null;
+    const occ = withOccurrence(lead.webinar, new Date());
+    const start = occ.mode === "UNICO" ? occ.startDate : null;
     const anchor = start && start > lead.sessionStart ? start : lead.sessionStart;
     const elapsed = Date.now() - anchor.getTime();
     if (elapsed > ttl) {

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { publicWebinarDto, publicVideoDto, publicLeadWithUtmsDto } from "@/lib/public-dto";
-import { computePhase, computeInitialOffset } from "@/lib/sync";
+import { computePhase, computeInitialOffset, withOccurrence } from "@/lib/sync";
 import { maybeFireEnterWebhook } from "@/lib/webhook";
 import { isReservedSlug } from "@/lib/slug-blacklist";
 import { CountdownView } from "../_components/countdown-view";
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function LivePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   if (isReservedSlug(slug)) notFound();
-  const w = await prisma.webinar.findUnique({
+  const found = await prisma.webinar.findUnique({
     where: { slug },
     include: {
       video: true,
@@ -32,7 +32,8 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
       saleNotifications: { orderBy: { showAtSec: "asc" } }
     }
   });
-  if (!w || w.status !== "ACTIVE") notFound();
+  if (!found || found.status !== "ACTIVE") notFound();
+  const w = withOccurrence(found, new Date());
 
   const cookieStore = await cookies();
   const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);

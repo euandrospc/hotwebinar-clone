@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "db";
 import { AUTO_TIMEZONE_VALUE } from "@/lib/timezones";
+import { computePhase, withOccurrence } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 
@@ -10,16 +11,24 @@ export const metadata: Metadata = {
 };
 
 export default async function PublicWebinarsList() {
-  const webinars = await prisma.webinar.findMany({
-    // Hide webinars already over (same rule as computePhase's "closed").
+  const now = new Date();
+  const rows = await prisma.webinar.findMany({
+    // Hide webinars already over (same rule as computePhase's "closed"); recurring
+    // ones are resolved to their next occurrence below.
     where: {
       status: "ACTIVE",
       slug: { not: null },
-      OR: [{ endDate: null }, { endDate: { gt: new Date() } }]
+      OR: [{ endDate: null }, { endDate: { gt: now } }, { recurring: true }]
     },
     orderBy: { createdAt: "desc" },
-    select: { id: true, slug: true, title: true, name: true, startDate: true, timezone: true }
+    select: {
+      id: true, slug: true, title: true, name: true, mode: true, startDate: true, endDate: true,
+      timezone: true, recurring: true, recurringDays: true
+    }
   });
+  const webinars = rows
+    .map((w) => withOccurrence(w, now))
+    .filter((w) => computePhase(w, now) !== "closed");
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">

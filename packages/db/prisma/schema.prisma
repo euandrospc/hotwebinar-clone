@@ -187,6 +187,10 @@ model Webinar {
   mode                   WebinarMode        @default(UNICO)
   startDate              DateTime?
   endDate                DateTime?
+  // UNICO only: repeat the startDate..endDate window at the same local time on
+  // recurringDays (0 = Sunday .. 6 = Saturday, in `timezone`).
+  recurring              Boolean            @default(false)
+  recurringDays          Int[]              @default([])
   timezone               String             @default("America/Sao_Paulo")
   waitingTitle           String             @default("Sala de Espera")
   teamChatName           String             @default("Suporte")
