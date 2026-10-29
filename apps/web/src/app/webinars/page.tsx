@@ -7,7 +7,7 @@ import { computePhase, withOccurrence } from "@/lib/sync";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Webinars disponíveis"
+  title: "Lives"
 };
 
 export default async function PublicWebinarsList() {
@@ -32,14 +32,14 @@ export default async function PublicWebinarsList() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="text-3xl font-semibold">Webinars disponíveis</h1>
+      <h1 className="text-3xl font-semibold">Lives</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Selecione um webinar para se inscrever.
+        Selecione uma live para se inscrever.
       </p>
       <ul className="mt-8 space-y-3">
         {webinars.length === 0 && (
           <li className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
-            Nenhum webinar ativo no momento.
+            Nenhuma live ativa no momento.
           </li>
         )}
         {webinars.map((w) => (
