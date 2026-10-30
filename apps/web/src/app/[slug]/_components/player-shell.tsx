@@ -20,6 +20,15 @@ export function PlayerShell({
     setCurrentTimeSec(sec);
   }
 
+  const audience = {
+    mode: webinar.audienceMode,
+    min: webinar.audienceMin,
+    max: webinar.audienceMax,
+    seed: `${webinar.id}:${lead.id}`,
+    durationSec: video?.durationSec ?? 3600,
+    currentTimeRef
+  };
+
   if (!video?.hlsUrl) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6 text-center">
@@ -46,15 +55,7 @@ export function PlayerShell({
             startOffsetSec={initialOffsetSec}
             onTimeUpdate={onTimeUpdate}
             overlayBadge={
-              <AudienceBadge
-                mode={webinar.audienceMode}
-                min={webinar.audienceMin}
-                max={webinar.audienceMax}
-                showLiveBadge={webinar.audienceLiveBadge}
-                seed={`${webinar.id}:${lead.id}`}
-                durationSec={video?.durationSec ?? 3600}
-                currentTimeRef={currentTimeRef}
-              />
+              <AudienceBadge {...audience} showLiveBadge={webinar.audienceLiveBadge} />
             }
           />
         </div>
@@ -63,7 +64,7 @@ export function PlayerShell({
         </div>
         <div className="min-h-0 md:col-start-2 md:row-start-2">
           <ChatPanel
-            webinarId={webinar.id}
+            audience={audience}
             ownerChat={ownerChat}
             leadChat={leadChat}
             currentTimeSec={currentTimeSec}

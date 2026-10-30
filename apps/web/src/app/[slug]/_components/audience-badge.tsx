@@ -12,17 +12,13 @@ interface Props {
   currentTimeRef: React.RefObject<number>;
 }
 
-const fmt = new Intl.NumberFormat("pt-BR");
+export const fmtAudience = new Intl.NumberFormat("pt-BR");
+const fmt = fmtAudience;
 
-export function AudienceBadge({
-  mode,
-  min,
-  max,
-  showLiveBadge,
-  seed,
-  durationSec,
-  currentTimeRef,
-}: Props) {
+export type AudienceParams = Omit<Props, "showLiveBadge">;
+
+/** The simulated viewer count shown to leads (never the real online count). */
+export function useSimulatedAudience({ mode, min, max, seed, durationSec, currentTimeRef }: AudienceParams): number {
   const [count, setCount] = useState<number>(() =>
     mode === "NONE"
       ? 0
@@ -37,6 +33,12 @@ export function AudienceBadge({
     }, 5000);
     return () => clearInterval(id);
   }, [mode, min, max, seed, durationSec, currentTimeRef]);
+  return count;
+}
+
+export function AudienceBadge({ showLiveBadge, ...params }: Props) {
+  const count = useSimulatedAudience(params);
+  const { mode } = params;
 
   if (mode === "NONE") return null;
 
