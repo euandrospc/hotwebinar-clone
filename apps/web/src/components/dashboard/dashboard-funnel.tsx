@@ -16,7 +16,7 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
         <Info className="h-3.5 w-3.5 text-muted-foreground" />
       </header>
 
-      <div className="mt-4 grid grid-cols-5 gap-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stages.map((s) => (
           <div key={s.label}>
             <p className="text-xs text-muted-foreground">{s.label}</p>

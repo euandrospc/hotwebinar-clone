@@ -5,6 +5,7 @@ import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { hasRole, ADMIN_ROLES } from "@/lib/roles";
 import { Sidebar } from "./sidebar";
 import { UserMenu } from "./user-menu";
+import { MobileNav } from "./mobile-nav";
 
 export async function AdminShell({
   children
@@ -18,12 +19,16 @@ export async function AdminShell({
   if (role === "disabled") redirect(ADMIN_LOGIN_PATH);
 
   return (
-    <div className="flex h-screen">
-      <div className="flex h-screen w-60 flex-col border-r bg-card">
+    <div className="flex h-screen flex-col md:flex-row">
+      <MobileNav>
+        <Sidebar />
+        <UserMenu name={session.user.name ?? session.user.email} email={session.user.email} />
+      </MobileNav>
+      <div className="hidden h-screen w-60 shrink-0 flex-col border-r bg-card md:flex">
         <Sidebar />
         <UserMenu name={session.user.name ?? session.user.email} email={session.user.email} />
       </div>
-      <main className="flex-1 overflow-y-auto bg-muted/30">{children}</main>
+      <main className="min-w-0 flex-1 overflow-y-auto bg-muted/30">{children}</main>
     </div>
   );
 }
