@@ -37,8 +37,10 @@ export function PlayerShell({
           <ThemeToggle />
         </div>
       </header>
-      <div className="grid gap-3 p-3 md:grid-cols-[2fr_1fr] md:gap-4 md:p-4">
-        <div className="space-y-3">
+      {/* Mobile: video, offer, chat stacked. Desktop: video left; offer on top of the
+          chat on the right, chat filling the rest of the viewport height. */}
+      <div className="grid gap-3 p-3 md:h-[calc(100dvh-65px)] md:grid-cols-[2fr_1fr] md:grid-rows-[auto_minmax(0,1fr)] md:gap-4 md:p-4">
+        <div className="md:row-span-2">
           <HlsPlayer
             src={video.hlsUrl}
             startOffsetSec={initialOffsetSec}
@@ -55,20 +57,24 @@ export function PlayerShell({
               />
             }
           />
+        </div>
+        <div className="md:col-start-2 md:row-start-1">
           <OfferBanner offer={offer} lead={lead} currentTimeSec={currentTimeSec} />
         </div>
-        <ChatPanel
-          ownerChat={ownerChat}
-          leadChat={leadChat}
-          currentTimeSec={currentTimeSec}
-          leadName={lead.name}
-          teamChatName={teamChatName}
-          baseTimestampMs={
-            webinar.mode === "UNICO" && webinar.startDate
-              ? new Date(webinar.startDate).getTime()
-              : new Date(lead.sessionStart).getTime()
-          }
-        />
+        <div className="min-h-0 md:col-start-2 md:row-start-2">
+          <ChatPanel
+            ownerChat={ownerChat}
+            leadChat={leadChat}
+            currentTimeSec={currentTimeSec}
+            leadName={lead.name}
+            teamChatName={teamChatName}
+            baseTimestampMs={
+              webinar.mode === "UNICO" && webinar.startDate
+                ? new Date(webinar.startDate).getTime()
+                : new Date(lead.sessionStart).getTime()
+            }
+          />
+        </div>
       </div>
       <Tracker currentTimeRef={currentTimeRef} />
       <SalesNotifier notifications={salesNotifications} currentTimeRef={currentTimeRef} />
