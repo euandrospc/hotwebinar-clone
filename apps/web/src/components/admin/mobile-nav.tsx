@@ -17,12 +17,17 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
       </Button>
       {open ? (
         <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-          <div className="flex h-full w-64 flex-col border-r bg-card">
-            <div className="flex justify-end p-2">
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fechar menu">
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
+          {/* Same width as the sidebar, whose own right border is the drawer edge. */}
+          <div className="relative flex h-full w-60 flex-col bg-card">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpen(false)}
+              aria-label="Fechar menu"
+              className="absolute right-2 top-3 z-10"
+            >
+              <X className="h-5 w-5" />
+            </Button>
             {children}
           </div>
           <button type="button" className="flex-1 bg-black/50" aria-label="Fechar menu" onClick={() => setOpen(false)} />

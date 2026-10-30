@@ -6,8 +6,9 @@ interface LogoProps {
 }
 
 const Logo = ({ color }: LogoProps) => {
-  const { theme } = useTheme();
-  const fillColor = color ?? (theme === "dark" ? "white" : "black");
+  // resolvedTheme: with the "system" theme on a dark OS, `theme` is "system", not "dark".
+  const { resolvedTheme } = useTheme();
+  const fillColor = color ?? (resolvedTheme === "dark" ? "white" : "black");
 
   return (
     <svg
