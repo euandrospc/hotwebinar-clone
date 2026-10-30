@@ -1,17 +1,17 @@
 import * as React from "react";
-import { useTheme } from "next-themes";
 
 interface LogoProps {
   color?: "black" | "white";
 }
 
 const Logo = ({ color }: LogoProps) => {
-  // resolvedTheme: with the "system" theme on a dark OS, `theme` is "system", not "dark".
-  const { resolvedTheme } = useTheme();
-  const fillColor = color ?? (resolvedTheme === "dark" ? "white" : "black");
+  // currentColor + the `dark` class next-themes sets on <html> before paint: right
+  // color on first render, no JS theme lookup (that rendered black on dark pages).
+  const fillColor = color ?? "currentColor";
 
   return (
     <svg
+      className={color ? undefined : "text-black dark:text-white"}
       width={137}
       height={24}
       viewBox="0 0 137 24"
