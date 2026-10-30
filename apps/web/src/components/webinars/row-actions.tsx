@@ -1,7 +1,7 @@
 "use client";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Pencil, Files, Trash2, Users, BarChart3, MoreHorizontal } from "@/components/icons";
+import { Copy, Pencil, Files, Trash2, Users, BarChart3, Radio, MoreHorizontal } from "@/components/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +66,9 @@ export function RowActions({
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push(`/dashboard/webinars/${id}/metrics`)}>
           <BarChart3 className="mr-2 h-4 w-4" /> Métricas
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/dashboard/webinars/${id}/realtime`)}>
+          <Radio className="mr-2 h-4 w-4" /> Tempo real
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DeleteConfirmDialog id={id} title={title}>

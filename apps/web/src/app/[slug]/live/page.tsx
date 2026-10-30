@@ -66,6 +66,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
 
   return (
     <PlayerShell
+      key={`${lead.id}:${lead.sessionStart.toISOString()}`}
       webinar={wDto}
       video={videoDto}
       offer={{
@@ -89,7 +90,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
         id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner
       }))}
       leadChat={leadChat.map((m) => ({
-        id: m.id, text: m.text, sender: m.sender as "lead" | "team", teamName: m.authorUser?.name ?? null, videoSec: m.videoSec, createdAt: m.createdAt.toISOString()
+        id: m.id, text: m.text, sender: m.sender as "lead" | "team", teamName: m.authorUser?.name ?? null, videoSec: m.videoSec, createdAt: m.createdAt.toISOString(), clientMessageId: m.clientMessageId
       }))}
       teamChatName={w.teamChatName}
       lead={publicLeadWithUtmsDto(lead)}

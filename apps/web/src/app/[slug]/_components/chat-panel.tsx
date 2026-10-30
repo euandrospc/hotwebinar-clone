@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import type { PublicSaleNotification } from "@/lib/public-dto";
 import { mergeLeadMessages } from "../_lib/merge-lead-messages";
 import { useSimulatedAudience, fmtAudience, type AudienceParams } from "./audience-badge";
 import { SalesNotifier } from "./sales-notifier";
+import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
 
 const TIME_FMT = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 function formatClock(baseMs: number, sec: number): string {
@@ -39,6 +40,7 @@ interface ChatPanelProps {
   leadChat: PlayerLeadMsg[];
   currentTimeSec: number;
   leadName: string;
+  leadId: string;
   teamChatName: string;
   baseTimestampMs: number;
   salesNotifications: PublicSaleNotification[];
@@ -48,26 +50,70 @@ type StreamItem =
   | { kind: "owner"; id: string; authorName: string; text: string; showAtSec: number; isOwner: boolean }
   | { kind: "lead"; id: string; text: string; showAtSec: number; sender: "lead" | "team"; teamName?: string | null };
 
+interface MessageAttempt { text: string; videoSec: number; clientMessageId: string }
+
 function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs, salesNotifications }: ChatPanelProps) {
+export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, leadId, teamChatName, baseTimestampMs, salesNotifications }: ChatPanelProps) {
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(() =>
     leadChat.map((x) => (x.videoSec == null ? { ...x, videoSec: currentTimeSec } : x))
   );
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState<MessageAttempt[]>([]);
+  const retryRef = useRef<MessageAttempt | null>(null);
+  const confirmedRequests = useRef(new Set<string>());
+  const sendingRef = useRef(false);
+  const aliveRef = useRef(true);
+  const syncController = useRef<AbortController | null>(null);
+  const sendController = useRef<AbortController | null>(null);
   // Leads see the simulated audience (same number as the player badge), never the real count.
   const online = useSimulatedAudience(audience);
-  const leadMsgsRef = useRef<PlayerLeadMsg[]>(leadMsgs);
-  useEffect(() => {
-    leadMsgsRef.current = leadMsgs;
-  }, [leadMsgs]);
-
   const maxSecRef = useRef(currentTimeSec);
   if (currentTimeSec > maxSecRef.current) maxSecRef.current = currentTimeSec;
   const visibleSec = maxSecRef.current;
+
+  const receive = useCallback((messages: PlayerLeadMsg[]) => {
+    for (const message of messages) {
+      if (message.clientMessageId) confirmedRequests.current.add(message.clientMessageId);
+    }
+    const stamped = messages.map((message) => message.videoSec == null ? { ...message, videoSec: maxSecRef.current } : message);
+    setLeadMsgs((previous) => mergeLeadMessages(previous, stamped));
+    setFailedAttempts((previous) => previous.filter((attempt) => !confirmedRequests.current.has(attempt.clientMessageId)));
+  }, []);
+
+  const resync = useCallback(async () => {
+    syncController.current?.abort();
+    const controller = new AbortController();
+    syncController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const response = await fetch("/api/lead-chat", { cache: "no-store", signal: controller.signal });
+      if (!response.ok) return;
+      const body = (await response.json()) as { messages: PlayerLeadMsg[] };
+      if (aliveRef.current && !controller.signal.aborted) receive(body.messages);
+    } catch { /* The channel status and fallback handle temporary disconnections. */ }
+    finally { clearTimeout(timeout); }
+  }, [receive]);
+
+  const { status } = useRealtimeChannel(
+    { kind: "lead", clientKey: leadId },
+    (event) => { if (event.type === "chat" && event.leadId === leadId) receive([event.message]); },
+    () => { void resync(); }
+  );
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => { aliveRef.current = false; syncController.current?.abort(); sendController.current?.abort(); };
+  }, []);
+
+  useEffect(() => {
+    // A slow reconciliation also recovers a missed Redis publish while the socket stayed open.
+    const timer = setInterval(() => { if (!document.hidden) void resync(); }, status === "connected" ? 60_000 : 4_000);
+    return () => clearInterval(timer);
+  }, [resync, status]);
 
   const items = useMemo<StreamItem[]>(() => {
     const ownerVisible: StreamItem[] = ownerChat
@@ -87,61 +133,60 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sendingRef.current) return;
+    const attempt = retryRef.current?.text === trimmed ? retryRef.current : {
+      text: trimmed, videoSec: Math.round(currentTimeSec), clientMessageId: crypto.randomUUID()
+    };
+    await sendAttempt(attempt);
+  }
+
+  async function sendAttempt(attempt: MessageAttempt) {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
+    setFailedAttempts((previous) => previous.filter((failed) => failed.clientMessageId !== attempt.clientMessageId));
+    retryRef.current = attempt;
     const optimistic: PlayerLeadMsg = {
-      id: "tmp-" + Date.now(),
-      text: trimmed,
+      id: "tmp-" + attempt.clientMessageId,
+      clientMessageId: attempt.clientMessageId,
+      text: attempt.text,
       sender: "lead",
-      videoSec: Math.round(currentTimeSec),
+      videoSec: attempt.videoSec,
       createdAt: new Date().toISOString()
     };
-    setLeadMsgs((m) => [...m, optimistic]);
-    setText("");
+    setLeadMsgs((messages) => mergeLeadMessages(messages, [optimistic]));
+    setText((draft) => draft.trim() === attempt.text ? "" : draft);
+    const controller = new AbortController();
+    sendController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch("/api/lead-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: trimmed, videoSec: Math.round(currentTimeSec) })
+        signal: controller.signal,
+        body: JSON.stringify(attempt)
       });
-      if (res.ok) {
-        const created = (await res.json()) as PlayerLeadMsg;
-        setLeadMsgs((m) => m.map((x) => (x.id === optimistic.id ? created : x)));
-      } else {
-        setLeadMsgs((m) => m.filter((x) => x.id !== optimistic.id));
-      }
+      if (!res.ok) throw new Error("send_failed");
+      const created = (await res.json()) as PlayerLeadMsg;
+      if (!aliveRef.current) return;
+      receive([created]);
+      retryRef.current = null;
     } catch {
-      setLeadMsgs((m) => m.filter((x) => x.id !== optimistic.id));
+      if (!aliveRef.current) return;
+      setLeadMsgs((messages) => messages.filter((message) => message.id !== optimistic.id));
+      if (confirmedRequests.current.has(attempt.clientMessageId)) {
+        retryRef.current = null;
+      } else {
+        setText((draft) => draft || attempt.text);
+        setFailedAttempts((previous) => [...previous.filter((failed) => failed.clientMessageId !== attempt.clientMessageId), attempt]);
+      }
     } finally {
-      setSending(false);
+      clearTimeout(timeout);
+      sendController.current = null;
+      sendingRef.current = false;
+      if (aliveRef.current) setSending(false);
     }
   }
-
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      const last = leadMsgsRef.current[leadMsgsRef.current.length - 1];
-      const after = last && !last.id.startsWith("tmp-") ? `?after=${last.id}` : "";
-      try {
-        const res = await fetch(`/api/lead-chat${after}`, { cache: "no-store" });
-        if (res.ok && alive) {
-          const json = (await res.json()) as { messages: PlayerLeadMsg[] };
-          if (json.messages.length) {
-            const at = maxSecRef.current;
-            const stamped = json.messages.map((x) => (x.videoSec == null ? { ...x, videoSec: at } : x));
-            setLeadMsgs((m) => mergeLeadMessages(m, stamped));
-          }
-        }
-      } catch {}
-      if (alive) timer = setTimeout(poll, 4000);
-    }
-    timer = setTimeout(poll, 4000);
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   // Stick to the newest message unless the lead scrolled up. The box keeps
@@ -179,6 +224,9 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
       <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 md:px-4 md:py-3">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
         <h3 className="truncate text-xs font-semibold md:text-sm">Chat</h3>
+        <span className="text-[10px] text-muted-foreground" aria-label="Conexão do chat">
+          {status === "connected" ? "Conectado" : status === "fallback" ? "Atualização periódica" : "Reconectando…"}
+        </span>
         {audience.mode !== "NONE" ? (
           <span className="ml-auto text-[10px] text-muted-foreground">{fmtAudience.format(online)} online</span>
         ) : null}
@@ -237,6 +285,13 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
         })}
       </div>
       <SalesNotifier notifications={salesNotifications} currentTimeRef={audience.currentTimeRef} />
+      {failedAttempts.length > 0 && <div role="alert" className="max-h-36 shrink-0 space-y-2 overflow-y-auto border-t px-3 py-2 text-xs text-destructive">
+        <p>Não foi possível confirmar o envio. Suas mensagens foram mantidas.</p>
+        {failedAttempts.map((attempt) => <div key={attempt.clientMessageId} className="flex items-start gap-2">
+          <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{attempt.text}</p>
+          <Button type="button" variant="outline" size="sm" disabled={sending} onClick={() => void sendAttempt(attempt)} aria-label={`Reenviar: ${attempt.text}`}>Reenviar</Button>
+        </div>)}
+      </div>}
       <form onSubmit={send} className="flex shrink-0 gap-1 border-t px-2 py-2 md:gap-2 md:px-3 md:py-3">
         <Input
           value={text}

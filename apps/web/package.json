@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "tsx server.ts",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production tsx server.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -19,6 +19,7 @@
     "@aws-sdk/client-s3": "3.665.0",
     "@aws-sdk/s3-request-presigner": "3.665.0",
     "@hookform/resolvers": "3.9.0",
+    "@next/env": "15.0.3",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.1",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -41,6 +42,7 @@
     "dotenv": "16.4.5",
     "exceljs": "^4.4.0",
     "hls.js": "1.5.17",
+    "ioredis": "5.9.3",
     "jobs": "workspace:*",
     "leaflet": "^1.9.4",
     "libphonenumber-js": "1.11.12",
@@ -57,9 +59,12 @@
     "react-phone-number-input": "3.4.9",
     "recharts": "^3.8.1",
     "slugify": "1.6.6",
+    "socket.io": "4.8.1",
+    "socket.io-client": "4.8.1",
     "sonner": "1.5.0",
     "tailwind-merge": "2.5.4",
     "tailwindcss": "3.4.14",
+    "tsx": "4.19.1",
     "zod": "3.23.8"
   },
   "devDependencies": {
@@ -78,7 +83,6 @@
     "eslint-config-next": "15.0.3",
     "jsdom": "25.0.1",
     "postcss": "8.4.47",
-    "tsx": "4.19.1",
     "typescript": "5.6.3",
     "vitest": "2.1.4"
   }

@@ -52,12 +52,14 @@ export function PlayerShell({
         <OfferBanner offer={offer} lead={lead} currentTimeSec={currentTimeSec} />
         <div className="min-h-0 flex-1">
           <ChatPanel
+            key={lead.id}
             audience={audience}
             ownerChat={ownerChat}
             leadChat={leadChat}
             salesNotifications={salesNotifications}
             currentTimeSec={currentTimeSec}
             leadName={lead.name}
+            leadId={lead.id}
             teamChatName={teamChatName}
             baseTimestampMs={
               webinar.mode === "UNICO" && webinar.startDate
@@ -67,7 +69,7 @@ export function PlayerShell({
           />
         </div>
       </div>
-      <Tracker currentTimeRef={currentTimeRef} />
+      <Tracker currentTimeRef={currentTimeRef} leadId={lead.id} />
     </main>
   );
 }

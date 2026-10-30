@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
+import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
+import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
+import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
 
 interface Conversation {
   leadId: string;
@@ -19,19 +22,16 @@ interface Conversation {
   online: boolean;
 }
 
-interface ThreadMessage {
-  id: string;
-  text: string;
-  sender: string;
-  createdAt: string;
-}
+type ThreadMessage = PlayerLeadMsg;
 
 interface InboxProps {
   attendantName: string;
 }
 
-const CONVERSATIONS_POLL_MS = 4000;
-const THREAD_POLL_MS = 4000;
+interface ReplyAttempt {
+  text: string;
+  clientMessageId: string;
+}
 
 function initialOf(name: string): string {
   return (name.trim()[0] ?? "?").toUpperCase();
@@ -56,89 +56,212 @@ export function Inbox({ attendantName }: InboxProps) {
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [filter, setFilter] = useState<string>("active");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-  const [thread, setThread] = useState<ThreadMessage[]>([]);
-  const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
+  const [threads, setThreads] = useState<Record<string, ThreadMessage[]>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [sendingLeads, setSendingLeads] = useState<Record<string, boolean>>({});
+  const [failedAttempts, setFailedAttempts] = useState<Record<string, ReplyAttempt[]>>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [loggingOut, setLoggingOut] = useState(false);
   const [onlineTotal, setOnlineTotal] = useState(0);
+  const selectedRef = useRef<string | null>(selectedLeadId);
+  selectedRef.current = selectedLeadId;
+  const alive = useRef(true);
+  const conversationController = useRef<AbortController | null>(null);
+  const conversationFetching = useRef(false);
+  const conversationRefreshQueued = useRef(false);
+  const threadController = useRef<AbortController | null>(null);
+  const eventRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryAttempts = useRef(new Map<string, ReplyAttempt>());
+  const inFlightSends = useRef(new Set<string>());
+  const sendControllers = useRef(new Map<string, AbortController>());
+  const confirmedRequests = useRef(new Set<string>());
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
 
-  const cursorRef = useRef<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const thread = selectedLeadId ? (threads[selectedLeadId] ?? []) : [];
+  const text = selectedLeadId ? (drafts[selectedLeadId] ?? "") : "";
+  const sending = selectedLeadId ? !!sendingLeads[selectedLeadId] : false;
+  const failedReplies = selectedLeadId ? (failedAttempts[selectedLeadId] ?? []) : [];
 
   useEffect(() => {
-    const t = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(t);
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      conversationController.current?.abort();
+      threadController.current?.abort();
+      for (const controller of sendControllers.current.values()) controller.abort();
+      if (eventRefreshTimer.current) clearTimeout(eventRefreshTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const receive = useCallback((leadId: string, messages: ThreadMessage[]) => {
+    for (const message of messages) if (message.clientMessageId) confirmedRequests.current.add(message.clientMessageId);
+    setThreads((previous) => ({ ...previous, [leadId]: mergeLeadMessages(previous[leadId] ?? [], messages) }));
+    setFailedAttempts((previous) => ({ ...previous, [leadId]: (previous[leadId] ?? []).filter((attempt) => !confirmedRequests.current.has(attempt.clientMessageId)) }));
   }, []);
 
   const fetchConversations = useCallback(async () => {
+    if (!alive.current) return;
+    if (conversationFetching.current) { conversationRefreshQueued.current = true; return; }
+    conversationFetching.current = true;
+    const controller = new AbortController();
+    conversationController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch("/api/attendant/conversations", { cache: "no-store" });
-      if (res.ok) {
-        const data = (await res.json()) as { conversations: Conversation[]; onlineTotal: number };
-        setConversations(data.conversations);
-        setOnlineTotal(data.onlineTotal ?? 0);
-      }
+      const res = await fetch("/api/attendant/conversations", { cache: "no-store", signal: controller.signal });
+      if (!res.ok) return;
+      const data = (await res.json()) as { conversations: Conversation[]; onlineTotal: number };
+      if (!alive.current || controller.signal.aborted) return;
+      setConversations(data.conversations);
+      setOnlineTotal(data.onlineTotal ?? 0);
     } catch {
+      // Retry through reconnect or the fallback timer.
     } finally {
-      setConversationsLoaded(true);
+      clearTimeout(timeout);
+      conversationFetching.current = false;
+      if (alive.current && !controller.signal.aborted) setConversationsLoaded(true);
+      if (alive.current && conversationRefreshQueued.current) {
+        conversationRefreshQueued.current = false;
+        void fetchConversations();
+      }
     }
   }, []);
 
-  useEffect(() => {
-    fetchConversations();
-    const timer = setInterval(fetchConversations, CONVERSATIONS_POLL_MS);
-    return () => clearInterval(timer);
-  }, [fetchConversations]);
-
   const fetchThread = useCallback(async (leadId: string) => {
+    threadController.current?.abort();
+    const controller = new AbortController();
+    threadController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const params = new URLSearchParams({ leadId });
-      if (cursorRef.current) params.set("after", cursorRef.current);
-      const res = await fetch(`/api/attendant/thread?${params.toString()}`, { cache: "no-store" });
+      const res = await fetch(`/api/attendant/thread?${params.toString()}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) return;
       const data = (await res.json()) as { messages: ThreadMessage[] };
-      if (data.messages.length === 0) return;
-      cursorRef.current = data.messages[data.messages.length - 1].id;
-      setThread((prev) => {
-        const seen = new Set(prev.map((m) => m.id));
-        return [...prev, ...data.messages.filter((m) => !seen.has(m.id))];
-      });
-    } catch {}
-  }, []);
+      if (alive.current && !controller.signal.aborted && selectedRef.current === leadId) receive(leadId, data.messages);
+    } catch { /* A changed conversation aborts its old request. */ }
+    finally { clearTimeout(timeout); }
+  }, [receive]);
+
+  const refreshConversationsSoon = useCallback(() => {
+    if (eventRefreshTimer.current) return;
+    eventRefreshTimer.current = setTimeout(() => {
+      eventRefreshTimer.current = null;
+      void fetchConversations();
+    }, 150);
+  }, [fetchConversations]);
+
+  const { status } = useRealtimeChannel(
+    { kind: "staff" },
+    (event) => {
+      if (event.type === "chat") {
+        if (event.message.clientMessageId) confirmedRequests.current.add(event.message.clientMessageId);
+        if (event.leadId === selectedRef.current) receive(event.leadId, [event.message]);
+        setConversations((previous) => previous.map((conversation) => conversation.leadId === event.leadId
+          ? { ...conversation, lastText: event.message.text, lastAt: event.message.createdAt, pending: event.message.sender === "lead" }
+          : conversation).sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")));
+        refreshConversationsSoon();
+      } else if (event.type === "presence") refreshConversationsSoon();
+    },
+    () => {
+      void fetchConversations();
+      if (selectedRef.current) void fetchThread(selectedRef.current);
+    }
+  );
+
+  useEffect(() => { void fetchConversations(); }, [fetchConversations]);
 
   useEffect(() => {
-    if (!selectedLeadId) return;
-    cursorRef.current = null;
-    setThread([]);
-    fetchThread(selectedLeadId);
-    const timer = setInterval(() => fetchThread(selectedLeadId), THREAD_POLL_MS);
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      void fetchConversations();
+      if (selectedRef.current) void fetchThread(selectedRef.current);
+    }, status === "connected" ? 60_000 : 4_000);
     return () => clearInterval(timer);
+  }, [fetchConversations, fetchThread, status]);
+
+  useEffect(() => {
+    stickToBottom.current = true;
+    if (selectedLeadId) void fetchThread(selectedLeadId);
+    return () => threadController.current?.abort();
   }, [selectedLeadId, fetchThread]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [thread]);
+    const element = threadScrollRef.current;
+    if (!element) return;
+    const onScroll = () => { stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 80; };
+    const observer = new ResizeObserver(() => {
+      if (stickToBottom.current) element.scrollTop = element.scrollHeight;
+    });
+    element.addEventListener("scroll", onScroll, { passive: true });
+    observer.observe(element);
+    return () => { element.removeEventListener("scroll", onScroll); observer.disconnect(); };
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    const element = threadScrollRef.current;
+    if (!element) return;
+    const frame = requestAnimationFrame(() => {
+      if (stickToBottom.current) element.scrollTop = element.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [thread.length, selectedLeadId]);
 
   async function handleSend() {
-    const leadId = selectedLeadId;
+    const leadId = selectedRef.current;
     const trimmed = text.trim();
-    if (!leadId || !trimmed || sending) return;
-    setSending(true);
+    if (!leadId || !trimmed || inFlightSends.current.has(leadId)) return;
+    const priorAttempt = retryAttempts.current.get(leadId);
+    const attempt = priorAttempt?.text === trimmed ? priorAttempt : { text: trimmed, clientMessageId: crypto.randomUUID() };
+    await sendAttempt(leadId, attempt);
+  }
+
+  async function sendAttempt(leadId: string, attempt: ReplyAttempt) {
+    if (inFlightSends.current.has(leadId)) return;
+    inFlightSends.current.add(leadId);
+    setSendingLeads((previous) => ({ ...previous, [leadId]: true }));
+    setFailedAttempts((previous) => ({ ...previous, [leadId]: (previous[leadId] ?? []).filter((failed) => failed.clientMessageId !== attempt.clientMessageId) }));
+    retryAttempts.current.set(leadId, attempt);
+    const optimistic: ThreadMessage = {
+      id: `tmp-${attempt.clientMessageId}`, clientMessageId: attempt.clientMessageId,
+      text: attempt.text, sender: "team", teamName: attendantName, videoSec: null, createdAt: new Date().toISOString()
+    };
+    setThreads((previous) => ({ ...previous, [leadId]: mergeLeadMessages(previous[leadId] ?? [], [optimistic]) }));
+    setDrafts((previous) => ({ ...previous, [leadId]: previous[leadId]?.trim() === attempt.text ? "" : (previous[leadId] ?? "") }));
+    const controller = new AbortController();
+    sendControllers.current.set(leadId, controller);
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch("/api/attendant/reply", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ leadId, text: trimmed })
+        method: "POST", headers: { "content-type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ leadId, ...attempt })
       });
-      if (res.ok) {
-        setText("");
-        fetchThread(leadId);
-      }
+      if (!res.ok) throw new Error("send_failed");
+      const created = (await res.json()) as ThreadMessage;
+      if (!alive.current) return;
+      receive(leadId, [created]);
+      retryAttempts.current.delete(leadId);
+      refreshConversationsSoon();
     } catch {
+      if (!alive.current) return;
+      setThreads((previous) => ({ ...previous, [leadId]: (previous[leadId] ?? []).filter((message) => message.id !== optimistic.id) }));
+      if (confirmedRequests.current.has(attempt.clientMessageId)) {
+        retryAttempts.current.delete(leadId);
+      } else {
+        setDrafts((previous) => ({ ...previous, [leadId]: previous[leadId] || attempt.text }));
+        setFailedAttempts((previous) => ({ ...previous, [leadId]: [...(previous[leadId] ?? []).filter((failed) => failed.clientMessageId !== attempt.clientMessageId), attempt] }));
+      }
     } finally {
-      setSending(false);
+      clearTimeout(timeout);
+      sendControllers.current.delete(leadId);
+      inFlightSends.current.delete(leadId);
+      if (alive.current) setSendingLeads((previous) => ({ ...previous, [leadId]: false }));
     }
   }
 
@@ -152,6 +275,8 @@ export function Inbox({ attendantName }: InboxProps) {
   }
 
   function selectConversation(leadId: string) {
+    selectedRef.current = leadId;
+    threadController.current?.abort();
     setSelectedLeadId(leadId);
     setDrawerOpen(false);
   }
@@ -194,6 +319,9 @@ export function Inbox({ attendantName }: InboxProps) {
             </span>
             <div className="leading-tight">
               <h1 className="text-base font-semibold sm:text-lg">Atendimento</h1>
+              <span aria-label="Conexão do atendimento" className="mr-2 text-[10px] text-muted-foreground">
+                {status === "connected" ? "Conectado" : status === "fallback" ? "Atualização periódica" : "Reconectando…"}
+              </span>
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
@@ -356,7 +484,7 @@ export function Inbox({ attendantName }: InboxProps) {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-background p-4">
+              <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-background p-4">
                 {thread.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "team" ? "justify-end" : "justify-start"}`}>
                     <div
@@ -377,9 +505,15 @@ export function Inbox({ attendantName }: InboxProps) {
                     </div>
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
               </div>
 
+              {failedReplies.length > 0 && <div role="alert" className="max-h-40 shrink-0 space-y-2 overflow-y-auto border-t px-4 py-2 text-sm text-destructive">
+                <p>Não foi possível confirmar o envio. As respostas foram mantidas.</p>
+                {failedReplies.map((attempt) => <div key={attempt.clientMessageId} className="flex items-start gap-3">
+                  <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{attempt.text}</p>
+                  <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className="rounded-lg border px-3 py-1 text-xs font-medium disabled:opacity-50">Reenviar</button>
+                </div>)}
+              </div>}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -389,7 +523,11 @@ export function Inbox({ attendantName }: InboxProps) {
               >
                 <textarea
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
+                  onChange={(e) => {
+                    const leadId = selectedRef.current;
+                    if (leadId) setDrafts((previous) => ({ ...previous, [leadId]: e.target.value }));
+                  }}
+                  maxLength={500}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -403,6 +541,7 @@ export function Inbox({ attendantName }: InboxProps) {
                 <button
                   type="submit"
                   disabled={!text.trim() || sending}
+                  aria-label="Enviar resposta"
                   className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />

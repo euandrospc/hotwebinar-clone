@@ -69,7 +69,7 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 
 - Step 6 (Chat) redesigned: 2-column layout, accordion 3 sections (AI stub / file XLSX / individual editor), search-filterable preview aside with always-editable rows + per-row delete + bulk delete + Export XLSX + "Testar no player".
 - Step 7 (Vendas) — new: same layout. Schema `Hora | Minuto | Segundo | Nome do comprador | Produto | Preço`. Persists to new `SaleNotification` table.
-- Player `/[slug]/live`: sonner toasts fire as `🛒 {buyer} comprou {product} por {price}` when timeline crosses each `showAtSec`. One toast per notif per session.
+- Player `/[slug]/live`: avisos de compra aparecem dentro do chat quando a reprodução cruza `showAtSec`, uma vez por aviso/sessão.
 - AI generation buttons present but disabled (`disabled={true}` + tooltip "Em breve") in both steps; reserved for a future sub-plan.
 - Schema migration: `20260505220000_d3_sales_notifications`.
 
@@ -96,6 +96,32 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 3. Postgres service no mesmo project
 4. Env vars do `.env.example`
 5. Domain + SSL automatic
+
+## Chat e presença em tempo real
+
+- `apps/web/server.ts` inicia Next.js e Socket.IO na mesma porta. Use `pnpm dev -- --port 3010` (ou `pnpm --filter web dev --port 3010`) e `pnpm --filter web start` em produção. Iniciar com `next start` diretamente não inicia o WebSocket.
+- O navegador usa WebSocket em `/socket.io/`. Cookies autenticam a conexão e as permissões são revalidadas a cada30s. Cada lead recebe somente sua conversa; atendimento mantém o acesso global de admin/atendente já existente. Métricas usam canais restritos ao proprietário.
+- Mensagens são persistidas por HTTP no PostgreSQL antes de serem publicadas. `clientMessageId` permite repetir um envio sem duplicar a mensagem. Ao reconectar, os chats recuperam o histórico; uma reconciliação a cada60s cobre eventual evento perdido. Se o WebSocket/Redis estiver indisponível, os chats consultam a cada4s.
+- Redis compartilha eventos entre instâncias e presença entre conexões. O player sinaliza reprodução logo no primeiro avanço, renova a cada15s e remove sua conexão ao pausar/sair; leases expiram em45s se a conexão desaparecer. Duas abas do mesmo lead contam uma pessoa. Os ticks históricos de30s continuam preservados; players antigos usam presençaHTTP.
+- A aba **Tempo real** recebe mudanças por WebSocket e atualiza mapa/dispositivos juntos. **Métricas** continua mostrando resultados do período. Pessoas sem geolocalização continuam no total; audiência simulada nunca entra no painel administrativo.
+
+Infra local:
+
+```bash
+docker compose up -d redis
+# .env: REDIS_URL=redis://127.0.0.1:6382
+pnpm db:migrate:deploy
+pnpm db:generate
+pnpm --filter web dev --port 3010
+```
+
+No Coolify, configure `REDIS_URL` para um Redis privado dedicado e mantenha o encaminhamento de WebSocket no mesmo domínio/porta da aplicação. A migration `20261030200500_chat_message_idempotency` é aditiva e preserva as mensagens existentes. Sem Redis, a aplicação permanece disponível com atualização periódica.
+
+Os testes Redis são opt-in e usam prefixo separado do ambiente de desenvolvimento:
+
+```bash
+REALTIME_REDIS_TEST_URL=redis://127.0.0.1:6382 pnpm --filter web test src/test/lib/realtime-presence.test.ts src/test/lib/realtime-bus.test.ts src/test/lib/realtime-gateway.test.ts
+```
 
 ## Testes locais
 

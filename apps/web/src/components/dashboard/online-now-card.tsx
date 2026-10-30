@@ -47,7 +47,7 @@ export function OnlineNowCard({ webinarId }: { webinarId?: string } = {}) {
 
   return (
     <Link
-      href={webinarId ? `/dashboard/online?webinarId=${webinarId}` : "/dashboard/online"}
+      href={webinarId ? `/dashboard/webinars/${webinarId}/realtime` : "/dashboard/online"}
       className="block rounded-lg border bg-card p-5 transition-colors hover:bg-accent/40"
     >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">

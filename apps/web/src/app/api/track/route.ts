@@ -4,10 +4,12 @@ import { z } from "zod";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
+import { touchLegacyPresence } from "@/server/realtime/presence";
 
 const inputSchema = z.object({
   videoSec: z.number().int().min(0),
-  watchedSecDelta: z.number().int().min(0).max(60)
+  watchedSecDelta: z.number().int().min(0).max(60),
+  presenceTransport: z.enum(["websocket", "http"]).optional()
 });
 
 const THROTTLE_MS = 25_000;
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
     where: { id: lead.id },
     data: { watchedSec: newWatched, lastSeenAt: now, leaveFired: false }
   });
+  if (parsed.data.presenceTransport !== "websocket") await touchLegacyPresence(lead.id, lead.webinarId);
 
   const w = lead.webinar;
 

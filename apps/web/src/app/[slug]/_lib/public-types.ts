@@ -28,6 +28,7 @@ export interface PlayerOwnerMsg {
 
 export interface PlayerLeadMsg {
   id: string;
+  clientMessageId?: string | null;
   text: string;
   sender: "lead" | "team";
   teamName?: string | null;

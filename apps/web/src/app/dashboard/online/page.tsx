@@ -4,7 +4,7 @@ import Link from "next/link";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
-import { onlineLeadWhere } from "@/lib/online";
+import { getOnlineSnapshot } from "@/lib/online";
 import { ClientPolling } from "@/components/videos/client-polling";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -39,9 +39,10 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect(ADMIN_LOGIN_PATH);
   const { webinarId } = await searchParams;
+  const online = await getOnlineSnapshot();
 
   const leads = await prisma.lead.findMany({
-    where: { ...onlineLeadWhere(), webinar: { ownerId: session.user.id }, ...(webinarId ? { webinarId } : {}) },
+    where: { id: { in: [...online.leadIds] }, webinar: { ownerId: session.user.id }, ...(webinarId ? { webinarId } : {}) },
     orderBy: { sessionStart: "desc" },
     select: {
       id: true, name: true, email: true, phone: true, city: true, region: true, country: true,
@@ -55,10 +56,13 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
   return (
     <div className="container mx-auto py-10">
       <ClientPolling enabled intervalMs={15_000} />
-      <div className="flex items-baseline justify-between gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-3xl font-semibold">Ao vivo agora · {leads.length}</h1>
         {webinarId ? (
-          <Link href="/dashboard/online" className="text-sm text-muted-foreground underline">Ver todos os webinars</Link>
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground underline">
+            <Link href={`/dashboard/webinars/${webinarId}/realtime`}>Voltar ao tempo real</Link>
+            <Link href="/dashboard/online">Ver todos os webinars</Link>
+          </div>
         ) : null}
       </div>
       <p className="mt-2 text-sm text-muted-foreground">

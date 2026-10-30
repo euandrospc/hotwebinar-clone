@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
-import { OnlineNowCard } from "@/components/dashboard/online-now-card";
 import { DashboardParticipantesChart } from "@/components/dashboard/dashboard-participantes-chart";
 import { DashboardDispositivosChart } from "@/components/dashboard/dashboard-dispositivos-chart";
 import { MetricsVideoRetention } from "@/components/dashboard/metrics-video-retention";
@@ -146,7 +145,10 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
       <WebinarTabs webinarId={id} />
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{webinar.title || "Métricas"}</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">{webinar.title || "Métricas"}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Resultados do período selecionado</p>
+        </div>
         <DashboardRangePicker
           initialFrom={toIsoDate(rangeStart)}
           initialTo={toIsoDate(rangeEnd)}
@@ -176,7 +178,6 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
         </div>
 
         <div className="space-y-2.5">
-          <OnlineNowCard webinarId={id} />
           <MetricsKpiList kpis={kpis} webinarId={id} />
         </div>
       </div>

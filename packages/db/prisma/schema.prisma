@@ -348,12 +348,14 @@ model LeadChatMessage {
   videoSec     Int?
   sender       String   @default("lead")
   authorUserId String?
+  clientMessageId String?
   createdAt    DateTime @default(now())
   lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   webinar      Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   authorUser   User?    @relation("TeamChatAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([leadId, createdAt])
+  @@unique([leadId, clientMessageId])
   @@map("lead_chat_message")
 }
 

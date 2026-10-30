@@ -47,7 +47,7 @@ export function WebinarOnlineBadge({ webinarId }: { webinarId: string }) {
 
   return (
     <Link
-      href={`/dashboard/online?webinarId=${webinarId}`}
+      href={`/dashboard/webinars/${webinarId}/realtime`}
       className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-500/20"
     >
       <span className="relative flex h-1.5 w-1.5">

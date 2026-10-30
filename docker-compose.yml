@@ -1,4 +1,18 @@
 services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: hotwebinar-redis
+    ports:
+      - "127.0.0.1:6382:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   postgres:
     image: postgres:16-alpine
     container_name: hotwebinar-pg
@@ -25,5 +39,6 @@ services:
       - miniodata:/data
 
 volumes:
+  redisdata:
   pgdata:
   miniodata:

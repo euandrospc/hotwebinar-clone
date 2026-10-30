@@ -4,10 +4,12 @@ import { z } from "zod";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { leadChatLimiter } from "@/lib/rate-limit";
+import { ChatIdempotencyConflict, createChatMessage, getChatMessages } from "@/server/chat-message";
 
 const inputSchema = z.object({
-  text: z.string().min(1).max(500),
-  videoSec: z.number().int().min(0).optional()
+  text: z.string().trim().min(1).max(500),
+  videoSec: z.number().int().min(0).optional(),
+  clientMessageId: z.string().uuid().optional()
 });
 
 export async function POST(request: Request) {
@@ -26,18 +28,22 @@ export async function POST(request: Request) {
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
-  const msg = await prisma.leadChatMessage.create({
-    data: {
+  try {
+    const { message } = await createChatMessage({
       leadId: lead.id,
       webinarId: lead.webinarId,
       text: parsed.data.text,
-      videoSec: parsed.data.videoSec
+      sender: "lead",
+      videoSec: parsed.data.videoSec,
+      clientMessageId: parsed.data.clientMessageId
+    });
+    return NextResponse.json(message);
+  } catch (error) {
+    if (error instanceof ChatIdempotencyConflict) {
+      return NextResponse.json({ error: "client_message_id_conflict" }, { status: 409 });
     }
-  });
-
-  return NextResponse.json({
-    id: msg.id, text: msg.text, videoSec: msg.videoSec, createdAt: msg.createdAt
-  });
+    throw error;
+  }
 }
 
 export async function GET(request: Request) {
@@ -46,21 +52,8 @@ export async function GET(request: Request) {
   if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
-  const after = url.searchParams.get("after");
-  let createdAtGt: Date | undefined;
-  if (after) {
-    const cursor = await prisma.leadChatMessage.findFirst({ where: { id: after, leadId }, select: { createdAt: true } });
-    createdAtGt = cursor?.createdAt;
-  }
-
-  const rows = await prisma.leadChatMessage.findMany({
-    where: { leadId, ...(createdAtGt ? { createdAt: { gt: createdAtGt } } : {}) },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, text: true, sender: true, videoSec: true, createdAt: true, authorUser: { select: { name: true } } }
-  });
-
   return NextResponse.json(
-    { messages: rows.map((m) => ({ id: m.id, text: m.text, sender: m.sender, teamName: m.authorUser?.name ?? null, videoSec: m.videoSec, createdAt: m.createdAt.toISOString() })) },
-    { headers: { "cache-control": "no-store" } }
+    { messages: await getChatMessages(leadId, url.searchParams.get("after")) },
+    { headers: { "cache-control": "private, no-store" } }
   );
 }

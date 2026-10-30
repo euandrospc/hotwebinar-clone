@@ -12,6 +12,9 @@ vi.mock("@/app/[slug]/_components/hls-player", () => ({
   }
 }));
 vi.mock("@/app/[slug]/_components/tracker", () => ({ Tracker: () => null }));
+vi.mock("@/lib/hooks/use-realtime-channel", () => ({
+  useRealtimeChannel: () => ({ status: "connected", emitPresence: () => {} })
+}));
 
 const props: PlayerShellProps = {
   webinar: {

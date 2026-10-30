@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
+import { removeLegacyPresence } from "@/server/realtime/presence";
 
 const inputSchema = z.object({ videoSec: z.number().int().min(0).optional() });
 
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
   if (!lead) return new NextResponse(null, { status: 204 });
+  await removeLegacyPresence(lead.id);
 
   await prisma.event.create({
     data: { webinarId: lead.webinarId, leadId: lead.id, kind: "VIDEO_END", videoSec }

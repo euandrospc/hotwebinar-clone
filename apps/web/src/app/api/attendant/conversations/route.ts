@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     select: {
       id: true, name: true, phone: true, webinarId: true,
       webinar: { select: { title: true, name: true, mode: true, startDate: true, endDate: true, recurring: true, recurringDays: true, timezone: true } },
-      leadChatMessages: { orderBy: { createdAt: "desc" }, take: 1, select: { text: true, sender: true, createdAt: true } }
+      leadChatMessages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { text: true, sender: true, createdAt: true } }
     }
   });
 
