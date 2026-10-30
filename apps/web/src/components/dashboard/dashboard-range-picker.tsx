@@ -1,6 +1,6 @@
 "use client";
 import "react-day-picker/style.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { ptBR } from "date-fns/locale";
@@ -47,6 +47,15 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   const [fromTime, setFromTime] = useState(initialFromTime);
   const [toTime, setToTime] = useState(initialToTime);
   const [open, setOpen] = useState(false);
+  // Two months side by side don't fit a phone screen.
+  const [months, setMonths] = useState(2);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const sync = () => setMonths(mq.matches ? 2 : 1);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   function go(from: Date, to: Date, fTime: string, tTime: string) {
     const params = new URLSearchParams({ from: `${toIsoDate(from)}T${fTime}:00`, to: `${toIsoDate(to)}T${tTime}:00` });
@@ -80,7 +89,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
           <span className="font-mono text-xs">{label}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-auto p-3">
+      <PopoverContent align="end" className="w-auto max-w-[calc(100vw-1rem)] p-3">
         <div className="mb-3 flex flex-wrap gap-2 border-b pb-3">
           {PRESETS.map((p) => (
             <Button key={p.label} size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyPreset(p)}>
@@ -93,7 +102,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
           selected={range}
           onSelect={setRange}
           locale={ptBR}
-          numberOfMonths={2}
+          numberOfMonths={months}
           modifiersClassNames={{
             selected: "!bg-destructive !text-white !rounded-none",
             range_start: "!rounded-l-md",
