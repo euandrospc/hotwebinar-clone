@@ -4,7 +4,6 @@ import { runSeed } from "../../../scripts/seed";
 
 beforeEach(async () => {
   vi.resetModules();
-  process.env.DATABASE_URL ??= "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public";
   process.env.BETTER_AUTH_SECRET ??= "test-secret-at-least-32-chars-long-okay";
   process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
   await prisma.session.deleteMany({});

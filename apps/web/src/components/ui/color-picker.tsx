@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import { HexColorPicker } from "react-colorful";
-import { Pipette } from "lucide-react";
+import { Pipette } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

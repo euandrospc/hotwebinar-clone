@@ -14,7 +14,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     fileParallelism: false,
     env: {
-      DATABASE_URL: "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public",
+      DATABASE_URL: "postgresql://hotwebinar:hotwebinar@localhost:5452/hotwebinar_test?schema=public",
       BETTER_AUTH_SECRET: "test-secret-at-least-32-chars-long-okay",
       BETTER_AUTH_URL: "http://localhost:3000"
     }

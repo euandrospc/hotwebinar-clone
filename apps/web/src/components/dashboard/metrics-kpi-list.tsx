@@ -11,8 +11,8 @@ import {
   LogOut,
   Info,
   ArrowUpRight,
-  type LucideIcon
-} from "lucide-react";
+  type AppIcon
+} from "@/components/icons";
 import type { WebinarKpis } from "@/lib/dashboard-stats";
 
 const fmt = new Intl.NumberFormat("pt-BR");
@@ -23,7 +23,7 @@ function Row({
   value,
   href
 }: {
-  icon: LucideIcon;
+  icon: AppIcon;
   label: string;
   value: number;
   href?: string;

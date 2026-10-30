@@ -31,7 +31,6 @@ function parseRange(from: string | undefined, to: string | undefined): { rangeSt
   const fallbackEnd = new Date(now);
   fallbackEnd.setHours(23, 59, 0, 0);
   const fallbackStart = new Date(now);
-  fallbackStart.setDate(fallbackStart.getDate() - 5);
   fallbackStart.setHours(0, 0, 0, 0);
 
   const rangeStart = from ? new Date(from) : fallbackStart;

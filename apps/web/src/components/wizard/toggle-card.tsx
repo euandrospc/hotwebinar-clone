@@ -1,6 +1,6 @@
 "use client";
 import { Switch } from "@/components/ui/switch";
-import { Info } from "lucide-react";
+import { Info } from "@/components/icons";
 
 export interface ToggleCardProps {
   title: string;

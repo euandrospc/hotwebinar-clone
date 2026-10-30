@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Download, Search, Trash2, Rocket, Pencil, Check, Zap } from "lucide-react";
+import { Download, Search, Trash2, Rocket, Pencil, Check, Zap } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SecondsInput } from "@/components/ui/seconds-input";

@@ -1,8 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
-
-beforeEach(() => {
-  process.env.DATABASE_URL = "postgresql://hotwebinar:hotwebinar@localhost:5432/hotwebinar?schema=public";
-});
+import { describe, it, expect } from "vitest";
 
 describe("/api/health", () => {
   it("returns ok when DB is reachable", async () => {

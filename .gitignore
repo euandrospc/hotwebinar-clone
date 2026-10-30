@@ -13,6 +13,7 @@ out
 .vercel
 coverage
 playwright-report
+.playwright-mcp/
 test-results
 
 # scraper output

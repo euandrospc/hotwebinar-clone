@@ -5,9 +5,7 @@ import { HlsPlayer } from "./hls-player";
 import { ChatPanel } from "./chat-panel";
 import { OfferBanner } from "./offer-banner";
 import { Tracker } from "./tracker";
-import { SalesNotifier } from "./sales-notifier";
 import { AudienceBadge } from "./audience-badge";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PlayerShell({
   webinar, video, offer, ownerChat, leadChat, lead, initialOffsetSec, salesNotifications, teamChatName
@@ -38,35 +36,26 @@ export function PlayerShell({
   }
 
   return (
-    <main className="grid min-h-screen grid-rows-[auto_1fr] bg-background">
-      <header className="flex items-center justify-between gap-4 border-b p-4">
-        {webinar.logoUrl ? <img src={webinar.logoUrl} alt="" className="h-8 object-contain" /> : <div />}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Olá, {lead.name}</span>
-          <ThemeToggle />
-        </div>
-      </header>
-      {/* Mobile: video, offer, chat stacked. Desktop: video left; offer on top of the
-          chat on the right, chat filling the rest of the viewport height. */}
-      <div className="grid gap-3 p-3 md:h-[calc(100dvh-65px)] md:grid-cols-[2fr_1fr] md:grid-rows-[auto_minmax(0,1fr)] md:gap-4 md:p-4">
-        <div className="md:row-span-2">
-          <HlsPlayer
-            src={video.hlsUrl}
-            startOffsetSec={initialOffsetSec}
-            onTimeUpdate={onTimeUpdate}
-            overlayBadge={
-              <AudienceBadge {...audience} showLiveBadge={webinar.audienceLiveBadge} />
-            }
-          />
-        </div>
-        <div className="md:col-start-2 md:row-start-1">
-          <OfferBanner offer={offer} lead={lead} currentTimeSec={currentTimeSec} />
-        </div>
-        <div className="min-h-0 md:col-start-2 md:row-start-2">
+    <main className="grid h-dvh min-h-0 w-full grid-rows-[minmax(0,min(42dvh,56.25vw))_minmax(0,1fr)] gap-2 overflow-hidden bg-background p-2 md:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] md:grid-rows-[minmax(0,1fr)] md:gap-3 md:p-3">
+      <div className="min-h-0 min-w-0">
+        <HlsPlayer
+          className="h-full aspect-auto"
+          src={video.hlsUrl}
+          startOffsetSec={initialOffsetSec}
+          onTimeUpdate={onTimeUpdate}
+          overlayBadge={
+            <AudienceBadge {...audience} showLiveBadge={webinar.audienceLiveBadge} />
+          }
+        />
+      </div>
+      <div className="flex min-h-0 min-w-0 flex-col gap-2">
+        <OfferBanner offer={offer} lead={lead} currentTimeSec={currentTimeSec} />
+        <div className="min-h-0 flex-1">
           <ChatPanel
             audience={audience}
             ownerChat={ownerChat}
             leadChat={leadChat}
+            salesNotifications={salesNotifications}
             currentTimeSec={currentTimeSec}
             leadName={lead.name}
             teamChatName={teamChatName}
@@ -79,7 +68,6 @@ export function PlayerShell({
         </div>
       </div>
       <Tracker currentTimeRef={currentTimeRef} />
-      <SalesNotifier notifications={salesNotifications} currentTimeRef={currentTimeRef} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
 // Below md the sidebar is hidden; this top bar opens it as a drawer.
@@ -17,7 +17,7 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
       </Button>
       {open ? (
         <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-          <div className="flex h-full w-64 flex-col border-r bg-card">
+          <div data-ui-motion="drawer-enter" className="flex h-full w-64 flex-col border-r bg-card">
             <div className="flex justify-end p-2">
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fechar menu">
                 <X className="h-5 w-5" />
@@ -25,7 +25,7 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
             </div>
             {children}
           </div>
-          <button type="button" className="flex-1 bg-black/50" aria-label="Fechar menu" onClick={() => setOpen(false)} />
+          <button type="button" data-ui-motion="overlay" data-state="open" className="flex-1 bg-black/50" aria-label="Fechar menu" onClick={() => setOpen(false)} />
         </div>
       ) : null}
     </div>

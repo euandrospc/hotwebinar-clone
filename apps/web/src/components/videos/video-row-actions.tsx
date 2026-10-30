@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Image as ImageIcon, RefreshCw, Trash2, MoreHorizontal, Play } from "lucide-react";
+import { Image as ImageIcon, RefreshCw, Trash2, MoreHorizontal, Play } from "@/components/icons";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";

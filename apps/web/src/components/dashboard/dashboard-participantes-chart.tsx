@@ -1,5 +1,5 @@
 "use client";
-import { Users } from "lucide-react";
+import { Users } from "@/components/icons";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 import type { DailyParticipants } from "@/lib/dashboard-stats";
 

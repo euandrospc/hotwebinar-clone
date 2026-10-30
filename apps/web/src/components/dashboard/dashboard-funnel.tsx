@@ -1,4 +1,4 @@
-import { Info, Filter } from "lucide-react";
+import { Info, Filter } from "@/components/icons";
 import type { FunnelStage } from "@/lib/dashboard-stats";
 
 const fmt = new Intl.NumberFormat("pt-BR");

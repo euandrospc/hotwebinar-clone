@@ -1,5 +1,5 @@
 "use client";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 function formatDuration(sec: number): string {

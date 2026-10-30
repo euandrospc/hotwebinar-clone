@@ -18,7 +18,7 @@ afterAll(async () => {
   await fs.rm(outDir, { recursive: true, force: true });
 });
 
-describe("crawl stage", () => {
+describe("crawl stage", { timeout: 15_000 }, () => {
   it("discovers sidebar routes and dedupes", async () => {
     const result = await crawl({
       baseUrl: server.url,

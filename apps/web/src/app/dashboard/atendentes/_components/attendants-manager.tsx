@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@/components/icons";
 import { createAttendantAction, toggleAttendantAction, deleteAttendantAction } from "@/server/actions/attendants";
 
 export interface AttendantRow {

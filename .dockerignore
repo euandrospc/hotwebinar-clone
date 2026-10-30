@@ -13,3 +13,4 @@
 *.log
 docs
 apps/web/e2e/.playwright
+.playwright-mcp

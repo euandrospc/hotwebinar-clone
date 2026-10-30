@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { WAITING_TEMPLATES, type WaitingTemplateId } from "@/lib/waiting-templates";
 
 export interface WaitingTemplatePickerProps {

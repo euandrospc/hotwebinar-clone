@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, MousePointerClick, Download } from "lucide-react";
+import { ArrowLeft, ArrowRight, MousePointerClick, Download } from "@/components/icons";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";

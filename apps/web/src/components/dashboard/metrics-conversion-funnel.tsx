@@ -7,7 +7,7 @@ import {
   RotateCcw,
   MousePointerClick,
   DollarSign
-} from "lucide-react";
+} from "@/components/icons";
 
 export interface ConversionFunnelData {
   visitantes: number;

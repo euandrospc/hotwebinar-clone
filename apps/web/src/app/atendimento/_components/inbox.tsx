@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "lucide-react";
+import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 
@@ -182,6 +182,8 @@ export function Inbox({ attendantName }: InboxProps) {
             type="button"
             onClick={() => setDrawerOpen((v) => !v)}
             aria-label="Abrir conversas"
+            aria-expanded={drawerOpen}
+            aria-controls="attendant-conversations"
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
           >
             <Menu className="h-4 w-4" />
@@ -217,17 +219,22 @@ export function Inbox({ attendantName }: InboxProps) {
       </header>
 
       <div className="relative flex-1 overflow-hidden lg:grid lg:grid-cols-[380px_1fr]">
-        {drawerOpen && (
-          <button
-            type="button"
-            aria-label="Fechar"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 z-20 bg-black/40 lg:hidden"
-          />
-        )}
+        <button
+          type="button"
+          aria-label="Fechar conversas"
+          aria-hidden={!drawerOpen}
+          tabIndex={-1}
+          data-ui-motion="drawer-overlay"
+          data-state={drawerOpen ? "open" : "closed"}
+          onClick={() => setDrawerOpen(false)}
+          className="absolute inset-0 z-20 bg-black/40 lg:hidden"
+        />
 
         <aside
-          className={`absolute inset-y-0 left-0 z-30 flex min-h-0 w-[88%] max-w-[380px] flex-col border-r bg-card transition-transform lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
+          id="attendant-conversations"
+          data-ui-motion="drawer"
+          data-state={drawerOpen ? "open" : "closed"}
+          className={`absolute inset-y-0 left-0 z-30 flex min-h-0 w-[88%] max-w-[380px] flex-col border-r bg-card lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
@@ -244,7 +251,7 @@ export function Inbox({ attendantName }: InboxProps) {
                 {webinars.length > 0 && <option disabled>──────────</option>}
                 {webinars.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.phase === "before" ? "⏳ " : w.phase === "open" ? "🔴 " : ""}
+                    {w.phase === "before" ? "[Em breve] " : w.phase === "open" ? "[Ao vivo] " : ""}
                     {w.title}
                   </option>
                 ))}

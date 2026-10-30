@@ -48,6 +48,159 @@
   }
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
+
+  /* Native controls, Radix triggers and controls rendered through asChild. */
+  :where(a[href], button, select, summary, label[for], [role="button"],
+    [role="link"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"],
+    [role="menuitemradio"], [role="option"], [role="checkbox"], [role="radio"],
+    [role="switch"], [aria-haspopup], input[type="button"], input[type="submit"],
+    input[type="reset"], input[type="checkbox"], input[type="radio"],
+    input[type="range"], input[type="color"], input[type="file"],
+    input[type="date"], input[type="time"], input[type="datetime-local"]) {
+    cursor: pointer;
+  }
+  input::file-selector-button { cursor: pointer; }
+  :where(input:not([type]), input[type="text"], input[type="email"],
+    input[type="password"], input[type="search"], input[type="number"],
+    input[type="tel"], input[type="url"], textarea, [contenteditable="true"]) {
+    cursor: text;
+  }
+  :disabled, [aria-disabled="true"], [data-disabled] { cursor: not-allowed; }
+}
+
+/* Individual scale/translate preserve Radix popper positioning. Centered dialogs
+   use their own keyframes so scaling never shifts their horizontal center. */
+:root {
+  --motion-spring: cubic-bezier(0.22, 1.18, 0.36, 1);
+  --motion-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+[data-ui-motion="popover"], [data-ui-motion="tooltip"] {
+  --motion-x: 0px;
+  --motion-y: -6px;
+}
+[data-ui-motion="popover"] { cursor: pointer; }
+[data-ui-motion="tooltip"] { transform-origin: var(--radix-tooltip-content-transform-origin); }
+[data-ui-motion][data-side="top"] { --motion-y: 6px; }
+[data-ui-motion][data-side="left"] { --motion-x: 6px; --motion-y: 0px; }
+[data-ui-motion][data-side="right"] { --motion-x: -6px; --motion-y: 0px; }
+
+[data-ui-motion="popover"][data-state="open"] {
+  animation: surface-in 240ms var(--motion-spring) both;
+}
+[data-ui-motion="popover"][data-state="closed"],
+[data-ui-motion="tooltip"][data-state="closed"] {
+  animation: surface-out 130ms var(--motion-exit) both;
+}
+[data-ui-motion="tooltip"]:is([data-state="delayed-open"], [data-state="instant-open"]) {
+  animation: surface-in 180ms ease-out both;
+}
+[data-ui-motion="dialog"][data-state="open"] {
+  animation: dialog-in 300ms var(--motion-spring) both;
+}
+[data-ui-motion="dialog"][data-state="closed"] {
+  animation: dialog-out 150ms var(--motion-exit) both;
+}
+[data-ui-motion="overlay"][data-state="open"] { animation: overlay-in 180ms ease-out both; }
+[data-ui-motion="overlay"][data-state="closed"] { animation: overlay-out 150ms ease-in both; }
+
+@keyframes surface-in {
+  from { opacity: 0; scale: 0.94; translate: var(--motion-x) var(--motion-y); }
+  70% { opacity: 1; scale: 1.012; translate: 0 0; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+@keyframes surface-out {
+  from { opacity: 1; scale: 1; translate: 0 0; }
+  to { opacity: 0; scale: 0.97; translate: var(--motion-x) var(--motion-y); }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) translateY(12px) scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1.012);
+  }
+  to {
+    opacity: 1;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
+  }
+}
+@keyframes dialog-out {
+  from {
+    opacity: 1;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) translateY(8px) scale(0.97);
+  }
+}
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* Mounted-on-open mobile navigation shares the same spring as the inbox. */
+[data-ui-motion="drawer-enter"] { animation: drawer-in 320ms var(--motion-spring) both; }
+@keyframes drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+[data-ui-motion="accordion"][data-state="open"] { animation: accordion-in 240ms ease-out; }
+[data-ui-motion="accordion"][data-state="closed"] { animation: accordion-out 180ms ease-in; }
+@keyframes accordion-in {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes accordion-out {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+/* The inbox drawer stays mounted so reversals and closing can animate too.
+   On desktop it is a static column, not an animated overlay. */
+@media (max-width: 1023px) {
+  [data-ui-motion="drawer"] {
+    transition: transform 320ms var(--motion-spring), visibility 0s;
+  }
+  [data-ui-motion="drawer"][data-state="closed"] {
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 180ms var(--motion-exit), visibility 0s 180ms;
+  }
+  [data-ui-motion="drawer-overlay"] {
+    opacity: 1;
+    transition: opacity 180ms ease-out, visibility 0s;
+  }
+  [data-ui-motion="drawer-overlay"][data-state="closed"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 180ms ease-out, visibility 0s 180ms;
+  }
+}
+
+[data-ui-motion="chat-sale"][data-state="open"] {
+  animation: chat-sale-in 400ms var(--motion-spring) both;
+}
+[data-ui-motion="chat-sale"][data-state="closed"] {
+  animation: chat-sale-out 180ms ease-in both;
+}
+@keyframes chat-sale-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes chat-sale-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-motion] {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* react-day-picker theme override (default uses blue) */

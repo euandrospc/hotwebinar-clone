@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/icons";
 
 interface OnlinePayload {
   online: number;

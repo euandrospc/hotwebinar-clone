@@ -53,6 +53,7 @@ export function WebinarsFilters() {
           <SelectContent>
             <SelectItem value="ALL">Todos</SelectItem>
             <SelectItem value="UNICO">Único</SelectItem>
+            <SelectItem value="RECURRING">Recorrente</SelectItem>
             <SelectItem value="JIT">Just in time</SelectItem>
           </SelectContent>
         </Select>

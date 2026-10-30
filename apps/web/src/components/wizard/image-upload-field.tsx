@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload } from "@/components/icons";
 
 interface Props {
   webinarId: string;

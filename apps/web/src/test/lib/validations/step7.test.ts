@@ -18,8 +18,8 @@ describe("step7Schema", () => {
   it("rejects empty buyerName", () => {
     expect(step7Schema.safeParse({ notifications: [{ ...VALID.notifications[0], buyerName: "" }] }).success).toBe(false);
   });
-  it("rejects empty productName", () => {
-    expect(step7Schema.safeParse({ notifications: [{ ...VALID.notifications[0], productName: "" }] }).success).toBe(false);
+  it("accepts a text-only notification without a product", () => {
+    expect(step7Schema.safeParse({ notifications: [{ ...VALID.notifications[0], productName: "" }] }).success).toBe(true);
   });
   it("rejects negative showAtSec", () => {
     expect(step7Schema.safeParse({ notifications: [{ ...VALID.notifications[0], showAtSec: -1 }] }).success).toBe(false);

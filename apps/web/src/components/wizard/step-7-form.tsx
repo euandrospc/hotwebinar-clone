@@ -4,7 +4,7 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload } from "@/components/icons";
 import { step7Schema, type Step7Input } from "@/lib/validations/webinar";
 import { updateWebinarStep7 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";

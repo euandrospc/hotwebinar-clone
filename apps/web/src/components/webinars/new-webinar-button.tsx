@@ -1,7 +1,7 @@
 "use client";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { createDraftWebinar } from "@/server/actions/webinar";
 

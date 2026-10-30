@@ -1,4 +1,4 @@
-import { DollarSign, Receipt, Users, Clock } from "lucide-react";
+import { DollarSign, Receipt, Users, Clock } from "@/components/icons";
 import type { SalesKpis } from "@/lib/dashboard-stats";
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });

@@ -12,15 +12,15 @@ import {
   DollarSign,
   Eye,
   Plug2,
-  type LucideIcon
-} from "lucide-react";
+  type AppIcon
+} from "@/components/icons";
 
 interface StepDef {
   num: number;
   href: (id: string) => string;
   matchPath: (pathname: string, id: string) => boolean;
   label: string;
-  Icon: LucideIcon;
+  Icon: AppIcon;
 }
 
 const STEPS: ReadonlyArray<StepDef> = [

@@ -1,5 +1,5 @@
 "use client";
-import { TrendingUp, Info } from "lucide-react";
+import { TrendingUp, Info } from "@/components/icons";
 import { Area, AreaChart, XAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { RetentionPoint } from "@/lib/dashboard-stats";
 

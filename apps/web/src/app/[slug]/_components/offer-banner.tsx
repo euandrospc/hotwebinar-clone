@@ -34,17 +34,12 @@ function buildUrl(link: string, lead: PublicLeadWithUtms, passUtms: boolean): st
 
 export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
   const seenRef = useRef(false);
-  const rootRef = useRef<HTMLDivElement>(null);
   const active = isActive(offer, currentTimeSec);
 
   useEffect(() => {
     if (!active || seenRef.current) return;
     seenRef.current = true;
     void fetch("/api/offer-view", { method: "POST" }).catch(() => {});
-    const t = setTimeout(() => {
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
-    return () => clearTimeout(t);
   }, [active]);
 
   if (!active) return null;
@@ -57,19 +52,19 @@ export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
   }
 
   return (
-    <div ref={rootRef} className="scroll-mt-4 space-y-3 rounded-lg border bg-card p-4 shadow">
+    <div aria-label="Oferta do webinar" className="grid shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] items-center gap-2 rounded-lg border bg-card p-2 shadow md:grid-cols-1 md:p-3">
       {offer.imageDesktopUrl ? (
-        <img src={offer.imageDesktopUrl} alt="" className="hidden w-full rounded-md object-cover md:block" />
+        <img src={offer.imageDesktopUrl} alt="" className="hidden max-h-[12dvh] w-full rounded-md object-contain md:block" />
       ) : null}
       {offer.imageMobileUrl ? (
-        <img src={offer.imageMobileUrl} alt="" className="block w-full rounded-md object-cover md:hidden" />
+        <img src={offer.imageMobileUrl} alt="" className="block max-h-[10dvh] w-full rounded-md object-contain md:hidden" />
       ) : null}
-      <div className="flex items-end justify-between gap-2 text-sm">
+      <div className="flex min-w-0 items-end justify-between gap-2 break-words text-xs md:text-sm">
         <div>
           {offer.priceOriginal ? (
             <p className="text-muted-foreground line-through">De {offer.priceOriginal}</p>
           ) : null}
-          {offer.priceFinal ? <p className="text-lg font-semibold">Por {offer.priceFinal}</p> : null}
+          {offer.priceFinal ? <p className="text-sm font-semibold md:text-base">Por {offer.priceFinal}</p> : null}
         </div>
         {offer.raffleEnabled ? (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
@@ -80,7 +75,7 @@ export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
       <button
         type="button"
         onClick={onClick}
-        className="block w-full rounded-md py-3 text-center text-sm font-semibold text-white shadow"
+        className="col-span-2 block min-w-0 w-full break-words rounded-md px-2 py-2 text-center text-sm font-semibold text-white shadow md:col-span-1"
         style={{ backgroundColor: offer.buttonColor }}
       >
         {offer.buttonText}

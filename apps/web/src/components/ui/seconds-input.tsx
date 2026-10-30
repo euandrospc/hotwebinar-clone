@@ -68,11 +68,9 @@ export function SecondsInput({ value, onChange, className, disabled, ...rest }: 
               setParts((p) => ({ ...p, [key]: v }));
             }}
             onBlur={() => {
-              setParts((p) => {
-                const cleaned = { ...p, [key]: clampSeg(p[key], max) };
-                commit(cleaned);
-                return cleaned;
-              });
+              const cleaned = { ...parts, [key]: clampSeg(parts[key], max) };
+              setParts(cleaned);
+              commit(cleaned);
             }}
             className="h-10 w-14 rounded-md border border-input bg-background px-2 py-2 text-center text-sm tabular-nums ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />

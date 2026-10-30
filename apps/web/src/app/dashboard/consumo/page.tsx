@@ -1,4 +1,4 @@
-import { Database, Download, Upload, Globe, DollarSign } from "lucide-react";
+import { Database, Download, Upload, Globe, DollarSign } from "@/components/icons";
 import { getR2Usage, R2_PRICING, type R2Usage } from "@/lib/cloudflare-usage";
 
 export const dynamic = "force-dynamic";

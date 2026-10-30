@@ -1,5 +1,5 @@
 "use client";
-import { Smartphone } from "lucide-react";
+import { Smartphone } from "@/components/icons";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { DeviceBreakdown } from "@/lib/dashboard-stats";
 

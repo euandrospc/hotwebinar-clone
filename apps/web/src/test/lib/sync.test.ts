@@ -130,4 +130,22 @@ describe("withOccurrence", () => {
     const none = { ...rec, recurringDays: [] };
     expect(computePhase(withOccurrence(none, new Date("2026-11-05T12:00:00Z")), new Date("2026-11-05T12:00:00Z"))).toBe("closed");
   });
+
+  it("finds the first selected weekday even when the anchor is months ahead", () => {
+    const o = withOccurrence({ ...rec, recurringDays: [1] }, new Date("2026-08-01T12:00:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-11-02T23:00:00.000Z");
+  });
+
+  it("keeps yesterday's session while it is still running after local midnight", () => {
+    const o = withOccurrence({ ...rec, endDate: new Date("2026-10-29T04:00:00Z") }, new Date("2026-10-30T03:30:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-10-29T23:00:00.000Z");
+    expect(o.endDate?.toISOString()).toBe("2026-10-30T04:00:00.000Z");
+  });
+
+  it("preserves the local start time after a daylight saving offset change", () => {
+    const o = withOccurrence({ ...rec, timezone: "America/New_York",
+      startDate: new Date("2026-10-29T00:00:00Z"), endDate: new Date("2026-10-29T02:10:00Z")
+    }, new Date("2026-11-02T12:00:00Z"));
+    expect(o.startDate?.toISOString()).toBe("2026-11-03T01:00:00.000Z");
+  });
 });

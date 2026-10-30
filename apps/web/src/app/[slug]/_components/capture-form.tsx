@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { ShieldCheck, LockKeyhole } from "lucide-react";
+import { ShieldCheck, LockKeyhole } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

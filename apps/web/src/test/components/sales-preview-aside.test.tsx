@@ -15,7 +15,7 @@ describe("SalesPreviewAside", () => {
     );
     fireEvent.change(screen.getByPlaceholderText(/buscar/i), { target: { value: "ana" } });
     expect(screen.getByDisplayValue("Ana")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Combo Ana")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Carol")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Bob")).toBeNull();
   });
   it("calls onDelete with original index", () => {

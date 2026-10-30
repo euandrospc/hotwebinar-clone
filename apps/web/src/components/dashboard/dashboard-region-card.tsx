@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight } from "@/components/icons";
 import type { RegionBreakdown } from "@/lib/dashboard-stats";
 
 const fmt = new Intl.NumberFormat("pt-BR");

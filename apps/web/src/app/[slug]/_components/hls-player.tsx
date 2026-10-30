@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Hls from "hls.js";
 import { Button } from "@/components/ui/button";
-import { Volume2, VolumeX } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Volume2, VolumeX } from "@/components/icons";
 
 interface HlsPlayerProps {
   src: string;
@@ -10,9 +11,10 @@ interface HlsPlayerProps {
   onTimeUpdate: (sec: number) => void;
   onEnded?: () => void;
   overlayBadge?: ReactNode;
+  className?: string;
 }
 
-export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayBadge }: HlsPlayerProps) {
+export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayBadge, className }: HlsPlayerProps) {
   const ref = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [muted, setMuted] = useState(true);
@@ -79,14 +81,14 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
   }
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+    <div className={cn("relative aspect-video w-full overflow-hidden rounded-lg bg-black", className)}>
       <video
         ref={ref}
         playsInline
         muted={muted}
         onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
         onEnded={() => onEnded?.()}
-        className="h-full w-full"
+        className="h-full w-full object-contain"
         controls={false}
         controlsList="nodownload"
         disablePictureInPicture

@@ -67,3 +67,33 @@ export function formatWebinarDateTime(
     return formatWebinarDateTime(date, "America/Sao_Paulo");
   }
 }
+
+/** Wall-clock parts of `d` in `timeZone`. */
+export function zonedParts(d: Date, timeZone: string) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, Number(x.value)])
+  );
+  return { y: p.year, mo: p.month - 1, d: p.day, h: p.hour, mi: p.minute, s: p.second };
+}
+
+/** UTC instant of a wall-clock time in `timeZone` (DST-safe: offset re-checked once). */
+export function zonedToUtc(y: number, mo: number, d: number, h: number, mi: number, s: number, timeZone: string): Date {
+  const wall = Date.UTC(y, mo, d, h, mi, s);
+  let t = wall;
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(t), timeZone);
+    t += wall - Date.UTC(p.y, p.mo, p.d, p.h, p.mi, p.s);
+  }
+  return new Date(t);
+}

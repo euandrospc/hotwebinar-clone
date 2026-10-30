@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import { useEffect, useState } from "react";
-import { Radio } from "lucide-react";
+import { Radio } from "@/components/icons";
 
 const counts = new Map<string, number>();
 const subscribers = new Set<() => void>();

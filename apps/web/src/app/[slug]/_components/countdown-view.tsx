@@ -1,4 +1,5 @@
 "use client";
+import { Check } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PublicVideo, PublicWebinar } from "@/lib/public-dto";
@@ -51,10 +52,10 @@ export function CountdownView({ w, video }: { w: PublicWebinar; video: PublicVid
         <p className="mt-2 text-muted-foreground">{w.waitingSubtitle}</p>
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-2">✓ Acesso completo ao webinar ao vivo</li>
-            <li className="flex items-start gap-2">✓ Materiais exclusivos para participantes</li>
-            <li className="flex items-start gap-2">✓ Sessão de Q&A ao final</li>
-            <li className="flex items-start gap-2">✓ Bônus surpresa para inscritos</li>
+            <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4" /> Acesso completo ao webinar ao vivo</li>
+            <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4" /> Materiais exclusivos para participantes</li>
+            <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4" /> Sessão de Q&A ao final</li>
+            <li className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4" /> Bônus surpresa para inscritos</li>
           </ul>
           <p className="self-center font-mono text-5xl tabular-nums" aria-live="polite">{fmt(remaining)}</p>
         </div>

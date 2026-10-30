@@ -3,7 +3,7 @@ import "react-day-picker/style.css";
 import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon } from "@/components/icons";
 
 export function DashboardCalendar({ scheduledDates }: { scheduledDates: string[] }) {
   const [month, setMonth] = useState<Date>(new Date());

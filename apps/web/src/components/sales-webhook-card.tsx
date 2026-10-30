@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Copy, RefreshCw, Webhook } from "lucide-react";
+import { Copy, RefreshCw, Webhook } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { regenerateWebinarSalesWebhookSecret } from "@/server/actions/settings";
 

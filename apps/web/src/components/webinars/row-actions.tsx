@@ -1,7 +1,7 @@
 "use client";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Pencil, Files, Trash2, Users, BarChart3, MoreHorizontal } from "lucide-react";
+import { Copy, Pencil, Files, Trash2, Users, BarChart3, MoreHorizontal } from "@/components/icons";
 import {
   DropdownMenu,
   DropdownMenuContent,

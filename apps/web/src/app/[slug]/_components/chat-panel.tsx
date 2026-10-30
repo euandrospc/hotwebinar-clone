@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PlayerLeadMsg, PlayerOwnerMsg } from "../_lib/public-types";
+import type { PublicSaleNotification } from "@/lib/public-dto";
 import { mergeLeadMessages } from "../_lib/merge-lead-messages";
 import { useSimulatedAudience, fmtAudience, type AudienceParams } from "./audience-badge";
+import { SalesNotifier } from "./sales-notifier";
 
 const TIME_FMT = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 function formatClock(baseMs: number, sec: number): string {
@@ -39,6 +41,7 @@ interface ChatPanelProps {
   leadName: string;
   teamChatName: string;
   baseTimestampMs: number;
+  salesNotifications: PublicSaleNotification[];
 }
 
 type StreamItem =
@@ -49,29 +52,18 @@ function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs }: ChatPanelProps) {
+export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs, salesNotifications }: ChatPanelProps) {
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(() =>
     leadChat.map((x) => (x.videoSec == null ? { ...x, videoSec: currentTimeSec } : x))
   );
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [windowHeight, setWindowHeight] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   // Leads see the simulated audience (same number as the player badge), never the real count.
   const online = useSimulatedAudience(audience);
   const leadMsgsRef = useRef<PlayerLeadMsg[]>(leadMsgs);
   useEffect(() => {
     leadMsgsRef.current = leadMsgs;
   }, [leadMsgs]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const maxSecRef = useRef(currentTimeSec);
   if (currentTimeSec > maxSecRef.current) maxSecRef.current = currentTimeSec;
@@ -152,17 +144,6 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
   }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const initialScrollDone = useRef(false);
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowHeight(window.innerHeight);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-
   // Stick to the newest message unless the lead scrolled up. The box keeps
   // resizing after load (window height, offer image above it on desktop), so a
   // one-shot scroll on mount left it at the first message.
@@ -191,22 +172,18 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
       if (stickToBottom.current) el.scrollTop = el.scrollHeight;
     });
     return () => cancelAnimationFrame(id);
-  }, [items.length, windowHeight]);
+  }, [items.length]);
 
   return (
-    <aside className="flex flex-col overflow-hidden rounded-lg border bg-card text-xs md:h-full md:text-sm"
-      style={{
-        maxHeight: `${isMobile ? (windowHeight -340) : (windowHeight - 94)}px`
-      }}
-    >
-      <div className="flex items-center gap-2 border-b px-2 py-2 md:px-4 md:py-3">
+    <aside aria-label="Chat do webinar" className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card text-xs md:text-sm">
+      <div className="flex shrink-0 items-center gap-2 border-b px-2 py-2 md:px-4 md:py-3">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
         <h3 className="truncate text-xs font-semibold md:text-sm">Chat</h3>
         {audience.mode !== "NONE" ? (
           <span className="ml-auto text-[10px] text-muted-foreground">{fmtAudience.format(online)} online</span>
         ) : null}
       </div>
-      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {
           const ts = formatClock(baseTimestampMs, m.showAtSec);
           const teamLabel = (m.kind === "lead" && m.teamName) || teamChatName;
@@ -259,7 +236,8 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
           );
         })}
       </div>
-      <form onSubmit={send} className="flex gap-1 border-t px-2 py-2 md:gap-2 md:px-3 md:py-3">
+      <SalesNotifier notifications={salesNotifications} currentTimeRef={audience.currentTimeRef} />
+      <form onSubmit={send} className="flex shrink-0 gap-1 border-t px-2 py-2 md:gap-2 md:px-3 md:py-3">
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}

@@ -1,7 +1,7 @@
 "use client";
 import { signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { generateAvatar } from "@/lib/generate-avatar";

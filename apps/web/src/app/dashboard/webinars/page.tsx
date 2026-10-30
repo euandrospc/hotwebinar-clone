@@ -29,7 +29,9 @@ export default async function WebinarsPage({
     ownerId: session.user.id,
     ...(q && { OR: [{ name: { contains: q, mode: "insensitive" } }, { title: { contains: q, mode: "insensitive" } }] }),
     ...(status === "DRAFT" || status === "ACTIVE" || status === "ARCHIVED" ? { status } : {}),
-    ...(tipo === "UNICO" || tipo === "JIT" ? { mode: tipo } : {})
+    ...(tipo === "UNICO" ? { mode: "UNICO", recurring: false } :
+      tipo === "RECURRING" ? { mode: "UNICO", recurring: true } :
+      tipo === "JIT" ? { mode: "JIT" } : {})
   };
   const orderBy: Prisma.WebinarOrderByWithRelationInput =
     sort === "az" ? { title: "asc" } :

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { RecurringScheduleFields } from "@/components/wizard/recurring-schedule-fields";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { TimezoneSelect } from "@/components/wizard/timezone-select";
 import { WaitingTemplatePicker } from "@/components/wizard/waiting-template-picker";
@@ -32,6 +33,7 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
     handleSubmit,
     formState: { errors },
     setError,
+    setValue,
     watch
   } = useForm<Step2Input>({
     resolver: zodResolver(step2Schema),
@@ -40,6 +42,9 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
 
   const mode = watch("mode");
   const recurring = watch("recurring");
+  const startDate = watch("startDate");
+  const endDate = watch("endDate");
+  const timezone = watch("timezone");
 
   function onSubmit(values: Step2Input) {
     startTransition(async () => {
@@ -64,11 +69,11 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
         render={({ field }) => (
           <Tabs value={field.value} onValueChange={field.onChange}>
             <TabsList>
-              <TabsTrigger value="UNICO">Webinar único</TabsTrigger>
+              <TabsTrigger value="UNICO">Webinar agendado</TabsTrigger>
               <TabsTrigger value="JIT">Just in time</TabsTrigger>
             </TabsList>
             <TabsContent value="UNICO" className="mt-4 text-sm text-muted-foreground">
-              Um evento único, em uma data e horário específicos.
+              Um evento com horário definido, único ou recorrente nos dias escolhidos.
             </TabsContent>
             <TabsContent value="JIT" className="mt-4 text-sm text-muted-foreground">
               Vídeo passa em tempo real desde o horário de início. Quem chega depois vê o offset correspondente.
@@ -76,31 +81,6 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
           </Tabs>
         )}
       />
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Data e hora de início</Label>
-          <Controller
-            control={control}
-            name="startDate"
-            render={({ field }) => (
-              <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Início" />
-            )}
-          />
-          {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label>Data e hora de finalização</Label>
-          <Controller
-            control={control}
-            name="endDate"
-            render={({ field }) => (
-              <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Fim" />
-            )}
-          />
-          {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
-        </div>
-      </div>
 
       {mode === "UNICO" ? (
         <div className="space-y-3">
@@ -155,6 +135,47 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
           {errors.recurringDays && <p className="text-sm text-destructive">{errors.recurringDays.message}</p>}
         </div>
       ) : null}
+
+      {mode === "UNICO" && recurring ? (
+        <>
+          <RecurringScheduleFields
+            startDate={startDate}
+            endDate={endDate}
+            timezone={timezone}
+            onChange={(schedule) => {
+              setValue("startDate", schedule.startDate, { shouldDirty: true, shouldValidate: true });
+              setValue("endDate", schedule.endDate, { shouldDirty: true, shouldValidate: true });
+            }}
+          />
+          {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+          {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Data e hora de início</Label>
+            <Controller
+              control={control}
+              name="startDate"
+              render={({ field }) => (
+                <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Início" />
+              )}
+            />
+            {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Data e hora de finalização</Label>
+            <Controller
+              control={control}
+              name="endDate"
+              render={({ field }) => (
+                <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Fim" />
+              )}
+            />
+            {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Fuso horário</Label>

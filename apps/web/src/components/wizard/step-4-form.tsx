@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SecondsInput } from "@/components/ui/seconds-input";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { LibraryPicker, type LibraryVideo } from "@/components/videos/library-picker";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "@/components/icons";
 import { UploadDropzone } from "@/components/videos/upload-dropzone";
 
 type Mode = "external" | "upload" | "library";

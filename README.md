@@ -96,3 +96,28 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 3. Postgres service no mesmo project
 4. Env vars do `.env.example`
 5. Domain + SSL automatic
+
+## Testes locais
+
+A suíte Vitest web usa exclusivamente o banco `hotwebinar_test` em
+`localhost:5452`, separado do banco de desenvolvimento. Os testes limpam tabelas.
+A configuração fica em `apps/web/vitest.config.ts`.
+
+Preparação inicial (PostgreSQL local já em execução):
+
+```bash
+docker exec hotwebinar-pg createdb -U hotwebinar hotwebinar_test
+DATABASE_URL="postgresql://hotwebinar:hotwebinar@localhost:5452/hotwebinar_test?schema=public" pnpm db:migrate:deploy
+pnpm db:generate
+pnpm --filter scraper exec playwright install chromium
+```
+
+Reaplique as migrations nesse banco após mudanças de schema. Para validar:
+
+```bash
+pnpm test
+pnpm typecheck
+```
+
+O comando `pnpm test` executa as suítes Vitest web e scraper; E2E tem comando e
+configuração próprios (`pnpm test:e2e`).

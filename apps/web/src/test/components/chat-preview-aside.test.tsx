@@ -13,15 +13,15 @@ describe("ChatPreviewAside", () => {
     render(
       <ChatPreviewAside webinarId="w1" slug="demo" messages={ITEMS} onUpdate={() => {}} onDelete={() => {}} onDeleteAll={() => {}} />
     );
-    expect(screen.getAllByDisplayValue(/^(Ana|Bob|Carol)$/)).toHaveLength(3);
+    expect(screen.getAllByText(/^(Ana|Bob|Carol)$/)).toHaveLength(3);
   });
   it("filters rows by authorName when typing in search", () => {
     render(
       <ChatPreviewAside webinarId="w1" slug="demo" messages={ITEMS} onUpdate={() => {}} onDelete={() => {}} onDeleteAll={() => {}} />
     );
     fireEvent.change(screen.getByPlaceholderText(/buscar/i), { target: { value: "ana" } });
-    expect(screen.getByDisplayValue("Ana")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Bob")).toBeNull();
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.queryByText("Bob")).toBeNull();
   });
   it("calls onDelete with original index when trash is clicked on a filtered row", () => {
     const onDelete = vi.fn();
@@ -29,7 +29,7 @@ describe("ChatPreviewAside", () => {
       <ChatPreviewAside webinarId="w1" slug="demo" messages={ITEMS} onUpdate={() => {}} onDelete={onDelete} onDeleteAll={() => {}} />
     );
     fireEvent.change(screen.getByPlaceholderText(/buscar/i), { target: { value: "carol" } });
-    fireEvent.click(screen.getAllByLabelText(/Remover/i)[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
     expect(onDelete).toHaveBeenCalledWith(2);
   });
   it("calls onDeleteAll when 'Excluir todo' clicked", () => {

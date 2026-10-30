@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlignCenter, AlignLeft, AlignRight, Upload } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Upload, ArrowUp, ArrowDown } from "@/components/icons";
 import { step3Schema, type Step3Input } from "@/lib/validations/webinar";
 import { updateWebinarStep3 } from "@/server/actions/webinar";
 import { Button } from "@/components/ui/button";
@@ -262,10 +262,10 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                         <span className="text-xs text-muted-foreground">Exibir</span>
                       </div>
                       <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, -1)} aria-label="Subir">
-                        ↑
+                        <ArrowUp className="h-4 w-4" />
                       </Button>
                       <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, 1)} aria-label="Descer">
-                        ↓
+                        <ArrowDown className="h-4 w-4" />
                       </Button>
                     </li>
                   ))}

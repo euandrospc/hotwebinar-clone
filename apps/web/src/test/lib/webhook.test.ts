@@ -69,7 +69,7 @@ describe("enqueueWebhook", () => {
     expect(queueAddMock).not.toHaveBeenCalled();
   });
 
-  it("payload includes webinarSlug + lead public dto", async () => {
+  it("payload includes webinarSlug and contact details for outbound integrations", async () => {
     const { enqueueWebhook } = await import("@/lib/webhook?" + (Date.now() + 2));
     const w = await makeWebinar({ slug: "myhook" });
     const lead = await prisma.lead.create({
@@ -82,6 +82,8 @@ describe("enqueueWebhook", () => {
     expect(payload.webinarSlug).toBe("myhook");
     expect(payload.lead.id).toBe(lead.id);
     expect(payload.lead.name).toBe("Joe");
-    expect(payload.lead.email).toBeUndefined();
+    expect(payload.lead.email).toBe("j@e.com");
+    expect(payload.lead.phone).toBe("+5511");
+    expect(payload.lead).not.toHaveProperty("enterFired");
   });
 });

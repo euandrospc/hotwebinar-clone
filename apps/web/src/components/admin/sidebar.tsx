@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, TvMinimalPlay, Video, Headset, Gauge, Bolt } from "lucide-react";
+import { LayoutDashboard, TvMinimalPlay, Video, Headset, Gauge, Bolt } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import Logo from "../logo";
 

@@ -8,12 +8,11 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { ArrowRight } from "lucide-react";
-import { formatWebinarDateTime } from "@/lib/timezones";
+import { WebinarSchedule } from "./webinar-schedule";
 import { RowActions } from "./row-actions";
 import { WebinarOnlineBadge } from "./webinar-online-badge";
 
-type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate" | "timezone">;
+type Row = Pick<Webinar, "id" | "name" | "title" | "slug" | "status" | "mode" | "startDate" | "endDate" | "timezone" | "recurring" | "recurringDays">;
 
 const STATUS_LABEL: Record<Row["status"], string> = {
   DRAFT: "Rascunho",
@@ -22,6 +21,7 @@ const STATUS_LABEL: Record<Row["status"], string> = {
 };
 
 export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBaseUrl: string }) {
+  const now = Date.now();
   if (rows.length === 0) {
     return (
       <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">
@@ -45,15 +45,15 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
           <TableRow key={r.id}>
             <TableCell>
               <div className="font-medium">{r.title || r.name || "Sem título"}</div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                {r.startDate ? formatWebinarDateTime(r.startDate, r.timezone) : "—"}
-                <ArrowRight className="h-3 w-3 shrink-0" />
-                {r.endDate ? formatWebinarDateTime(r.endDate, r.timezone) : "—"}
-              </div>
+              <WebinarSchedule
+                webinar={{ mode: r.mode, startDate: r.startDate, endDate: r.endDate,
+                  recurring: r.recurring, recurringDays: r.recurringDays, timezone: r.timezone }}
+                initialNow={now}
+              />
             </TableCell>
             <TableCell><WebinarOnlineBadge webinarId={r.id} /></TableCell>
             <TableCell><Badge variant={r.status === "ACTIVE" ? "default" : "outline"}>{STATUS_LABEL[r.status]}</Badge></TableCell>
-            <TableCell><Badge variant="destructive">{r.mode === "UNICO" ? "Único" : "JIT"}</Badge></TableCell>
+            <TableCell><Badge variant="destructive">{r.mode === "JIT" ? "JIT" : r.recurring ? "Recorrente" : "Único"}</Badge></TableCell>
             <TableCell>
               <RowActions
                 id={r.id}

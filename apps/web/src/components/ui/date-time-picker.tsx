@@ -2,7 +2,7 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ export interface DateTimePickerProps {
   value: Date | undefined;
   onChange: (value: Date | undefined) => void;
   ariaLabel?: string;
+  showTime?: boolean;
 }
 
-export function DateTimePicker({ value, onChange, ariaLabel }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, ariaLabel, showTime = true }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
   const time = value ? format(value, "HH:mm") : "00:00";
 
@@ -41,6 +42,7 @@ export function DateTimePicker({ value, onChange, ariaLabel }: DateTimePickerPro
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            aria-label={ariaLabel ? `${ariaLabel} - data` : undefined}
             variant="outline"
             className={cn("w-48 justify-start text-left font-normal", !value && "text-muted-foreground")}
           >
@@ -49,15 +51,16 @@ export function DateTimePicker({ value, onChange, ariaLabel }: DateTimePickerPro
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
-          <Calendar mode="single" selected={value} onSelect={handleDate} initialFocus />
+          <Calendar mode="single" required defaultMonth={value} selected={value} onSelect={handleDate} initialFocus />
         </PopoverContent>
       </Popover>
-      <Input
+      {showTime && <Input
+        aria-label={ariaLabel ? `${ariaLabel} - horário` : undefined}
         type="time"
         value={time}
         onChange={(e) => handleTime(e.target.value)}
         className="w-28"
-      />
+      />}
     </div>
   );
 }
