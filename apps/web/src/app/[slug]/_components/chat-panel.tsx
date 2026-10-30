@@ -31,6 +31,7 @@ function colorFromName(name: string): string {
 }
 
 interface ChatPanelProps {
+  webinarId: string;
   ownerChat: PlayerOwnerMsg[];
   leadChat: PlayerLeadMsg[];
   currentTimeSec: number;
@@ -47,7 +48,7 @@ function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs }: ChatPanelProps) {
+export function ChatPanel({ webinarId, ownerChat, leadChat, currentTimeSec, leadName, teamChatName, baseTimestampMs }: ChatPanelProps) {
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(() =>
     leadChat.map((x) => (x.videoSec == null ? { ...x, videoSec: currentTimeSec } : x))
   );
@@ -55,6 +56,20 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
   const [sending, setSending] = useState(false);
   const [windowHeight, setWindowHeight] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [online, setOnline] = useState<number | null>(null);
+
+  // Real viewers, same 15s snapshot as the admin "Ao vivo agora".
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch(`/api/live-online?webinarId=${encodeURIComponent(webinarId)}`, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { online: number } | null) => { if (alive && d) setOnline(d.online); })
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 15_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [webinarId]);
   const leadMsgsRef = useRef<PlayerLeadMsg[]>(leadMsgs);
   useEffect(() => {
     leadMsgsRef.current = leadMsgs;
@@ -186,7 +201,9 @@ export function ChatPanel({ ownerChat, leadChat, currentTimeSec, leadName, teamC
       <div className="flex items-center gap-2 border-b px-2 py-2 md:px-4 md:py-3">
         <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
         <h3 className="truncate text-xs font-semibold md:text-sm">Chat</h3>
-        <span className="ml-auto text-[10px] text-muted-foreground">{items.length}</span>
+        {online != null ? (
+          <span className="ml-auto text-[10px] text-muted-foreground">{online} online</span>
+        ) : null}
       </div>
       <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-2 py-2 md:space-y-3 md:px-4 md:py-3">
         {items.map((m) => {

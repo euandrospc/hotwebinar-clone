@@ -63,6 +63,7 @@ export function PlayerShell({
         </div>
         <div className="min-h-0 md:col-start-2 md:row-start-2">
           <ChatPanel
+            webinarId={webinar.id}
             ownerChat={ownerChat}
             leadChat={leadChat}
             currentTimeSec={currentTimeSec}

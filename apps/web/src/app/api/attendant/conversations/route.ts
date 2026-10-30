@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
 import { computePhase, withOccurrence } from "@/lib/sync";
-import { onlineLeadWhere } from "@/lib/online";
+import { getOnlineSnapshot } from "@/lib/online";
 
 export async function GET(request: Request) {
   const session = await requireAttendant();
@@ -10,10 +10,7 @@ export async function GET(request: Request) {
   const webinarId = new URL(request.url).searchParams.get("webinarId") || undefined;
 
   const nowDate = new Date();
-  const online = onlineLeadWhere(nowDate);
-  const onlineIds = new Set(
-    (await prisma.lead.findMany({ where: { ...(webinarId ? { webinarId } : {}), ...online }, select: { id: true } })).map((l) => l.id)
-  );
+  const snap = await getOnlineSnapshot();
 
   const leads = await prisma.lead.findMany({
     where: { ...(webinarId ? { webinarId } : {}), leadChatMessages: { some: {} } },
@@ -24,7 +21,9 @@ export async function GET(request: Request) {
     }
   });
 
-  const onlineTotal = onlineIds.size;
+  const onlineTotal = webinarId
+    ? (snap.byWebinar.get(webinarId) ?? 0)
+    : [...snap.byWebinar.values()].reduce((n, c) => n + c, 0);
 
   const conversations = leads
     .map((l) => {
@@ -45,7 +44,7 @@ export async function GET(request: Request) {
         lastText: last?.text ?? "",
         lastAt: last ? last.createdAt.toISOString() : null,
         pending: last?.sender === "lead",
-        online: onlineIds.has(l.id)
+        online: snap.leadIds.has(l.id)
       };
     })
     .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
