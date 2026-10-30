@@ -163,20 +163,32 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
   }, []);
 
 
+  // Stick to the newest message unless the lead scrolled up. The box keeps
+  // resizing after load (window height, offer image above it on desktop), so a
+  // one-shot scroll on mount left it at the first message.
+  const stickToBottom = useRef(true);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    // Wait for layout (height set after windowHeight resolves) so scrollHeight is real.
+    const onScroll = () => {
+      stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    const ro = new ResizeObserver(() => {
+      if (stickToBottom.current) el.scrollTop = el.scrollHeight;
+    });
+    el.addEventListener("scroll", onScroll, { passive: true });
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
     const id = requestAnimationFrame(() => {
-      if (!el) return;
-      if (!initialScrollDone.current) {
-        if (items.length === 0 || el.clientHeight === 0) return;
-        el.scrollTop = el.scrollHeight;
-        initialScrollDone.current = true;
-        return;
-      }
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-      if (nearBottom) el.scrollTop = el.scrollHeight;
+      if (stickToBottom.current) el.scrollTop = el.scrollHeight;
     });
     return () => cancelAnimationFrame(id);
   }, [items.length, windowHeight]);
