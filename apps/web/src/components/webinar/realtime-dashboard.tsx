@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
 import type { RealtimeStatus } from "@/lib/realtime-protocol";
+import { RealtimeCountdown } from "./realtime-countdown";
+import { DashboardFunnel } from "@/components/dashboard/dashboard-funnel";
 import { RealtimeMap } from "./realtime-map";
 
 const REFRESH_MS = 15_000;
@@ -169,6 +171,8 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
         </div>
       </header>
 
+      <RealtimeCountdown data={data} />
+
       {stale && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Não foi possível atualizar. Exibindo a última leitura; tentaremos novamente automaticamente.</div>}
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -184,6 +188,11 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
           </section>
         ))}
       </div>
+
+      {data.funnel && <div className="space-y-2">
+        <DashboardFunnel stages={data.funnel} />
+        <p className="text-xs text-muted-foreground">Acumulado deste webinar · atualizado automaticamente com o painel.</p>
+      </div>}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-4">

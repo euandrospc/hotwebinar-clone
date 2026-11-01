@@ -1,3 +1,5 @@
+import { buildSalesKpis } from "@/lib/dashboard-stats";
+import { withOccurrence } from "@/lib/sync";
 import { prisma } from "db";
 import { getOnlineSnapshot } from "@/lib/online";
 import { buildWebinarRealtimeSnapshot, type WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
@@ -11,5 +13,38 @@ export async function getWebinarRealtimeSnapshot(webinarId: string): Promise<Web
         select: { userAgent: true, city: true, region: true, country: true, lat: true, lng: true }
       })
     : [];
-  return buildWebinarRealtimeSnapshot(leads);
+  const now = new Date();
+  const webinar = await prisma.webinar.findUnique({
+    where: { id: webinarId },
+    select: { mode: true, startDate: true, endDate: true, recurring: true,
+      recurringDays: true, timezone: true, pitchAtSec: true,
+      offerShowAtSec: true, offerHideAtSec: true, offerDisabled: true, videoSyncWithStart: true }
+  });
+  // Cumulative webinar totals, including viewers who have already left.
+  const [visits, entered, pitch, clicked, sales] = await Promise.all([
+    prisma.lead.count({ where: { webinarId } }),
+    prisma.lead.count({ where: { webinarId, enterFired: true } }),
+    prisma.lead.count({ where: { webinarId, OR: [{ reachedPitch: true }, { pitchFired: true }] } }),
+    prisma.lead.count({ where: { webinarId, ctaClicks: { gt: 0 } } }),
+    prisma.sale.findMany({ where: { webinarId }, select: { amount: true, buyerEmail: true, leadId: true } })
+  ]);
+  const counts = [visits, entered, pitch, clicked, buildSalesKpis(sales).uniqueBuyers];
+  const labels = ["Visitas", "Acessou o webinar", "Chegou no pitch", "Clicou na oferta", "Comprou"];
+  const snapshot = {
+    ...buildWebinarRealtimeSnapshot(leads, new Date()),
+    funnel: counts.map((count, index) => ({ label: labels[index], count,
+      pct: visits > 0 ? Math.round(count / visits * 10000) / 100 : 0 }))
+  };
+  if (!webinar) return snapshot;
+  const occurrence = withOccurrence(webinar, now);
+  return { ...snapshot, schedule: {
+    mode: occurrence.mode,
+    startDate: occurrence.startDate?.toISOString() ?? null,
+    endDate: occurrence.endDate?.toISOString() ?? null,
+    pitchAtSec: occurrence.pitchAtSec,
+    offerShowAtSec: occurrence.offerShowAtSec,
+    offerHideAtSec: occurrence.offerHideAtSec,
+    offerDisabled: occurrence.offerDisabled,
+    videoSyncWithStart: occurrence.videoSyncWithStart
+  } };
 }

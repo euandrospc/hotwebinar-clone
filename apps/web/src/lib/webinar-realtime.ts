@@ -1,3 +1,5 @@
+import type { FunnelStage } from "@/lib/dashboard-stats";
+
 export interface RealtimeLead {
   userAgent: string | null;
   city: string | null;
@@ -8,6 +10,17 @@ export interface RealtimeLead {
 }
 
 export interface WebinarRealtimeSnapshot {
+  funnel?: FunnelStage[];
+  schedule?: {
+    mode: "UNICO" | "JIT";
+    startDate: string | null;
+    endDate: string | null;
+    pitchAtSec: number | null;
+    offerShowAtSec: number | null;
+    offerHideAtSec?: number | null;
+    offerDisabled: boolean;
+    videoSyncWithStart: boolean;
+  };
   updatedAt: string;
   online: number;
   devices: { desktop: number; mobile: number; tablet: number; unknown: number };
