@@ -191,7 +191,7 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
 
       {data.funnel && <div className="space-y-2">
         <DashboardFunnel stages={data.funnel} />
-        <p className="text-xs text-muted-foreground">Acumulado deste webinar · atualizado automaticamente com o painel.</p>
+        <p className="text-xs text-muted-foreground">Hoje · fuso horário do webinar · atualizado automaticamente com o painel.</p>
       </div>}
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">

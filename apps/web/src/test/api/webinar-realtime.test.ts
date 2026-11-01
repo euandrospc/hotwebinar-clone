@@ -112,3 +112,23 @@ describe("GET /api/webinars/[id]/realtime", () => {
     expect(body).toMatchObject({ online: 0, located: 0, unlocated: 0, locations: [], topCities: [], topCountries: [] });
   });
 });
+
+it("limits the funnel to today's sessions and purchases in the webinar timezone", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T01:30:00Z")); // Still October 31 in São Paulo.
+  try {
+    await addLead("today", { sessionStart: new Date("2026-10-31T03:00:00Z"), enterFired: true, pitchFired: true, ctaClicks: 1 });
+    await addLead("yesterday", { sessionStart: new Date("2026-10-31T02:59:59Z"), enterFired: true, reachedPitch: true, ctaClicks: 1 });
+    await addLead("tomorrow", { sessionStart: new Date("2026-11-01T03:00:00Z"), enterFired: true });
+    await prisma.sale.createMany({ data: [
+      { webinarId: WEBINAR, externalId: "realtime-today", amount: 100, buyerEmail: "today@example.test", createdAt: new Date("2026-11-01T01:00:00Z") },
+      { webinarId: WEBINAR, externalId: "realtime-yesterday", amount: 100, buyerEmail: "yesterday@example.test", createdAt: new Date("2026-10-31T02:59:59Z") }
+    ] });
+    const response = await request();
+    const result = await response.json();
+    expect(result.funnel.map((stage: { count: number }) => stage.count)).toEqual([1, 1, 1, 1, 1]);
+  } finally {
+    vi.useRealTimers();
+    await prisma.sale.deleteMany({ where: { externalId: { in: ["realtime-today", "realtime-yesterday"] } } });
+  }
+});

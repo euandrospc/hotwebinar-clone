@@ -1,3 +1,4 @@
+import { zonedParts, zonedToUtc } from "@/lib/timezones";
 import { buildSalesKpis } from "@/lib/dashboard-stats";
 import { withOccurrence } from "@/lib/sync";
 import { prisma } from "db";
@@ -20,13 +21,21 @@ export async function getWebinarRealtimeSnapshot(webinarId: string): Promise<Web
       recurringDays: true, timezone: true, pitchAtSec: true,
       offerShowAtSec: true, offerHideAtSec: true, offerDisabled: true, videoSyncWithStart: true }
   });
-  // Cumulative webinar totals, including viewers who have already left.
+  const timezone = !webinar?.timezone || webinar.timezone === "__auto__" ? "America/Sao_Paulo" : webinar.timezone;
+  const today = zonedParts(now, timezone);
+  const dayRange = {
+    gte: zonedToUtc(today.y, today.mo, today.d, 0, 0, 0, timezone),
+    lt: zonedToUtc(today.y, today.mo, today.d + 1, 0, 0, 0, timezone)
+  };
+  const todayLeads = { webinarId, sessionStart: dayRange };
+  // Today's sessions and purchases, in the webinar's timezone.
+
   const [visits, entered, pitch, clicked, sales] = await Promise.all([
-    prisma.lead.count({ where: { webinarId } }),
-    prisma.lead.count({ where: { webinarId, enterFired: true } }),
-    prisma.lead.count({ where: { webinarId, OR: [{ reachedPitch: true }, { pitchFired: true }] } }),
-    prisma.lead.count({ where: { webinarId, ctaClicks: { gt: 0 } } }),
-    prisma.sale.findMany({ where: { webinarId }, select: { amount: true, buyerEmail: true, leadId: true } })
+    prisma.lead.count({ where: { ...todayLeads } }),
+    prisma.lead.count({ where: { ...todayLeads, enterFired: true } }),
+    prisma.lead.count({ where: { ...todayLeads, OR: [{ reachedPitch: true }, { pitchFired: true }] } }),
+    prisma.lead.count({ where: { ...todayLeads, ctaClicks: { gt: 0 } } }),
+    prisma.sale.findMany({ where: { webinarId, createdAt: dayRange }, select: { amount: true, buyerEmail: true, leadId: true } })
   ]);
   const counts = [visits, entered, pitch, clicked, buildSalesKpis(sales).uniqueBuyers];
   const labels = ["Visitas", "Acessou o webinar", "Chegou no pitch", "Clicou na oferta", "Comprou"];
