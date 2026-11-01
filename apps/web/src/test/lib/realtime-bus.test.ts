@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { flushPresenceEvents, publishChatEvent, publishPresenceEvent } from "@/server/realtime/bus";
+import { flushPresenceEvents, publishFunnelEvent, publishChatEvent, publishPresenceEvent } from "@/server/realtime/bus";
 
 const mocks = vi.hoisted(() => ({
   redis: { status: "ready", publish: vi.fn(), sadd: vi.fn(), spop: vi.fn() },
@@ -40,4 +40,15 @@ describe("realtime publication", () => {
     await flushPresenceEvents();
     expect(mocks.redis.sadd).toHaveBeenCalledWith("test:presence-dirty", "w1");
   });
+});
+
+it("sends funnel invalidations only to the authorized webinar room", async () => {
+  await publishFunnelEvent("w1");
+  expect(JSON.parse(mocks.redis.publish.mock.calls[0][1])).toEqual({
+    rooms: ["webinar:w1"], event: { type: "funnel", webinarId: "w1" }
+  });
+});
+it("keeps persisted funnel actions successful during a Redis outage", async () => {
+  mocks.redis.publish.mockRejectedValue(new Error("offline"));
+  await expect(publishFunnelEvent("w1")).resolves.toBeUndefined();
 });

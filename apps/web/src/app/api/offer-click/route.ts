@@ -1,3 +1,4 @@
+import { publishFunnelEvent } from "@/server/realtime/bus";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "db";
@@ -26,6 +27,7 @@ export async function POST() {
     where: { id: lead.id },
     data: { ctaClicks: { increment: 1 }, lastSeenAt: new Date() }
   });
+  if (lead.ctaClicks === 0) await publishFunnelEvent(lead.webinarId);
   await enqueueWebhook(lead.webinar, "lead_clicou_oferta", updated);
 
   if (lead.webinar.offerRaffleEnabled) {

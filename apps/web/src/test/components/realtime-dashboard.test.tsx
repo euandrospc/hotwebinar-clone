@@ -194,3 +194,19 @@ describe("RealtimeDashboard", () => {
     expectCount("Pessoas ao vivo", 5);
   });
 });
+
+it("refreshes the funnel on websocket events without waiting for polling", async () => {
+  realtime.status = "connected";
+  fetchMock.mockImplementation(async () => response({ ...nextData, funnel: [{ label: "Comprou", count: 7, pct: 10 }] }));
+  mount();
+  act(() => realtime.onEvent({ type: "funnel", webinarId: "other" }));
+  await advance(200);
+  expect(fetchMock).not.toHaveBeenCalled();
+  act(() => realtime.onEvent({ type: "funnel", webinarId: "w1" }));
+  await advance(100);
+  act(() => realtime.onEvent({ type: "funnel", webinarId: "w1" }));
+  await advance(50);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("Comprou")).toBeInTheDocument();
+  expect(screen.getByText("7", { exact: true })).toBeInTheDocument();
+});

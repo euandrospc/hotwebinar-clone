@@ -91,9 +91,13 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
   const liveRefresh = useRef<ReturnType<typeof setTimeout>>();
   const channelStatus = useRef<RealtimeStatus>("connecting");
   const { status } = useRealtimeChannel({ kind: "webinar", webinarId }, (event) => {
-    if (event.type !== "presence" || event.webinarId !== webinarId) return;
-    clearTimeout(liveRefresh.current);
-    liveRefresh.current = setTimeout(() => refresh.current(), 150);
+    if ((event.type !== "presence" && event.type !== "funnel") || event.webinarId !== webinarId) return;
+    // A bounded batch cannot be postponed indefinitely by continuous traffic.
+    if (liveRefresh.current) return;
+    liveRefresh.current = setTimeout(() => {
+      liveRefresh.current = undefined;
+      refresh.current();
+    }, 150);
   }, () => refresh.current());
   channelStatus.current = status;
 
@@ -134,6 +138,7 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
     function visibilityChanged() {
       clearTimeout(timer);
       clearTimeout(liveRefresh.current);
+      liveRefresh.current = undefined;
       if (!document.hidden) void tick();
     }
 
@@ -145,6 +150,7 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
       alive = false;
       clearTimeout(timer);
       clearTimeout(liveRefresh.current);
+      liveRefresh.current = undefined;
       controller?.abort();
       document.removeEventListener("visibilitychange", visibilityChanged);
       window.removeEventListener("focus", visibilityChanged);

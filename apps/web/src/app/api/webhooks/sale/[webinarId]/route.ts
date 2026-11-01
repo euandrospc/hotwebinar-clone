@@ -1,3 +1,4 @@
+import { publishFunnelEvent } from "@/server/realtime/bus";
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -75,6 +76,7 @@ export async function POST(
         payload: body as Prisma.InputJsonValue
       }
     });
+    await publishFunnelEvent(webinarId);
     await fireSaleWebhook(sale);
     return NextResponse.json({ ok: true, saleId: sale.id }, { status: 201 });
   } catch (err) {

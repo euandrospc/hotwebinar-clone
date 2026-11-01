@@ -1,3 +1,4 @@
+import { publishFunnelEvent } from "@/server/realtime/bus";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
       data: { pitchFired: true }
     });
     if (r.count === 1) {
+      await publishFunnelEvent(w.id);
       const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
       if (updated) {
         await prisma.event.create({

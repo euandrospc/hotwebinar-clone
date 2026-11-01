@@ -1,4 +1,5 @@
 "use server";
+import { publishFunnelEvent } from "@/server/realtime/bus";
 
 import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
@@ -96,6 +97,8 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
       data: { webinarId: w.id, name, email: anonEmail, phone, ip, userAgent: ua, ...utm }
     });
   }
+
+  await publishFunnelEvent(w.id);
 
   await prisma.event.create({
     data: { webinarId: w.id, leadId: lead.id, kind: "OPTIN", metadata: { ip, ua } }

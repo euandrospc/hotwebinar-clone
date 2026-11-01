@@ -1,3 +1,4 @@
+import { publishFunnelEvent } from "@/server/realtime/bus";
 import type { Lead, Prisma, Webinar } from "db";
 import { prisma } from "db";
 import { enqueueDispatchWebhook, type WebhookEvent } from "jobs";
@@ -90,6 +91,7 @@ export async function maybeFireEnterWebhook(
     data: { enterFired: true, lastSeenAt: new Date() }
   });
   if (result.count === 0) return;
+  await publishFunnelEvent(webinar.id);
   const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
   if (!updated) return;
   await enqueueWebhook(webinar, "lead_acessou", updated);
