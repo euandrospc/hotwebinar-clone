@@ -1,0 +1,31 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Coolify deployment
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$COOLIFY_DEPLOY_TOKEN"
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
+            'http://82.25.64.13:8000/api/v1/deploy?uuid=c4o88swcok8soow8o4g0o8gc&force=false' \
+            --output response.json
+          jq -e '.deployments | length > 0' response.json > /dev/null
+          jq '.deployments[] | {message, deployment_uuid}' response.json
