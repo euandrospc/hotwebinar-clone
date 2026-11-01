@@ -7,11 +7,14 @@ import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
+import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
+import { defaultLeadsDateParams, leadsDateRange } from "@/lib/leads-date-range";
+
 const PAGE_SIZE = 50;
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ q?: string; page?: string; clicked?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; clicked?: string; from?: string; to?: string; period?: string }>;
 }
 
 const fmtNum = new Intl.NumberFormat("pt-BR");
@@ -36,7 +39,13 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   const clicked = sp.clicked === "1";
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
+  const selectedDates = leadsDateRange(sp.from, sp.to) ? { from: sp.from!, to: sp.to! } : defaultLeadsDateParams();
+  const dateRange = sp.period === "all" ? undefined : leadsDateRange(selectedDates.from, selectedDates.to);
+  const dateParams: Record<string, string> = dateRange ? selectedDates : { period: "all" };
+  const dateQuery = new URLSearchParams(dateParams).toString();
+
   const where = {
+    ...(dateRange && { sessionStart: dateRange }),
     webinarId: id,
     ...(clicked && { ctaClicks: { gt: 0 } }),
     ...(q && {
@@ -72,7 +81,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const baseHref = `/dashboard/webinars/${id}/leads`;
-  const qParam = `${q ? `&q=${encodeURIComponent(q)}` : ""}${clicked ? "&clicked=1" : ""}`;
+  const qParam = `${dateQuery ? `&${dateQuery}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}${clicked ? "&clicked=1" : ""}`;
 
   return (
     <div className="container mx-auto py-6">
@@ -86,6 +95,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           </p>
           <a
             href={`/api/webinars/${id}/leads/export?${new URLSearchParams({
+              ...dateParams,
               ...(q ? { q } : {}),
               ...(clicked ? { clicked: "1" } : {})
             }).toString()}`}
@@ -97,6 +107,18 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         </div>
       </div>
 
+      <div className="mt-4">
+        <DashboardRangePicker
+          key={`${dateParams.from ?? ""}-${dateParams.to ?? ""}`}
+          allowAll
+          initialFrom={dateRange ? selectedDates.from.slice(0, 10) : ""}
+          initialTo={dateRange ? selectedDates.to.slice(0, 10) : ""}
+          initialFromTime={dateRange ? selectedDates.from.slice(11, 16) : "00:00"}
+          initialToTime={dateRange ? selectedDates.to.slice(11, 16) : "23:59"}
+          queryParams={{ ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}) }}
+        />
+      </div>
+
       <form action={baseHref} method="get" className="mt-4 flex flex-wrap items-center gap-3">
         <input
           type="search"
@@ -105,12 +127,13 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           placeholder="Buscar por nome / email / cidade…"
           className="h-10 w-full max-w-md rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        {Object.entries(dateParams).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
         {clicked ? <input type="hidden" name="clicked" value="1" /> : null}
       </form>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <a
-          href={`${baseHref}${q ? `?q=${encodeURIComponent(q)}` : ""}`}
+          href={`${baseHref}?${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
             clicked ? "hover:bg-accent" : "border-primary bg-primary/10 font-medium text-primary"
           }`}
@@ -118,7 +141,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           Todos
         </a>
         <a
-          href={`${baseHref}?clicked=1${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+          href={`${baseHref}?clicked=1&${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
             clicked ? "border-primary bg-primary/10 font-medium text-primary" : "hover:bg-accent"
           }`}
@@ -145,7 +168,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                  {clicked ? "Nenhum lead clicou na oferta ainda." : `Nenhum lead ${q ? "para essa busca" : "ainda"}.`}
+                  Nenhum lead encontrado para os filtros selecionados.
                 </TableCell>
               </TableRow>
             )}

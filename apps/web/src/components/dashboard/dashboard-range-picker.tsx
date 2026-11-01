@@ -34,16 +34,18 @@ interface Props {
   initialTo: string;
   initialFromTime: string;
   initialToTime: string;
+  allowAll?: boolean;
+  queryParams?: Record<string, string>;
 }
 
-export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime }: Props) {
+export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime, allowAll = false, queryParams = {} }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   // "YYYY-MM-DD" alone parses as UTC midnight (the day before in Brasília); pin it to local.
-  const [range, setRange] = useState<DateRange | undefined>({
+  const [range, setRange] = useState<DateRange | undefined>(initialFrom && initialTo ? {
     from: new Date(`${initialFrom}T00:00`),
     to: new Date(`${initialTo}T00:00`)
-  });
+  } : undefined);
   const [fromTime, setFromTime] = useState(initialFromTime);
   const [toTime, setToTime] = useState(initialToTime);
   const [open, setOpen] = useState(false);
@@ -58,7 +60,18 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   }, []);
 
   function go(from: Date, to: Date, fTime: string, tTime: string) {
-    const params = new URLSearchParams({ from: `${toIsoDate(from)}T${fTime}:00`, to: `${toIsoDate(to)}T${tTime}:00` });
+    const params = new URLSearchParams({ ...queryParams, from: `${toIsoDate(from)}T${fTime}:00`, to: `${toIsoDate(to)}T${tTime}:00` });
+    if (allowAll) {
+      const start = new Date(`${toIsoDate(from)}T${fTime}:00`);
+      const end = new Date(`${toIsoDate(to)}T${tTime}:59.999`);
+      if (start > end) return;
+      const offset = -start.getTimezoneOffset();
+      const zone = `${offset >= 0 ? "+" : "-"}${String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0")}:${String(Math.abs(offset) % 60).padStart(2, "0")}`;
+      params.set("from", `${toIsoDate(from)}T${fTime}:00${zone}`);
+      const endOffset = -end.getTimezoneOffset();
+      const endZone = `${endOffset >= 0 ? "+" : "-"}${String(Math.floor(Math.abs(endOffset) / 60)).padStart(2, "0")}:${String(Math.abs(endOffset) % 60).padStart(2, "0")}`;
+      params.set("to", `${toIsoDate(to)}T${tTime}:59.999${endZone}`);
+    }
     router.push(`${pathname}?${params.toString()}`);
     setOpen(false);
   }
@@ -79,7 +92,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   const label =
     range?.from && range?.to
       ? `${fmt.format(range.from)} ${fromTime} ~ ${fmt.format(range.to)} ${toTime}`
-      : "Selecione o período";
+      : allowAll ? "Todo o período" : "Selecione o período";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -91,8 +104,13 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto max-w-[calc(100vw-1rem)] p-3">
         <div className="mb-3 flex flex-wrap gap-2 border-b pb-3">
+          {allowAll && <Button size="sm" variant={!range ? "default" : "outline"} className="h-7 text-xs" onClick={() => {
+            setRange(undefined);
+            router.push(`${pathname}?${new URLSearchParams({ ...queryParams, period: "all" }).toString()}`);
+            setOpen(false);
+          }}>Todo o período</Button>}
           {PRESETS.map((p) => (
-            <Button key={p.label} size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyPreset(p)}>
+            <Button key={p.label} size="sm" variant={range?.from && range?.to && toIsoDate(range.from) === toIsoDate(p.range(new Date()).from) && toIsoDate(range.to) === toIsoDate(p.range(new Date()).to) && fromTime === "00:00" && toTime === "23:59" ? "default" : "outline"} className="h-7 text-xs" onClick={() => applyPreset(p)}>
               {p.label}
             </Button>
           ))}

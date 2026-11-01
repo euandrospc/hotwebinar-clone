@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { leadsDateRange } from "@/lib/leads-date-range";
 import { prisma } from "db";
 
 function csvCell(v: string | number | null | undefined): string {
@@ -26,7 +27,9 @@ export async function GET(
   const q = (url.searchParams.get("q") ?? "").trim();
   const clicked = url.searchParams.get("clicked") === "1";
 
+  const dateRange = leadsDateRange(url.searchParams.get("from"), url.searchParams.get("to"));
   const where = {
+    ...(dateRange && { sessionStart: dateRange }),
     webinarId: id,
     ...(clicked && { ctaClicks: { gt: 0 } }),
     ...(q && {
