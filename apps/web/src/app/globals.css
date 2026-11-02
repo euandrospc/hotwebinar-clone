@@ -181,19 +181,59 @@
   }
 }
 
+[data-ui-motion="chat-sale"] { transform-origin: 16% 65%; }
 [data-ui-motion="chat-sale"][data-state="open"] {
-  animation: chat-sale-in 400ms var(--motion-spring) both;
+  animation: chat-sale-in 580ms ease-out both;
 }
 [data-ui-motion="chat-sale"][data-state="closed"] {
   animation: chat-sale-out 180ms ease-in both;
 }
 @keyframes chat-sale-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  0% { opacity: 0; transform: perspective(600px) translateY(12px) rotateX(-25deg) rotateY(8deg) scale(.90); }
+  56% { opacity: 1; transform: perspective(600px) translateY(-2px) rotateX(5deg) scale(1.025); }
+  80% { transform: perspective(600px) rotateX(-2deg) scale(.994); }
+  100% { transform: none; }
 }
 @keyframes chat-sale-out {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(6px); }
+  0% { opacity: 1; transform: none; }
+  30% { transform: perspective(600px) translateY(-1px) scale(1.015); }
+  100% { opacity: 0; transform: perspective(600px) translateY(8px) rotateX(15deg) scale(.94); }
+}
+
+.sale-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.sale-confetti i {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  width: 4px;
+  height: 7px;
+  border-radius: 1px;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sale-progress-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 20%, rgb(255 255 255 / 75%) 50%, transparent 80%);
+    animation: sale-progress-shine 1000ms ease-out both;
+  }
+  .sale-confetti i { animation: sale-confetti-burst 680ms 70ms ease-out both; }
+}
+@keyframes sale-progress-shine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes sale-confetti-burst {
+  0% { opacity: 0; transform: scale(.3); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--spin)) scale(.65); }
 }
 
 @media (prefers-reduced-motion: reduce) {

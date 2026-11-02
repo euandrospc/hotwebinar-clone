@@ -1,4 +1,5 @@
 "use client";
+import { OfferTitleEditor } from "./offer-title-editor";
 import { useTransition } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,8 +57,13 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
           </div>
           <div className="space-y-1">
             <Label htmlFor="offerTitle">Título da oferta *</Label>
-            <Input id="offerTitle" {...register("offerTitle")} />
+            <Controller control={control} name="offerTitle" render={({ field }) => (
+              <OfferTitleEditor value={field.value} format={watched.offerTitleStyle}
+                onChange={field.onChange}
+                onFormat={value => form.setValue("offerTitleStyle", value, { shouldDirty: true, shouldValidate: true })} />
+            )} />
             {errors.offerTitle && <p className="text-xs text-destructive">{errors.offerTitle.message}</p>}
+            {errors.offerTitleStyle && <p className="text-xs text-destructive">{errors.offerTitleStyle.message}</p>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
@@ -240,6 +246,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
         <h3 className="text-sm font-medium text-muted-foreground">Prévia da oferta</h3>
         <OfferPreviewDesktop
           offerTitle={watched.offerTitle ?? ""}
+          offerTitleStyle={watched.offerTitleStyle}
           offerPriceOriginal={watched.offerPriceOriginal ?? null}
           offerPriceFinal={watched.offerPriceFinal ?? null}
           offerButtonText={watched.offerButtonText ?? ""}
@@ -250,6 +257,7 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
         />
         <OfferPreviewMobile
           offerTitle={watched.offerTitle ?? ""}
+          offerTitleStyle={watched.offerTitleStyle}
           offerPriceOriginal={watched.offerPriceOriginal ?? null}
           offerPriceFinal={watched.offerPriceFinal ?? null}
           offerButtonText={watched.offerButtonText ?? ""}

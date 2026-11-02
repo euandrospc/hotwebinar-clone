@@ -1,3 +1,4 @@
+import { resolveScheduledSales } from "@/lib/scheduled-sales";
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { cookies } from "next/headers";
@@ -72,6 +73,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
       offer={{
         name: w.offerName,
         title: w.offerTitle,
+        titleStyle: w.offerTitleStyle,
         priceOriginal: w.offerPriceOriginal,
         priceFinal: w.offerPriceFinal,
         buttonText: w.offerButtonText,
@@ -94,13 +96,7 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
       }))}
       teamChatName={w.teamChatName}
       lead={publicLeadWithUtmsDto(lead)}
-      salesNotifications={w.saleNotifications.map((n) => ({
-        id: n.id,
-        showAtSec: n.showAtSec,
-        buyerName: n.buyerName,
-        productName: n.productName,
-        price: n.price
-      }))}
+      salesNotifications={resolveScheduledSales(w.saleNotifications, lead.city)}
       initialOffsetSec={offset}
     />
   );

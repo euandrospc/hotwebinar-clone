@@ -17,6 +17,7 @@ export default async function Step5Page({ params }: { params: Promise<{ id: stri
       initial={{
         offerName: w.offerName,
         offerTitle: w.offerTitle,
+        offerTitleStyle: w.offerTitleStyle,
         offerPriceOriginal: w.offerPriceOriginal,
         offerPriceFinal: w.offerPriceFinal,
         offerButtonText: w.offerButtonText,

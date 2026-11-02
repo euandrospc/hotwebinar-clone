@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { Download, Trash2 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete
   return (
     <aside className="flex h-fit flex-col gap-3 rounded-lg border bg-card p-4">
       <h3 className="text-sm font-semibold">Prévia das vendas</h3>
+      <Button asChild variant="outline"><Link href={`/dashboard/webinars/${webinarId}/sales-preview`}>Simular notificações salvas</Link></Button>
       <Button asChild type="button" className="w-full bg-emerald-800 text-white hover:bg-emerald-900">
         <a href={`/api/webinars/${webinarId}/sales/export`} download>
           <Download className="mr-2 h-4 w-4" /> Exportar vendas em XLSX

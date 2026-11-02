@@ -1,3 +1,4 @@
+import { storedTitleFormatSchema } from "@/lib/offer-title-format";
 import { z } from "zod";
 import { isReservedSlug } from "@/lib/slug-blacklist";
 
@@ -98,6 +99,7 @@ export type Step4Input = z.infer<typeof step4Schema>;
 
 export const step5Schema = z.object({
   offerName: z.string().min(1, "Nome obrigatório").max(100),
+  offerTitleStyle: storedTitleFormatSchema.optional(),
   offerTitle: z.string().min(1, "Título obrigatório").max(120),
   offerPriceOriginal: z.string().max(50).optional().nullable(),
   offerPriceFinal: z.string().max(50).optional().nullable(),

@@ -3,6 +3,7 @@ import type { PublicLead, PublicVideo, PublicWebinar, PublicLeadWithUtms, Public
 export interface PlayerOffer {
   name: string;
   title: string;
+  titleStyle?: string;
   priceOriginal: string | null;
   priceFinal: string | null;
   buttonText: string;

@@ -1,8 +1,10 @@
 "use client";
+import { OfferTitle } from "@/components/webinar/offer-title";
 
 export interface OfferPreviewProps {
   offerName?: string;
   offerTitle: string;
+  offerTitleStyle?: string;
   offerPriceOriginal: string | null;
   offerPriceFinal: string | null;
   offerButtonText: string;
@@ -15,6 +17,7 @@ export interface OfferPreviewProps {
 export function OfferPreviewDesktop(p: OfferPreviewProps) {
   return (
     <div className="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
+      <OfferTitle title={p.offerTitle} variant={p.offerTitleStyle} />
       {p.offerImageDesktopUrl ? (
         <img src={p.offerImageDesktopUrl} alt="" className="w-full rounded-md object-cover" />
       ) : null}
@@ -50,6 +53,7 @@ export function OfferPreviewMobile(p: OfferPreviewProps) {
   return (
     <div className="overflow-hidden rounded-lg border bg-muted/30">
       <p className="border-b px-3 py-2 text-xs text-muted-foreground">Prévia da oferta para mobile</p>
+      <OfferTitle title={p.offerTitle} variant={p.offerTitleStyle} />
       {p.offerImageMobileUrl ? (
         <img
           src={p.offerImageMobileUrl}

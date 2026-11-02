@@ -46,8 +46,8 @@ export function WizardShell({ webinarId, children }: WizardShellProps) {
   const activeIndex = STEPS.findIndex((s) => s.matchPath(pathname, webinarId));
 
   return (
-    <div>
-      <nav className="sticky top-0 z-20 overflow-x-auto border-b bg-background/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="flow-root">
+      <nav aria-label="Etapas do webinar" className="sticky top-3 z-20 mx-3 mt-3 overflow-x-auto rounded-xl border bg-card px-4 py-4 shadow-sm sm:px-6">
         <ol className="mx-auto flex min-w-max justify-center">
           {STEPS.map((s, i) => {
             const isActive = i === activeIndex;

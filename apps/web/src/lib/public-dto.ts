@@ -169,6 +169,7 @@ export function publicLeadWithUtmsDto(l: Lead): PublicLeadWithUtms {
 }
 
 export type PublicSaleNotification = {
+  simulated?: boolean;
   id: string;
   showAtSec: number;
   buyerName: string;

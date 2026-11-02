@@ -244,6 +244,7 @@ export async function updateWebinarStep5(id: string, input: Step5Input): Promise
     data: {
       offerName: d.offerName,
       offerTitle: d.offerTitle,
+      offerTitleStyle: d.offerTitleStyle,
       offerPriceOriginal: d.offerPriceOriginal ?? null,
       offerPriceFinal: d.offerPriceFinal ?? null,
       offerButtonText: d.offerButtonText,
@@ -392,6 +393,7 @@ export async function duplicateWebinar(id: string): Promise<{ newId: string } | 
       pitchAtSec: src.pitchAtSec,
       offerName: src.offerName,
       offerTitle: src.offerTitle,
+      offerTitleStyle: src.offerTitleStyle,
       offerPriceOriginal: src.offerPriceOriginal,
       offerPriceFinal: src.offerPriceFinal,
       offerButtonText: src.offerButtonText,

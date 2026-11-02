@@ -223,6 +223,7 @@ model Webinar {
   pitchAtSec             Int?
   // Offer (sub-plan D2)
   offerName              String             @default("")
+  offerTitleStyle          String             @default("highlight")
   offerTitle             String             @default("")
   offerPriceOriginal     String?
   offerPriceFinal        String?

@@ -1,0 +1,51 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { PublicSaleNotification } from "@/lib/public-dto";
+import { SalesNotifier } from "@/app/[slug]/_components/sales-notifier";
+import { resolveScheduledSales } from "@/lib/scheduled-sales";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+type Props = { title: string; notifications: PublicSaleNotification[] };
+
+function Playback({ notifications }: Pick<Props, "notifications">) {
+  const initial = Math.max(0, (notifications[0]?.showAtSec ?? 0) - 3);
+  const last = notifications.at(-1)?.showAtSec ?? initial;
+  const currentTimeRef = useRef(initial);
+  const [time, setTime] = useState(initial);
+  const [speed, setSpeed] = useState(4);
+  useEffect(() => {
+    const started = performance.now();
+    const from = currentTimeRef.current;
+    const timer = setInterval(() => {
+      currentTimeRef.current = Math.min(last, from + (performance.now() - started) * speed / 1000);
+      setTime(Math.floor(currentTimeRef.current));
+      if (currentTimeRef.current >= last) clearInterval(timer);
+    }, 200);
+    return () => clearInterval(timer);
+  }, [last, speed]);
+  return <>
+    <div className="mb-4 flex items-center justify-between border-b pb-4">
+      <span className="text-sm tabular-nums">Tempo do vídeo · {new Date(time * 1000).toISOString().slice(11, 19)}</span>
+      <label className="text-sm">Velocidade <select className="rounded border bg-background p-1" value={speed} onChange={e => setSpeed(Number(e.target.value))}>
+        <option value={1}>1×</option><option value={4}>4×</option>
+      </select></label>
+    </div>
+    <SalesNotifier notifications={notifications} currentTimeRef={currentTimeRef} />
+  </>;
+}
+
+export function SalesSimulation({ title, notifications }: Props) {
+  const [city, setCity] = useState("São Paulo");
+  const [run, setRun] = useState(0);
+  return <main className="mx-auto max-w-2xl space-y-4 p-6">
+    <h1 className="text-2xl font-semibold">Simulação das notificações</h1>
+    <p className="text-sm text-muted-foreground">{title} · {notifications.length} notificações disponíveis</p>
+    <label className="block text-sm">Cidade do espectador na simulação<Input value={city} maxLength={100} onChange={event => setCity(event.target.value)} /></label>
+    <section className="min-h-64 rounded-xl border bg-card p-5">
+      {notifications.length ? <Playback key={run} notifications={resolveScheduledSales(notifications, city)} /> : <p>Nenhuma notificação programada.</p>}
+    </section>
+    <Button variant="outline" onClick={() => setRun(run + 1)}>Reiniciar simulação</Button>
+  </main>;
+}

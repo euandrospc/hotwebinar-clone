@@ -1,4 +1,5 @@
 "use client";
+import { OfferTitle } from "@/components/webinar/offer-title";
 import { useEffect, useRef } from "react";
 import type { PlayerOffer } from "../_lib/public-types";
 import type { PublicLeadWithUtms } from "@/lib/public-dto";
@@ -53,6 +54,7 @@ export function OfferBanner({ offer, lead, currentTimeSec }: Props) {
 
   return (
     <div aria-label="Oferta do webinar" className="grid shrink-0 grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] items-center gap-2 rounded-lg border bg-card p-2 shadow md:grid-cols-1 md:p-3">
+      <OfferTitle title={offer.title} variant={offer.titleStyle} />
       {offer.imageDesktopUrl ? (
         <img src={offer.imageDesktopUrl} alt="" className="hidden max-h-[12dvh] w-full rounded-md object-contain md:block" />
       ) : null}
