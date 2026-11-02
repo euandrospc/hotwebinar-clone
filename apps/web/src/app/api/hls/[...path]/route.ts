@@ -6,6 +6,7 @@ import { verifyLeadCookie } from "@/lib/lead-session";
 import { getS3Client } from "@/lib/storage/s3";
 import { HLS_BUCKET } from "@/lib/storage/buckets";
 import { auth } from "@/lib/auth";
+import { withCdnSegments } from "@/lib/hls-playlist";
 
 function contentTypeFor(key: string): string {
   if (key.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
@@ -107,7 +108,7 @@ export async function GET(
   if (!out.Body) return new Response("empty body", { status: 404 });
 
   if (key.endsWith(".m3u8")) {
-    const text = await out.Body.transformToString();
+    const text = withCdnSegments(await out.Body.transformToString(), key);
     playlistCache.set(key, text);
     return playlistResponse(text);
   }
