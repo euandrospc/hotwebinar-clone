@@ -16,6 +16,7 @@ export interface RealtimeChatMessage {
 }
 
 export type RealtimeEvent =
+  | { type: "conversation"; webinarId: string; leadId: string }
   | { type: "chat"; webinarId: string; leadId: string; message: RealtimeChatMessage }
   | { type: "funnel"; webinarId: string }
   | { type: "presence"; webinarId: string }

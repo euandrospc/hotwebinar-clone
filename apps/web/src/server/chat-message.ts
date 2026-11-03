@@ -7,6 +7,7 @@ export const chatMessageSelect = {
   text: true,
   sender: true,
   authorUserId: true,
+  aiAgentName: true,
   videoSec: true,
   createdAt: true,
   clientMessageId: true,
@@ -20,7 +21,7 @@ export function serializeChatMessage(message: MessageRow): RealtimeChatMessage {
     id: message.id,
     text: message.text,
     sender: message.sender === "team" ? "team" : "lead",
-    teamName: message.authorUser?.name ?? null,
+    teamName: message.aiAgentName ? `IA · ${message.aiAgentName}` : message.authorUser?.name ?? null,
     videoSec: message.videoSec,
     createdAt: message.createdAt.toISOString(),
     clientMessageId: message.clientMessageId
@@ -68,9 +69,22 @@ export async function createChatMessage(input: CreateChatMessageInput) {
 
   let row: MessageRow;
   try {
-    row = await prisma.leadChatMessage.create({ data: input, select: chatMessageSelect });
+    row = await prisma.$transaction(async tx => {
+      // Lock this conversation before changing control or appending a message.
+      await tx.lead.update({
+        where: { id: input.leadId },
+        data: { chatVersion: { increment: 1 } }
+      });
+      const created = await tx.leadChatMessage.create({ data: input, select: chatMessageSelect });
+      await tx.lead.update({
+        where: { id: input.leadId },
+        data: input.sender === "lead"
+          ? { aiPendingMessageId: created.id, aiAttempts: 0, aiError: null, aiNextAttemptAt: null, aiLeaseToken: null, aiLeaseUntil: null }
+          : { aiPaused: true, assignedAttendantId: input.authorUserId, aiPendingMessageId: null, aiLeaseToken: null, aiLeaseUntil: null, aiError: null }
+      });
+      return created;
+    });
   } catch (error) {
-    // A concurrent request may have inserted the same UUID after our read.
     if (existingWhere && typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       const existing = await prisma.leadChatMessage.findUnique({ where: existingWhere, select: chatMessageSelect });
       if (existing) return checkRetry(existing, input);

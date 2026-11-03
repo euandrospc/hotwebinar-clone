@@ -1,3 +1,4 @@
+import { attendanceToday } from "@/lib/attendance-range";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -11,5 +12,5 @@ export default async function AtendimentoPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect(`${ADMIN_LOGIN_PATH}?from=/atendimento`);
   if (!hasRole((session.user as { role?: string }).role, ATTENDANT_ROLES)) redirect(ADMIN_LOGIN_PATH);
-  return <Inbox attendantName={session.user.name ?? "Atendente"} />;
+  return <Inbox attendantName={session.user.name ?? "Atendente"} attendantId={session.user.id} initialDate={attendanceToday()} isAdmin={(session.user as { role?: string }).role === "admin"} />;
 }

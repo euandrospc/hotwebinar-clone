@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MessageText } from "@/components/chat/message-text";
+import { attendanceToday } from "@/lib/attendance-range";
 import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
@@ -9,6 +11,13 @@ import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
 import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
 
 interface Conversation {
+  aiEnabled: boolean;
+  aiPaused: boolean;
+  aiName: string;
+  aiError: string | null;
+  aiPending: boolean;
+  assignedAttendantId: string | null;
+  assignedAttendantName: string | null;
   leadId: string;
   leadName: string;
   leadPhone: string | null;
@@ -26,6 +35,9 @@ type ThreadMessage = PlayerLeadMsg;
 
 interface InboxProps {
   attendantName: string;
+  attendantId?: string;
+  initialDate?: string;
+  isAdmin?: boolean;
 }
 
 interface ReplyAttempt {
@@ -51,10 +63,19 @@ function formatCountdown(startIso: string | null, nowMs: number): string {
   return days > 0 ? `${days}d ${clock}` : clock;
 }
 
-export function Inbox({ attendantName }: InboxProps) {
+export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false }: InboxProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
-  const [filter, setFilter] = useState<string>("active");
+  const [filter, setFilter] = useState<string>("all");
+  const [tab, setTab] = useState("all");
+  const [from, setFrom] = useState(initialDate ?? attendanceToday());
+  const [to, setTo] = useState(initialDate ?? attendanceToday());
+  const [attendant, setAttendant] = useState("all");
+  const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
+  const [controlBusy, setControlBusy] = useState(false);
+  const [controlError, setControlError] = useState("");
+  const rangeQuery = useRef("");
+  rangeQuery.current = new URLSearchParams({ from, to }).toString();
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<Record<string, ThreadMessage[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -114,11 +135,12 @@ export function Inbox({ attendantName }: InboxProps) {
     conversationController.current = controller;
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch("/api/attendant/conversations", { cache: "no-store", signal: controller.signal });
+      const res = await fetch(`/api/attendant/conversations?${rangeQuery.current}`, { cache: "no-store", signal: controller.signal });
       if (!res.ok) return;
-      const data = (await res.json()) as { conversations: Conversation[]; onlineTotal: number };
+      const data = (await res.json()) as { conversations: Conversation[]; onlineTotal: number; attendants?: Array<{ id: string; name: string }> };
       if (!alive.current || controller.signal.aborted) return;
       setConversations(data.conversations);
+      setAttendants(data.attendants ?? []);
       setOnlineTotal(data.onlineTotal ?? 0);
     } catch {
       // Retry through reconnect or the fallback timer.
@@ -166,7 +188,7 @@ export function Inbox({ attendantName }: InboxProps) {
           ? { ...conversation, lastText: event.message.text, lastAt: event.message.createdAt, pending: event.message.sender === "lead" }
           : conversation).sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")));
         refreshConversationsSoon();
-      } else if (event.type === "presence") refreshConversationsSoon();
+      } else if (event.type === "presence" || event.type === "conversation") refreshConversationsSoon();
     },
     () => {
       void fetchConversations();
@@ -174,7 +196,14 @@ export function Inbox({ attendantName }: InboxProps) {
     }
   );
 
-  useEffect(() => { void fetchConversations(); }, [fetchConversations]);
+  useEffect(() => {
+    setConversationsLoaded(false);
+    setConversations([]);
+    setSelectedLeadId(null);
+    selectedRef.current = null;
+    conversationController.current?.abort();
+    void fetchConversations();
+  }, [from, to, fetchConversations]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -289,13 +318,26 @@ export function Inbox({ attendantName }: InboxProps) {
     return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [conversations]);
 
-  const filteredConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      if (filter === "active") return c.webinarPhase === "open";
-      if (filter === "pending") return c.webinarPhase === "before";
-      return c.webinarId === filter;
-    });
-  }, [conversations, filter]);
+  const scopedConversations = conversations.filter(c => {
+    if (filter !== "all" && c.webinarId !== filter) return false;
+    if (attendant === "unassigned") return !c.assignedAttendantId;
+    return attendant === "all" || c.assignedAttendantId === attendant;
+  });
+  const filteredConversations = scopedConversations.filter(c => tab === "all" || (tab === "pending" ? c.pending : !c.pending));
+
+  async function changeControl(action: "takeover" | "resume") {
+    const leadId = selectedRef.current;
+    if (!leadId || controlBusy) return;
+    setControlBusy(true); setControlError("");
+    try {
+      const response = await fetch("/api/attendant/control", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ leadId, action })
+      });
+      if (!response.ok) throw new Error();
+      await fetchConversations();
+    } catch { setControlError("Não foi possível alterar o atendimento. Tente novamente."); }
+    finally { setControlBusy(false); }
+  }
 
   const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? null;
 
@@ -333,6 +375,7 @@ export function Inbox({ attendantName }: InboxProps) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {isAdmin && <a href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">Dashboard</a>}
           <span className="hidden text-sm text-muted-foreground sm:inline">Olá, {attendantName}</span>
           <button
             type="button"
@@ -366,7 +409,12 @@ export function Inbox({ attendantName }: InboxProps) {
             drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <div className="space-y-2 border-b p-4">
+          <div className="space-y-3 border-b p-4">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs text-muted-foreground">De<input aria-label="Data inicial dos atendimentos" type="date" value={from} onChange={e => { if (e.target.value) { setFrom(e.target.value); if (e.target.value > to) setTo(e.target.value); } }} className="mt-1 block w-full rounded-lg border bg-background p-2 text-xs" /></label>
+              <label className="text-xs text-muted-foreground">Até<input aria-label="Data final dos atendimentos" type="date" value={to} onChange={e => { if (e.target.value) { setTo(e.target.value); if (e.target.value < from) setFrom(e.target.value); } }} className="mt-1 block w-full rounded-lg border bg-background p-2 text-xs" /></label>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground"><span>Horário de Brasília</span><button type="button" className="underline" onClick={() => { const today = attendanceToday(); setFrom(today); setTo(today); }}>Hoje</button></div>
             <label className="text-xs font-medium text-muted-foreground">Responder o webinário</label>
             <div className="relative">
               <select
@@ -374,8 +422,7 @@ export function Inbox({ attendantName }: InboxProps) {
                 onChange={(e) => setFilter(e.target.value)}
                 className="w-full appearance-none rounded-lg border bg-background px-3 py-2 pr-9 text-base outline-none focus:ring-1 focus:ring-ring sm:text-sm"
               >
-                <option value="active">Todos ativos</option>
-                <option value="pending">Todos pendentes</option>
+                <option value="all">Todos os webinars</option>
                 {webinars.length > 0 && <option disabled>──────────</option>}
                 {webinars.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -388,6 +435,17 @@ export function Inbox({ attendantName }: InboxProps) {
             </div>
           </div>
 
+          <div className="space-y-3 border-b px-4 pb-3">
+            <label className="block text-xs text-muted-foreground">Atendente
+              <select aria-label="Filtrar por atendente" value={attendant} onChange={e => setAttendant(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2 text-sm">
+                <option value="all">Todos os atendentes</option><option value="unassigned">Sem responsável</option>
+                {attendants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+              </select>
+            </label>
+            <div role="tablist" aria-label="Status dos atendimentos" className="flex rounded-lg bg-muted p-1">
+              {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"]].map(([value, label]) => <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={`flex-1 rounded-md px-1 py-2 text-xs ${tab === value ? "bg-background font-semibold shadow-sm" : "text-muted-foreground"}`}>{label} <span className="tabular-nums">{scopedConversations.filter(c => value === "all" || (value === "pending" ? c.pending : !c.pending)).length}</span></button>)}
+            </div>
+          </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {conversationsLoaded && filteredConversations.length === 0 && (
               <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
@@ -438,6 +496,7 @@ export function Inbox({ attendantName }: InboxProps) {
                     ) : (
                       <p className="mt-1 truncate text-xs text-muted-foreground">{c.lastText}</p>
                     )}
+                    <p className="mt-1 text-[11px] text-muted-foreground">{c.assignedAttendantName || (c.aiEnabled && !c.aiPaused ? `IA · ${c.aiName}` : "Sem responsável")}</p>
                   </div>
                 </button>
               ))}
@@ -457,7 +516,7 @@ export function Inbox({ attendantName }: InboxProps) {
 
           {selectedConversation && (
             <>
-              <div className="flex items-center gap-3 border-b bg-card p-4">
+              <div className="flex flex-wrap items-center gap-3 border-b bg-card p-4">
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(true)}
@@ -484,6 +543,16 @@ export function Inbox({ attendantName }: InboxProps) {
                 </div>
               </div>
 
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2 text-xs">
+                <span>{selectedConversation.aiPaused ? `IA pausada · ${selectedConversation.assignedAttendantName || "aguardando humano"}` : selectedConversation.aiEnabled ? `IA ativa · ${selectedConversation.aiName}` : "Atendimento humano"}</span>
+                <div className="flex flex-wrap gap-2">
+                  {isAdmin && <a className="rounded-lg border bg-background px-3 py-2" href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}>Configurar agente</a>}
+                  {(!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
+                  {selectedConversation.aiEnabled && selectedConversation.aiPaused && <button type="button" disabled={controlBusy} onClick={() => void changeControl("resume")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Retomar IA</button>}
+                </div>
+                {selectedConversation.aiError && <p className="w-full text-amber-700 dark:text-amber-400">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
+                {controlError && <p role="alert" className="w-full text-destructive">{controlError}</p>}
+              </div>
               <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-background p-4">
                 {thread.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "team" ? "justify-end" : "justify-start"}`}>
@@ -494,7 +563,8 @@ export function Inbox({ attendantName }: InboxProps) {
                           : "rounded-bl-sm border bg-card"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="mb-1 text-[10px] font-medium opacity-80">{m.sender === "team" ? m.teamName || "Equipe" : selectedConversation.leadName}</p>
+                      <MessageText text={m.text} />
                       <p
                         className={`mt-1 text-right text-[10px] ${
                           m.sender === "team" ? "text-primary-foreground/70" : "text-muted-foreground"

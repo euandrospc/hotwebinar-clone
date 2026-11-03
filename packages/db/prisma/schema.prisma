@@ -26,6 +26,8 @@ model User {
   teamChatMessages LeadChatMessage[] @relation("TeamChatAuthor")
 
   @@map("user")
+  assignedConversations Lead[] @relation("ConversationAssignee")
+
 }
 
 model Session {
@@ -222,6 +224,10 @@ model Webinar {
   phonePlaceholder       String             @default("Seu telefone")
   pitchAtSec             Int?
   // Offer (sub-plan D2)
+  chatAiEnabled          Boolean @default(false)
+  chatAiName             String @default("Assistente")
+  chatAiInstructions     String @default("")
+  chatAiModel            String @default("gpt-4.1-mini")
   offerName              String             @default("")
   offerTitleStyle          String             @default("highlight")
   offerTitle             String             @default("")
@@ -313,6 +319,16 @@ model Lead {
   utmCampaign       String?
   utmTerm           String?
   utmContent        String?
+  assignedAttendantId String?
+  assignedAttendant User? @relation("ConversationAssignee", fields: [assignedAttendantId], references: [id], onDelete: SetNull)
+  aiPaused          Boolean @default(false)
+  chatVersion       Int @default(0)
+  aiPendingMessageId String?
+  aiLeaseToken      String?
+  aiLeaseUntil      DateTime?
+  aiAttempts        Int @default(0)
+  aiNextAttemptAt   DateTime?
+  aiError           String?
   webinar           Webinar           @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   events            Event[]
   leadChatMessages  LeadChatMessage[]
@@ -348,6 +364,7 @@ model LeadChatMessage {
   text         String
   videoSec     Int?
   sender       String   @default("lead")
+  aiAgentName  String?
   authorUserId String?
   clientMessageId String?
   createdAt    DateTime @default(now())
@@ -355,6 +372,8 @@ model LeadChatMessage {
   webinar      Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   authorUser   User?    @relation("TeamChatAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
+  @@index([webinarId, createdAt])
+  @@index([authorUserId, createdAt])
   @@index([leadId, createdAt])
   @@unique([leadId, clientMessageId])
   @@map("lead_chat_message")

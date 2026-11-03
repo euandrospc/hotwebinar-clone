@@ -1,3 +1,4 @@
+import { AttendanceReport } from "@/components/dashboard/attendance-report";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -133,6 +134,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         </div>
 
         <DashboardFunnel stages={funnel} />
+        <AttendanceReport ownerId={session.user.id} start={rangeStart} end={rangeEnd} />
 
         <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,400px)]">
           <DashboardParticipantesChart data={participantes} />

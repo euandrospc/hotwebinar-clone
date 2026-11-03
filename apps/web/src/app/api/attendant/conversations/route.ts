@@ -1,3 +1,4 @@
+import { attendanceRange } from "@/lib/attendance-range";
 import { NextResponse } from "next/server";
 import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
@@ -7,16 +8,21 @@ import { getOnlineSnapshot } from "@/lib/online";
 export async function GET(request: Request) {
   const session = await requireAttendant();
   if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  const webinarId = new URL(request.url).searchParams.get("webinarId") || undefined;
+  const params = new URL(request.url).searchParams;
+  const webinarId = params.get("webinarId") || undefined;
+  let range;
+  try { range = attendanceRange(params.get("from"), params.get("to")); }
+  catch { return NextResponse.json({ error: "invalid_range" }, { status: 400 }); }
 
   const nowDate = new Date();
   const snap = await getOnlineSnapshot();
 
   const leads = await prisma.lead.findMany({
-    where: { ...(webinarId ? { webinarId } : {}), leadChatMessages: { some: {} } },
+    where: { ...(webinarId ? { webinarId } : {}), leadChatMessages: { some: { createdAt: { gte: range.gte, lt: range.lt } } } },
     select: {
+      aiPaused: true, aiError: true, aiPendingMessageId: true, assignedAttendantId: true, assignedAttendant: { select: { name: true } },
       id: true, name: true, phone: true, webinarId: true,
-      webinar: { select: { title: true, name: true, mode: true, startDate: true, endDate: true, recurring: true, recurringDays: true, timezone: true } },
+      webinar: { select: { chatAiEnabled: true, chatAiName: true, title: true, name: true, mode: true, startDate: true, endDate: true, recurring: true, recurringDays: true, timezone: true } },
       leadChatMessages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { text: true, sender: true, createdAt: true } }
     }
   });
@@ -34,6 +40,13 @@ export async function GET(request: Request) {
         nowDate
       );
       return {
+        aiEnabled: l.webinar.chatAiEnabled && !!process.env.OPENAI_API_KEY,
+        aiName: l.webinar.chatAiName,
+        aiPaused: l.aiPaused,
+        aiError: l.aiError,
+        aiPending: !!l.aiPendingMessageId,
+        assignedAttendantId: l.assignedAttendantId,
+        assignedAttendantName: l.assignedAttendant?.name ?? null,
         leadId: l.id,
         leadName: l.name,
         leadPhone: l.phone,
@@ -49,5 +62,9 @@ export async function GET(request: Request) {
     })
     .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
 
-  return NextResponse.json({ conversations, onlineTotal }, { headers: { "cache-control": "no-store" } });
+  const attendants = await prisma.user.findMany({
+    where: { OR: [{ role: { in: ["admin", "attendant"] } }, { teamChatMessages: { some: {} } }] },
+    select: { id: true, name: true }, orderBy: { name: "asc" }
+  });
+  return NextResponse.json({ conversations, onlineTotal, attendants }, { headers: { "cache-control": "no-store" } });
 }

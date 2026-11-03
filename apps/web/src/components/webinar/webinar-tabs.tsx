@@ -13,6 +13,7 @@ const TABS = [
   { label: "Mapa", suffix: "/leads-map" },
   { label: "Métricas", suffix: "/metrics" },
   { label: "Tempo real", suffix: "/realtime" },
+  { label: "Agente IA", suffix: "/chat-ai" },
   { label: "Webhooks", suffix: "/webhooks" }
 ] as const;
 

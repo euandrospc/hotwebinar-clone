@@ -10,6 +10,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/webinars", label: "Webinars", icon: TvMinimalPlay },
   { href: "/dashboard/videos", label: "Vídeos", icon: Video },
+  { href: "/atendimento", label: "Atendimento", icon: Headset },
   { href: "/dashboard/atendentes", label: "Atendentes", icon: Headset },
   { href: "/dashboard/consumo", label: "Consumo", icon: Gauge },
   { href: "/dashboard/settings", label: "Configurações", icon: Bolt }

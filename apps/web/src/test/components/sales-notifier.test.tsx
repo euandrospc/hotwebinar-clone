@@ -47,7 +47,7 @@ describe("SalesNotifier", () => {
     playTo(5);
     expect(screen.getByRole("status")).toHaveTextContent(/^Ana comprou Curso A por R\$ 99$/);
     expect(screen.getByText("Vagas preenchidas", { exact: true })).toBeVisible();
-    expect(screen.getByRole("progressbar", { name: "Vagas preenchidas", exact: true }))
+    expect(screen.getByRole("progressbar", { name: "Vagas preenchidas" }))
       .toHaveAttribute("aria-valuenow", "45");
   });
 

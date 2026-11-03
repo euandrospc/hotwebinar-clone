@@ -7,6 +7,7 @@ import type { PlayerLeadMsg, PlayerOwnerMsg } from "../_lib/public-types";
 import type { PublicSaleNotification } from "@/lib/public-dto";
 import { mergeLeadMessages } from "../_lib/merge-lead-messages";
 import { useSimulatedAudience, fmtAudience, type AudienceParams } from "./audience-badge";
+import { MessageText } from "@/components/chat/message-text";
 import { SalesNotifier } from "./sales-notifier";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
 
@@ -249,7 +250,7 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
                     <span className="truncate text-xs font-semibold text-red-500 md:text-sm">{teamLabel}</span>
                     <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">{ts}</span>
                   </div>
-                  <p className="mt-0.5 break-words text-sm leading-snug">{m.text}</p>
+                  <div className="mt-0.5 text-sm leading-snug"><MessageText text={m.text} /></div>
                 </div>
               </div>
             );
@@ -278,7 +279,7 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
                   </span>
                   <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
                 </div>
-                <p className="break-words text-sm leading-snug">{m.kind === "owner" ? personalize(m.text, leadName) : m.text}</p>
+                <div className="text-sm leading-snug"><MessageText text={m.kind === "owner" ? personalize(m.text, leadName) : m.text} /></div>
               </div>
             </div>
           );

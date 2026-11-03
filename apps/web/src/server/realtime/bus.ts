@@ -25,6 +25,10 @@ export async function publishChatEvent(input: {
 }
 
 // Invalidation only: counts are fetched through the ownership-checked snapshot API.
+export async function publishConversationEvent(webinarId: string, leadId: string): Promise<void> {
+  await publish({ rooms: ["staff"], event: { type: "conversation", webinarId, leadId } });
+}
+
 export async function publishFunnelEvent(webinarId: string): Promise<void> {
   await publish({ rooms: [`webinar:${webinarId}`], event: { type: "funnel", webinarId } });
 }
@@ -62,7 +66,7 @@ export function parseRealtimeEnvelope(raw: string): RealtimeEnvelope | null {
   try {
     const value = JSON.parse(raw) as RealtimeEnvelope;
     if (!Array.isArray(value.rooms) || !value.rooms.length || value.rooms.some((room) => typeof room !== "string")) return null;
-    if (!value.event || !["chat", "presence", "funnel", "resync"].includes(value.event.type)) return null;
+    if (!value.event || !["chat", "presence", "funnel", "conversation", "resync"].includes(value.event.type)) return null;
     return value;
   } catch { return null; }
 }
