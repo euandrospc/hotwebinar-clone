@@ -42,6 +42,15 @@ describe("SalesNotifier", () => {
     expect(document.querySelectorAll('[data-sale-notification="1"]')).toHaveLength(1);
   });
 
+  it("renders the message and progress label without an extra prefix or suffix", () => {
+    render(<Harness notifs={[{ ...NOTIFS[0], simulated: true }, NOTIFS[1]]} />);
+    playTo(5);
+    expect(screen.getByRole("status")).toHaveTextContent(/^Ana comprou Curso A por R\$ 99$/);
+    expect(screen.getByText("Vagas preenchidas", { exact: true })).toBeVisible();
+    expect(screen.getByRole("progressbar", { name: "Vagas preenchidas", exact: true }))
+      .toHaveAttribute("aria-valuenow", "45");
+  });
+
   it("keeps each message visible for six seconds and then removes it after the exit", () => {
     render(<Harness />);
     playTo(5);

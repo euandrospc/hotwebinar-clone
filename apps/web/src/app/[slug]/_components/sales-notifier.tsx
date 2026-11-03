@@ -83,9 +83,9 @@ export function SalesNotifier({ notifications, currentTimeRef }: Props) {
     <>
       <div className="mx-2 mb-2 shrink-0 rounded-lg border bg-card p-3 md:mx-4">
         <div className="mb-2 flex justify-between text-xs font-medium">
-          <span>Vagas preenchidas · simulação</span><span className="tabular-nums">{percent}%</span>
+          <span>Vagas preenchidas</span><span className="tabular-nums">{percent}%</span>
         </div>
-        <div role="progressbar" aria-label="Vagas preenchidas na simulação" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} className="h-2 overflow-hidden rounded-full bg-muted">
+        <div role="progressbar" aria-label="Vagas preenchidas" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} className="h-2 overflow-hidden rounded-full bg-muted">
           <div className="relative h-full overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-[width] duration-700 ease-out motion-reduce:transition-none" style={{ width: `${percent}%` }}>
             <span key={filled} aria-hidden="true" className="sale-progress-shine" />
           </div>
@@ -106,7 +106,7 @@ export function SalesNotifier({ notifications, currentTimeRef }: Props) {
             {confetti.map((style, index) => <i key={index} style={style} />)}
           </span>
           <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <p className="min-w-0 flex-1 break-words leading-snug">{notifications.find(n => n.id === notice.id)?.simulated && <span className="mr-1 font-medium">Simulação ·</span>}{notice.text}</p>
+          <p className="min-w-0 flex-1 break-words leading-snug">{notice.text}</p>
         </div>
       ))}
     </div>}
