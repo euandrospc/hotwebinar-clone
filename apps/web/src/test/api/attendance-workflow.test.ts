@@ -104,3 +104,15 @@ it("filters the complete final minute of a selected time range", async () => {
   expect(() => attendanceRange("2026-11-04", "2026-11-04", new Date(), { fromTime: "17:00", toTime: "16:00" })).toThrow();
   expect(() => attendanceRange("2026-11-04", "2026-11-04", new Date(), { fromTime: "25:00" })).toThrow();
 });
+
+it("opens a shared conversation outside the date filter without changing the daily list", async () => {
+  await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "Conversa antiga", createdAt: new Date("2026-10-01T10:00:00Z") } });
+  const { GET } = await import("@/app/api/attendant/conversations/route");
+  const range = `webinarId=${webinarId}&from=2026-11-04&to=2026-11-04`;
+  const daily = await GET(new Request(`http://localhost/api/attendant/conversations?${range}`));
+  expect((await daily.json()).conversations).toHaveLength(0);
+  const linked = await GET(new Request(`http://localhost/api/attendant/conversations?${range}&leadId=${leadId}`));
+  expect((await linked.json()).conversations).toEqual([expect.objectContaining({ leadId, leadName: "Lead", lastText: "Conversa antiga" })]);
+  const missing = await GET(new Request("http://localhost/api/attendant/conversations?leadId=missing"));
+  expect((await missing.json()).conversations).toHaveLength(0);
+});

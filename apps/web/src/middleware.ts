@@ -19,7 +19,7 @@ function hasSessionCookie(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   if (!hasSessionCookie(request)) {
     const loginUrl = new URL(ADMIN_LOGIN_PATH, request.url);
-    loginUrl.searchParams.set("from", request.nextUrl.pathname);
+    loginUrl.searchParams.set("from", request.nextUrl.pathname + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
   // Forward the current pathname to RSC layouts via header so they can compute

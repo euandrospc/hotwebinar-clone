@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { MessageText } from "@/components/chat/message-text";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
-import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "@/components/icons";
+import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone, Copy } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
@@ -65,6 +67,10 @@ function formatCountdown(startIso: string | null, nowMs: number): string {
 }
 
 export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false }: InboxProps) {
+  const searchParams = useSearchParams();
+  const urlLeadId = searchParams.get("leadId");
+  const [linkedConversation, setLinkedConversation] = useState<Conversation | null>(null);
+  const [linkError, setLinkError] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [filter, setFilter] = useState<string>("all");
@@ -79,7 +85,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const [controlError, setControlError] = useState("");
   const rangeQuery = useRef("");
   rangeQuery.current = new URLSearchParams({ from, to, fromTime, toTime }).toString();
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(urlLeadId);
   const [threads, setThreads] = useState<Record<string, ThreadMessage[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [sendingLeads, setSendingLeads] = useState<Record<string, boolean>>({});
@@ -130,6 +136,19 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     setFailedAttempts((previous) => ({ ...previous, [leadId]: (previous[leadId] ?? []).filter((attempt) => !confirmedRequests.current.has(attempt.clientMessageId)) }));
   }, []);
 
+  const fetchLinkedConversation = useCallback(async (leadId: string, signal?: AbortSignal) => {
+    try {
+      const res = await fetch(`/api/attendant/conversations?${new URLSearchParams({ leadId })}`, { cache: "no-store", signal: signal ?? AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { conversations: Conversation[] };
+      if (!alive.current || signal?.aborted || selectedRef.current !== leadId) return;
+      setLinkedConversation(data.conversations[0] ?? null);
+      setLinkError(data.conversations.length ? "" : "Conversa não encontrada ou indisponível.");
+    } catch {
+      if (alive.current && !signal?.aborted && selectedRef.current === leadId) setLinkError("Não foi possível abrir a conversa. Tente novamente.");
+    }
+  }, []);
+
   const fetchConversations = useCallback(async () => {
     if (!alive.current) return;
     if (conversationFetching.current) { conversationRefreshQueued.current = true; return; }
@@ -143,6 +162,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
       const data = (await res.json()) as { conversations: Conversation[]; onlineTotal: number; attendants?: Array<{ id: string; name: string }> };
       if (!alive.current || controller.signal.aborted) return;
       setConversations(data.conversations);
+      if (selectedRef.current && !data.conversations.some(c => c.leadId === selectedRef.current)) void fetchLinkedConversation(selectedRef.current);
       setAttendants(data.attendants ?? []);
       setOnlineTotal(data.onlineTotal ?? 0);
     } catch {
@@ -156,7 +176,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
         void fetchConversations();
       }
     }
-  }, []);
+  }, [fetchLinkedConversation]);
 
   const fetchThread = useCallback(async (leadId: string) => {
     threadController.current?.abort();
@@ -202,8 +222,6 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   useEffect(() => {
     setConversationsLoaded(false);
     setConversations([]);
-    setSelectedLeadId(null);
-    selectedRef.current = null;
     conversationController.current?.abort();
     void fetchConversations();
   }, [from, to, fromTime, toTime, fetchConversations]);
@@ -216,6 +234,17 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     }, status === "connected" ? 60_000 : 4_000);
     return () => clearInterval(timer);
   }, [fetchConversations, fetchThread, status]);
+
+  useEffect(() => {
+    selectedRef.current = urlLeadId;
+    setSelectedLeadId(urlLeadId);
+    setLinkedConversation(null);
+    setLinkError("");
+    if (!urlLeadId) return;
+    const controller = new AbortController();
+    void fetchLinkedConversation(urlLeadId, controller.signal);
+    return () => controller.abort();
+  }, [urlLeadId, fetchLinkedConversation]);
 
   useEffect(() => {
     stickToBottom.current = true;
@@ -310,7 +339,23 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     selectedRef.current = leadId;
     threadController.current?.abort();
     setSelectedLeadId(leadId);
+    setLinkError("");
+    const url = new URL(window.location.href);
+    url.searchParams.set("leadId", leadId);
+    window.history.replaceState(null, "", url);
     setDrawerOpen(false);
+  }
+
+  async function copyConversationLink() {
+    if (!selectedLeadId) return;
+    const url = new URL("/atendimento", window.location.origin);
+    url.searchParams.set("leadId", selectedLeadId);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      toast.success("Link da conversa copiado");
+    } catch {
+      toast.error("Não foi possível copiar. Copie o endereço na barra do navegador.");
+    }
   }
 
   const webinars = useMemo(() => {
@@ -342,7 +387,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     finally { setControlBusy(false); }
   }
 
-  const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? null;
+  const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? (linkedConversation?.leadId === selectedLeadId ? linkedConversation : null);
 
   return (
     <div className="flex h-screen [height:100dvh] flex-col bg-background">
@@ -520,7 +565,8 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
                 <MessageSquare className="h-6 w-6 text-muted-foreground/50" />
               </span>
-              <p className="text-sm text-muted-foreground">Selecione uma conversa para começar.</p>
+              <p className="text-sm text-muted-foreground">{linkError || (selectedLeadId ? "Abrindo conversa…" : "Selecione uma conversa para começar.")}</p>
+              {linkError && selectedLeadId && <button type="button" onClick={() => { setLinkError(""); void fetchLinkedConversation(selectedLeadId); }} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">Tentar novamente</button>}
             </div>
           )}
 
@@ -551,8 +597,14 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                     </a>
                   ) : null}
                 </div>
+                <button type="button" onClick={() => void copyConversationLink()} className="ml-auto inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">
+                  <Copy className="h-4 w-4" /> Copiar link
+                </button>
               </div>
 
+              {conversationsLoaded && !filteredConversations.some(c => c.leadId === selectedLeadId) && (
+                <p className="border-b bg-muted/20 px-4 py-2 text-xs text-muted-foreground">Esta conversa está fora dos filtros da lista. Você pode continuar o atendimento normalmente.</p>
+              )}
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2 text-xs">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{selectedConversation.assignedAttendantName

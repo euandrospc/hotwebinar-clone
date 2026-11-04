@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const params = new URL(request.url).searchParams;
   const webinarId = params.get("webinarId") || undefined;
+  const leadId = params.get("leadId") || undefined;
   let range;
   try { range = attendanceRange(params.get("from"), params.get("to"), new Date(), { fromTime: params.get("fromTime"), toTime: params.get("toTime") }); }
   catch { return NextResponse.json({ error: "invalid_range" }, { status: 400 }); }
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   const snap = await getOnlineSnapshot();
 
   const leads = await prisma.lead.findMany({
-    where: { ...(webinarId ? { webinarId } : {}), leadChatMessages: { some: { createdAt: { gte: range.gte, lt: range.lt } } } },
+    where: { ...(webinarId ? { webinarId } : {}), ...(leadId ? { id: leadId } : {}), leadChatMessages: { some: leadId ? {} : { createdAt: { gte: range.gte, lt: range.lt } } } },
     select: {
       aiPaused: true, aiError: true, aiPendingMessageId: true, assignedAttendantId: true, assignedAttendant: { select: { name: true } },
       id: true, name: true, phone: true, webinarId: true,

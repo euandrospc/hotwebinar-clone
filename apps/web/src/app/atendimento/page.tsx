@@ -8,9 +8,11 @@ import { Inbox } from "./_components/inbox";
 
 export const dynamic = "force-dynamic";
 
-export default async function AtendimentoPage() {
+export default async function AtendimentoPage({ searchParams }: { searchParams: Promise<{ leadId?: string }> }) {
+  const { leadId } = await searchParams;
+  const returnTo = leadId ? `/atendimento?${new URLSearchParams({ leadId })}` : "/atendimento";
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect(`${ADMIN_LOGIN_PATH}?from=/atendimento`);
+  if (!session) redirect(`${ADMIN_LOGIN_PATH}?from=${encodeURIComponent(returnTo)}`);
   if (!hasRole((session.user as { role?: string }).role, ATTENDANT_ROLES)) redirect(ADMIN_LOGIN_PATH);
   return <Inbox attendantName={session.user.name ?? "Atendente"} attendantId={session.user.id} initialDate={attendanceToday()} isAdmin={(session.user as { role?: string }).role === "admin"} />;
 }

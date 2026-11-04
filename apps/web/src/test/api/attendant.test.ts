@@ -112,3 +112,15 @@ describe("attendant conversations", () => {
     expect(json.conversations[0].pending).toBe(true);
   });
 });
+
+
+describe("shared conversation access", () => {
+  it("requires an authenticated attendant even when the conversation id is known", async () => {
+    const { GET } = await import("@/app/api/attendant/conversations/route");
+    for (const role of [null, "user"]) {
+      sessionRole = role;
+      const response = await GET(new Request(`http://x?leadId=${leadId}`));
+      expect(response.status).toBe(403);
+    }
+  });
+});
