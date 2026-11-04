@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const webinarId = params.get("webinarId") || undefined;
   let range;
-  try { range = attendanceRange(params.get("from"), params.get("to")); }
+  try { range = attendanceRange(params.get("from"), params.get("to"), new Date(), { fromTime: params.get("fromTime"), toTime: params.get("toTime") }); }
   catch { return NextResponse.json({ error: "invalid_range" }, { status: 400 }); }
 
   const nowDate = new Date();

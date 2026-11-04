@@ -272,6 +272,7 @@ model Webinar {
   leadChatMessages       LeadChatMessage[]
   webhookDeliveries      WebhookDelivery[]
   saleNotifications      SaleNotification[]
+  audienceSamples        AudienceSample[]
   sales                  Sale[]
 
   @@index([ownerId, status])
@@ -433,4 +434,16 @@ model Sale {
   @@index([webinarId, createdAt])
   @@index([leadId])
   @@map("sale")
+}
+
+model AudienceSample {
+  webinarId String
+  sampledAt DateTime
+  observedAt DateTime @default(now())
+  online Int
+  webinar Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
+  @@id([webinarId, sampledAt])
+  @@index([webinarId, observedAt])
+  @@map("audience_sample")
 }

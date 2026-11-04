@@ -1,3 +1,5 @@
+import { getAudienceSummary } from "@/server/audience-history";
+import { AudienceSummary } from "@/components/dashboard/audience-summary";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -56,6 +58,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
 
   const { rangeStart, rangeEnd } = parseRange(sp.from, sp.to);
   const inRange = { gte: rangeStart, lte: rangeEnd };
+  const audience = await getAudienceSummary(id, rangeStart, rangeEnd);
 
   const [leads, events, chatLeads, salesCount] = await Promise.all([
     prisma.lead.findMany({
@@ -159,6 +162,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_minmax(0,340px)]">
         <div className="space-y-4">
+          <AudienceSummary data={audience} timezone={webinar.timezone} />
           <MetricsVideoRetention data={retention} />
           <MetricsConversionFunnel
             data={{

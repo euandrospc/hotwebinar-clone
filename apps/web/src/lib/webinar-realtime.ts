@@ -10,6 +10,7 @@ export interface RealtimeLead {
 }
 
 export interface WebinarRealtimeSnapshot {
+  audience?: { average: number | null; peak: number | null; peakAt: string | null; sampleCount: number };
   funnel?: FunnelStage[];
   schedule?: {
     mode: "UNICO" | "JIT";

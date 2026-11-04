@@ -14,6 +14,8 @@ export function MetricsVideoRetention({ data }: { data: RetentionPoint[] }) {
         <Info className="h-3.5 w-3.5 text-muted-foreground" />
       </header>
 
+      <p className="mt-2 text-xs text-muted-foreground">Retenção sobre os espectadores que iniciaram o vídeo, no período selecionado.</p>
+
       <div className="mt-4 h-64">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
@@ -32,16 +34,17 @@ export function MetricsVideoRetention({ data }: { data: RetentionPoint[] }) {
               minTickGap={24}
               interval="preserveStartEnd"
             />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                fontSize: 12,
-                borderRadius: 8
-              }}
-              labelFormatter={(l) => `Tempo ${l}`}
-              formatter={(v) => [v as number, "Assistindo"]}
-            />
+            <Tooltip content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const point = payload[0].payload as RetentionPoint;
+              return <div role="tooltip" className="space-y-1 rounded-lg border bg-popover p-3 text-xs text-popover-foreground shadow-md">
+                <p>Tempo assistido {point.label}</p>
+                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+                  {point.pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%
+                </p>
+                <p>{point.count.toLocaleString("pt-BR")} espectadores assistiram pelo menos este tempo.</p>
+              </div>;
+            }} />
             <Area
               type="monotone"
               dataKey="count"

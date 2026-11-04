@@ -83,6 +83,7 @@ export function buildDeviceBreakdown(input: DashboardStatsInput): DeviceBreakdow
 }
 
 export interface RetentionPoint {
+  pct: number;
   sec: number;
   label: string;
   count: number;
@@ -102,13 +103,15 @@ export function buildRetention(
   durationSec: number,
   points = 42
 ): RetentionPoint[] {
+  const viewers = watchedSecs.filter(seconds => Number.isFinite(seconds) && seconds > 0);
   const dur = Math.max(1, durationSec);
   const step = dur / points;
   const out: RetentionPoint[] = [];
   for (let i = 0; i <= points; i++) {
     const sec = Math.round(i * step);
-    const count = watchedSecs.filter((w) => w >= sec).length;
-    out.push({ sec, label: fmtClock(sec), count });
+    const count = viewers.filter((w) => w >= sec).length;
+    const pct = viewers.length ? count / viewers.length * 100 : 0;
+    out.push({ sec, label: fmtClock(sec), count, pct });
   }
   return out;
 }

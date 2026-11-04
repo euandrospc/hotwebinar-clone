@@ -9,6 +9,7 @@ import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
 import type { RealtimeStatus } from "@/lib/realtime-protocol";
 import { RealtimeCountdown } from "./realtime-countdown";
+import { AudienceSummary } from "@/components/dashboard/audience-summary";
 import { DashboardFunnel } from "@/components/dashboard/dashboard-funnel";
 import { RealtimeMap } from "./realtime-map";
 
@@ -194,6 +195,8 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
           </section>
         ))}
       </div>
+
+      {data.audience && <AudienceSummary data={data.audience} period="Hoje" />}
 
       {data.funnel && <div className="space-y-2">
         <DashboardFunnel stages={data.funnel} />

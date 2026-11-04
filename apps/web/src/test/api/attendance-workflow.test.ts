@@ -96,3 +96,11 @@ it("hands off when the spectator asks for a human", async () => {
   expect(fetcher).not.toHaveBeenCalled();
   expect(await prisma.lead.findUnique({ where: { id: leadId } })).toMatchObject({ aiPaused: true });
 });
+
+it("filters the complete final minute of a selected time range", async () => {
+  const range = attendanceRange("2026-11-04", "2026-11-04", new Date(), { fromTime: "14:00", toTime: "16:00" });
+  expect(range.gte.toISOString()).toBe("2026-11-04T17:00:00.000Z");
+  expect(range.lt.toISOString()).toBe("2026-11-04T19:01:00.000Z");
+  expect(() => attendanceRange("2026-11-04", "2026-11-04", new Date(), { fromTime: "17:00", toTime: "16:00" })).toThrow();
+  expect(() => attendanceRange("2026-11-04", "2026-11-04", new Date(), { fromTime: "25:00" })).toThrow();
+});

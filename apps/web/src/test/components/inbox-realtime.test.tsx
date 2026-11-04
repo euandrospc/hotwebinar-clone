@@ -3,6 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { Inbox } from "@/app/atendimento/_components/inbox";
 import type { RealtimeEvent } from "@/lib/realtime-protocol";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/atendimento" }));
+
 const channel = vi.hoisted(() => ({ onEvent: (_event: RealtimeEvent) => {}, onResync: () => {} }));
 vi.mock("@/lib/hooks/use-realtime-channel", () => ({
   useRealtimeChannel: (_scope: unknown, onEvent: typeof channel.onEvent, onResync: typeof channel.onResync) => {
@@ -25,6 +27,7 @@ const composer = () => screen.getByPlaceholderText("Escreva uma resposta...");
 async function select(name: string) { await act(async () => { fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${name.slice(0, 1)} ${name} `) })); }); }
 
 beforeEach(() => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
     if (String(url).includes("conversations")) return response({ conversations, onlineTotal: 2 });
     return response({ messages: [] });

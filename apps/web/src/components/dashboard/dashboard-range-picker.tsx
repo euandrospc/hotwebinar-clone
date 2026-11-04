@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { ptBR } from "date-fns/locale";
 import { endOfMonth, endOfWeek, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from "date-fns";
+import { cn } from "@/lib/utils";
+import { zonedParts } from "@/lib/timezones";
 import { CalendarRange } from "@/components/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,13 @@ export const PRESETS: Preset[] = [
   { label: "Mês passado", range: (n) => ({ from: startOfMonth(subMonths(n, 1)), to: endOfMonth(subMonths(n, 1)) }) }
 ];
 
+export interface RangePickerSelection {
+  from: string;
+  to: string;
+  fromTime: string;
+  toTime: string;
+}
+
 interface Props {
   initialFrom: string;
   initialTo: string;
@@ -36,9 +45,12 @@ interface Props {
   initialToTime: string;
   allowAll?: boolean;
   queryParams?: Record<string, string>;
+  onApply?: (selection: RangePickerSelection) => void;
+  timeZone?: string;
+  className?: string;
 }
 
-export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime, allowAll = false, queryParams = {} }: Props) {
+export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime, allowAll = false, queryParams = {}, onApply, timeZone, className }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   // "YYYY-MM-DD" alone parses as UTC midnight (the day before in Brasília); pin it to local.
@@ -49,6 +61,25 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   const [fromTime, setFromTime] = useState(initialFromTime);
   const [toTime, setToTime] = useState(initialToTime);
   const [open, setOpen] = useState(false);
+  const [applied, setApplied] = useState({ from: initialFrom, to: initialTo, fromTime: initialFromTime, toTime: initialToTime });
+  useEffect(() => {
+    setApplied({ from: initialFrom, to: initialTo, fromTime: initialFromTime, toTime: initialToTime });
+  }, [initialFrom, initialTo, initialFromTime, initialToTime]);
+
+  function changeOpen(next: boolean) {
+    if (next) {
+      setRange(applied.from && applied.to ? { from: new Date(`${applied.from}T00:00`), to: new Date(`${applied.to}T00:00`) } : undefined);
+      setFromTime(applied.fromTime);
+      setToTime(applied.toTime);
+    }
+    setOpen(next);
+  }
+  function calendarToday() {
+    if (!timeZone) return new Date();
+    const { y, mo, d } = zonedParts(new Date(), timeZone);
+    return new Date(y, mo, d);
+  }
+
   // Two months side by side don't fit a phone screen.
   const [months, setMonths] = useState(2);
   useEffect(() => {
@@ -60,6 +91,15 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   }, []);
 
   function go(from: Date, to: Date, fTime: string, tTime: string) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(fTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(tTime)) return;
+    if (`${toIsoDate(from)}T${fTime}` > `${toIsoDate(to)}T${tTime}`) return;
+    const selection = { from: toIsoDate(from), to: toIsoDate(to), fromTime: fTime, toTime: tTime };
+    setApplied(selection);
+    if (onApply) {
+      onApply(selection);
+      setOpen(false);
+      return;
+    }
     const params = new URLSearchParams({ ...queryParams, from: `${toIsoDate(from)}T${fTime}:00`, to: `${toIsoDate(to)}T${tTime}:00` });
     if (allowAll) {
       const start = new Date(`${toIsoDate(from)}T${fTime}:00`);
@@ -82,24 +122,25 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   }
 
   function applyPreset(p: Preset) {
-    const r = p.range(new Date());
+    const r = p.range(calendarToday());
     setRange(r);
     setFromTime("00:00");
     setToTime("23:59");
     go(r.from, r.to, "00:00", "23:59");
   }
 
-  const label =
-    range?.from && range?.to
-      ? `${fmt.format(range.from)} ${fromTime} ~ ${fmt.format(range.to)} ${toTime}`
-      : allowAll ? "Todo o período" : "Selecione o período";
+  const label = applied.from && applied.to
+    ? `${fmt.format(new Date(`${applied.from}T00:00`))} ${applied.fromTime} ~ ${fmt.format(new Date(`${applied.to}T00:00`))} ${applied.toTime}`
+    : allowAll ? "Todo o período" : "Selecione o período";
+  const invalidRange = !range?.from || !range?.to || !fromTime || !toTime ||
+    `${toIsoDate(range.from)}T${fromTime}` > `${toIsoDate(range.to)}T${toTime}`;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-2">
-          <CalendarRange className="h-4 w-4 text-muted-foreground" />
-          <span className="font-mono text-xs">{label}</span>
+        <Button variant="outline" size="sm" className={cn("h-9 gap-2", className)}>
+          <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate font-mono text-xs">{label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto max-w-[calc(100vw-1rem)] p-3">
@@ -110,7 +151,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
             setOpen(false);
           }}>Todo o período</Button>}
           {PRESETS.map((p) => (
-            <Button key={p.label} size="sm" variant={range?.from && range?.to && toIsoDate(range.from) === toIsoDate(p.range(new Date()).from) && toIsoDate(range.to) === toIsoDate(p.range(new Date()).to) && fromTime === "00:00" && toTime === "23:59" ? "default" : "outline"} className="h-7 text-xs" onClick={() => applyPreset(p)}>
+            <Button key={p.label} size="sm" variant={range?.from && range?.to && toIsoDate(range.from) === toIsoDate(p.range(calendarToday()).from) && toIsoDate(range.to) === toIsoDate(p.range(calendarToday()).to) && fromTime === "00:00" && toTime === "23:59" ? "default" : "outline"} className="h-7 text-xs" onClick={() => applyPreset(p)}>
               {p.label}
             </Button>
           ))}
@@ -118,6 +159,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
         <DayPicker
           mode="range"
           selected={range}
+          defaultMonth={range?.from}
           onSelect={setRange}
           locale={ptBR}
           numberOfMonths={months}
@@ -151,7 +193,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
         </div>
         <div className="mt-3 flex justify-end gap-2">
           <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button size="sm" onClick={apply} disabled={!range?.from || !range?.to}>Aplicar</Button>
+          <Button size="sm" onClick={apply} disabled={invalidRange}>Aplicar</Button>
         </div>
       </PopoverContent>
     </Popover>

@@ -26,6 +26,8 @@ const server = createServer((request, response) => {
 const gateway = attachRealtimeGateway(server);
 const { startAttendanceAiWorker } = await import("./src/server/attendance/ai");
 const stopAttendanceAi = startAttendanceAiWorker();
+const { startAudienceRecorder } = await import("./src/server/audience-history");
+const stopAudienceRecorder = startAudienceRecorder();
 server.on("upgrade", (request, socket, head) => {
   if (!request.url?.startsWith("/socket.io/")) void upgrade(request, socket, head);
 });
@@ -45,6 +47,7 @@ async function shutdown() {
   const timeout = setTimeout(() => process.exit(1), 10_000);
   timeout.unref();
   stopAttendanceAi();
+  stopAudienceRecorder();
   await gateway.close();
   await closeRedis();
   await app.close();

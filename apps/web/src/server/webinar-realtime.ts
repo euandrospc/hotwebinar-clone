@@ -1,3 +1,4 @@
+import { getAudienceSummary } from "./audience-history";
 import { zonedParts, zonedToUtc } from "@/lib/timezones";
 import { buildSalesKpis } from "@/lib/dashboard-stats";
 import { withOccurrence } from "@/lib/sync";
@@ -39,7 +40,9 @@ export async function getWebinarRealtimeSnapshot(webinarId: string): Promise<Web
   ]);
   const counts = [visits, entered, pitch, clicked, buildSalesKpis(sales).uniqueBuyers];
   const labels = ["Visitas", "Acessou o webinar", "Chegou no pitch", "Clicou na oferta", "Comprou"];
+  const audience = await getAudienceSummary(webinarId, dayRange.gte, new Date(Math.min(Date.now(), dayRange.lt.getTime() - 1)));
   const snapshot = {
+    audience,
     ...buildWebinarRealtimeSnapshot(leads, new Date()),
     funnel: counts.map((count, index) => ({ label: labels[index], count,
       pct: visits > 0 ? Math.round(count / visits * 10000) / 100 : 0 }))

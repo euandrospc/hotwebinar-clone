@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MessageText } from "@/components/chat/message-text";
-import { attendanceToday } from "@/lib/attendance-range";
+import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
+import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
 import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
@@ -69,13 +70,15 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const [filter, setFilter] = useState<string>("all");
   const [tab, setTab] = useState("all");
   const [from, setFrom] = useState(initialDate ?? attendanceToday());
+  const [fromTime, setFromTime] = useState("00:00");
+  const [toTime, setToTime] = useState("23:59");
   const [to, setTo] = useState(initialDate ?? attendanceToday());
   const [attendant, setAttendant] = useState("all");
   const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
   const [controlBusy, setControlBusy] = useState(false);
   const [controlError, setControlError] = useState("");
   const rangeQuery = useRef("");
-  rangeQuery.current = new URLSearchParams({ from, to }).toString();
+  rangeQuery.current = new URLSearchParams({ from, to, fromTime, toTime }).toString();
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [threads, setThreads] = useState<Record<string, ThreadMessage[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -203,7 +206,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     selectedRef.current = null;
     conversationController.current?.abort();
     void fetchConversations();
-  }, [from, to, fetchConversations]);
+  }, [from, to, fromTime, toTime, fetchConversations]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -410,11 +413,18 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
           }`}
         >
           <div className="space-y-3 border-b p-4">
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs text-muted-foreground">De<input aria-label="Data inicial dos atendimentos" type="date" value={from} onChange={e => { if (e.target.value) { setFrom(e.target.value); if (e.target.value > to) setTo(e.target.value); } }} className="mt-1 block w-full rounded-lg border bg-background p-2 text-xs" /></label>
-              <label className="text-xs text-muted-foreground">Até<input aria-label="Data final dos atendimentos" type="date" value={to} onChange={e => { if (e.target.value) { setTo(e.target.value); if (e.target.value < from) setFrom(e.target.value); } }} className="mt-1 block w-full rounded-lg border bg-background p-2 text-xs" /></label>
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground"><span>Horário de Brasília</span><button type="button" className="underline" onClick={() => { const today = attendanceToday(); setFrom(today); setTo(today); }}>Hoje</button></div>
+            <DashboardRangePicker initialFrom={from} initialTo={to}
+              initialFromTime={fromTime} initialToTime={toTime}
+              timeZone={ATTENDANCE_TIMEZONE}
+              className="w-full justify-start"
+              onApply={selection => {
+                setFrom(selection.from);
+                setTo(selection.to);
+                setFromTime(selection.fromTime);
+                setToTime(selection.toTime);
+              }}
+            />
+            <p className="text-[11px] text-muted-foreground">Horário de Brasília</p>
             <label className="text-xs font-medium text-muted-foreground">Responder o webinário</label>
             <div className="relative">
               <select
@@ -544,7 +554,14 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2 text-xs">
-                <span>{selectedConversation.aiPaused ? `IA pausada · ${selectedConversation.assignedAttendantName || "aguardando humano"}` : selectedConversation.aiEnabled ? `IA ativa · ${selectedConversation.aiName}` : "Atendimento humano"}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{selectedConversation.assignedAttendantName
+                    ? `Atendido por ${selectedConversation.assignedAttendantName}`
+                    : selectedConversation.aiEnabled && !selectedConversation.aiPaused
+                      ? `Atendido por IA · ${selectedConversation.aiName}`
+                      : "Aguardando um atendente"}</span>
+                  {selectedConversation.aiEnabled && selectedConversation.aiPaused && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950 dark:text-amber-300">IA pausada</span>}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {isAdmin && <a className="rounded-lg border bg-background px-3 py-2" href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}>Configurar agente</a>}
                   {(!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
