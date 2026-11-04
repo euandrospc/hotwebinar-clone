@@ -1,0 +1,34 @@
+import { beforeEach, afterEach, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { LoginClient } from "@/app/login/login-client";
+const mocks = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), login: vi.fn(), totp: vi.fn(), backup: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, refresh: mocks.refresh }) }));
+vi.mock("@/lib/auth-client", () => ({ signIn: { email: mocks.login }, authClient: { twoFactor: { verifyTotp: mocks.totp, verifyBackupCode: mocks.backup } } }));
+vi.mock("@/components/ui/animated-characters-login-page", () => ({ AnimatedCharactersLoginPage: ({ onSubmit }: { onSubmit: (email: string, password: string) => void }) => <button onClick={() => onSubmit("admin@example.test", "password")}>Entrar</button> }));
+beforeEach(() => { vi.resetAllMocks(); window.history.replaceState(null, "", "/login?from=%2Fatendimento%3FleadId%3D123"); mocks.login.mockResolvedValue({ data: { twoFactorRedirect: true } }); });
+afterEach(cleanup);
+it("waits for the second factor and preserves the shared conversation destination", async () => {
+  render(<LoginClient brandName="Bravy" />);
+  fireEvent.click(screen.getByText("Entrar"));
+  await screen.findByText("Verificação em duas etapas");
+  expect(mocks.push).not.toHaveBeenCalled();
+  mocks.totp.mockResolvedValueOnce({ error: { message: "invalid" } });
+  fireEvent.change(screen.getByLabelText("Código do autenticador"), { target: { value: "123456" } });
+  fireEvent.click(screen.getByText("Confirmar acesso"));
+  await screen.findByRole("alert");
+  expect(mocks.push).not.toHaveBeenCalled();
+  mocks.totp.mockResolvedValueOnce({ data: { token: "verified" } });
+  fireEvent.click(screen.getByText("Confirmar acesso"));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/atendimento?leadId=123"));
+});
+it("accepts recovery codes through the dedicated verification endpoint", async () => {
+  render(<LoginClient brandName="Bravy" />);
+  fireEvent.click(screen.getByText("Entrar"));
+  await screen.findByText("Verificação em duas etapas");
+  fireEvent.click(screen.getByText("Usar código de recuperação"));
+  fireEvent.change(screen.getByLabelText("Código de recuperação"), { target: { value: "backup-code" } });
+  mocks.backup.mockResolvedValueOnce({ data: {} });
+  fireEvent.click(screen.getByText("Confirmar acesso"));
+  await waitFor(() => expect(mocks.backup).toHaveBeenCalledWith({ code: "backup-code" }));
+  expect(mocks.totp).not.toHaveBeenCalled();
+});

@@ -1,14 +1,8 @@
 import { prisma } from "db";
-import { auth } from "@/lib/auth";
+import { createCredentialUser } from "@/lib/credential-user";
 
 export async function createAttendant(input: { name: string; email: string; password: string }): Promise<void> {
-  await auth.api.signUpEmail({
-    body: { email: input.email, password: input.password, name: input.name }
-  });
-  await prisma.user.update({
-    where: { email: input.email },
-    data: { role: "attendant", emailVerified: true }
-  });
+  await createCredentialUser({ ...input, role: "attendant" });
 }
 
 export async function listAttendants() {

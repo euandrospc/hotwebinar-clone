@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { Inbox } from "@/app/atendimento/_components/inbox";
 import type { RealtimeEvent } from "@/lib/realtime-protocol";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/atendimento" }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/atendimento", useSearchParams: () => new URLSearchParams() }));
 
 const channel = vi.hoisted(() => ({ onEvent: (_event: RealtimeEvent) => {}, onResync: () => {} }));
 vi.mock("@/lib/hooks/use-realtime-channel", () => ({

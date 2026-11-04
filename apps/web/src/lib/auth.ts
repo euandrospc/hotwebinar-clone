@@ -1,3 +1,4 @@
+import { twoFactor } from "better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "db";
@@ -22,18 +23,14 @@ if (secret.length < 32) {
 if (!baseURL) throw new Error("Missing env: BETTER_AUTH_URL");
 
 export const auth = betterAuth({
+  plugins: [twoFactor({ issuer: "Bravy Lives" })],
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   user: {
     additionalFields: {
       role: { type: "string", required: false, input: false }
     }
   },
-  // disableSignUp: this is an internal admin panel — accounts are provisioned via
-  // the seed script, not self-service. Without this the public POST
-  // /api/auth/sign-up/email lets anyone create an account (and, with the old
-  // role default of "admin", an admin one). The seed uses the server-side
-  // auth.api.signUpEmail admin call; if a fresh deploy needs the very first
-  // admin, run the seed with this temporarily false, then re-enable.
+  // Accounts are provisioned only through trusted server code, never public signup.
   emailAndPassword: { enabled: true, autoSignIn: true, disableSignUp: true },
   session: {
     expiresIn: 60 * 60 * 24 * 7,

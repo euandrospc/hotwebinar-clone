@@ -22,9 +22,9 @@ describe("auth instance", () => {
     expect(auth.api).toBeDefined();
   });
 
-  it("exposes Session type via $Infer", async () => {
+  it("keeps public signup disabled", async () => {
     const mod = await isolatedImport();
-    expect(mod.auth.$Infer).toBeDefined();
+    expect(mod.auth.options.emailAndPassword?.disableSignUp).toBe(true);
   });
 
   it("throws when BETTER_AUTH_SECRET is missing", async () => {

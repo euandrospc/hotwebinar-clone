@@ -27,19 +27,8 @@ export async function runSeed(): Promise<void> {
     return;
   }
 
-  // Lazy import so auth's module-level env validation runs only when seed
-  // actually executes (env vars are set by callers before runSeed()).
-  const { auth } = await import("../src/lib/auth.js");
-
-  await auth.api.signUpEmail({
-    body: { email, password, name }
-  });
-
-  // Better Auth doesn't expose role at signup; set it directly.
-  await prisma.user.update({
-    where: { email },
-    data: { role: "admin", emailVerified: true }
-  });
+  const { createCredentialUser } = await import("../src/lib/credential-user.js");
+  await createCredentialUser({ email, password, name, role: "admin" });
 
   console.log(`Seeded admin: ${email}`);
 }
