@@ -5,6 +5,9 @@ import type { RealtimeEvent } from "@/lib/realtime-protocol";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/atendimento", useSearchParams: () => new URLSearchParams() }));
 
+const screenshot = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/conversation-screenshot", () => ({ copyConversationScreenshot: screenshot }));
+
 const channel = vi.hoisted(() => ({ onEvent: (_event: RealtimeEvent) => {}, onResync: () => {} }));
 vi.mock("@/lib/hooks/use-realtime-channel", () => ({
   useRealtimeChannel: (_scope: unknown, onEvent: typeof channel.onEvent, onResync: typeof channel.onResync) => {
@@ -27,6 +30,7 @@ const composer = () => screen.getByPlaceholderText("Escreva uma resposta...");
 async function select(name: string) { await act(async () => { fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${name.slice(0, 1)} ${name} `) })); }); }
 
 beforeEach(() => {
+  screenshot.mockReset().mockResolvedValue(undefined);
   vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
     if (String(url).includes("conversations")) return response({ conversations, onlineTotal: 2 });
@@ -218,4 +222,21 @@ it("selects another employee and submits the transfer", async () => {
   fireEvent.click(dialog.getByRole("button", { name: "Confirmar transferência" }));
   await screen.findByText("Atendido por Maria");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+
+it("copies only the selected conversation and disables duplicate captures while busy", async () => {
+  let finish!: () => void;
+  screenshot.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  vi.mocked(fetch).mockImplementation(async (url) => String(url).includes("conversations")
+    ? response({ conversations, onlineTotal: 2 }) : response({ messages: [message("capture", "Mensagem para o print")] }));
+  await openInbox();
+  await screen.findByText("Mensagem para o print");
+  fireEvent.click(screen.getByRole("button", { name: "Copiar print" }));
+  expect(screenshot).toHaveBeenCalledTimes(1);
+  expect(screenshot.mock.calls[0][0].header.textContent).toContain("Ana");
+  expect(screenshot.mock.calls[0][0].messages.textContent).toContain("Mensagem para o print");
+  expect(screen.getByRole("button", { name: "Copiando print…" })).toBeDisabled();
+  await act(async () => finish());
+  expect(screen.getByRole("button", { name: "Copiar print" })).toBeEnabled();
 });

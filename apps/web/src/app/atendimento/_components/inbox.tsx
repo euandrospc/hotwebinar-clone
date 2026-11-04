@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { copyConversationScreenshot } from "@/lib/conversation-screenshot";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageText } from "@/components/chat/message-text";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
-import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone, Copy } from "@/components/icons";
+import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone, Copy, Image as ImageIcon } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
@@ -110,6 +111,9 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const inFlightSends = useRef(new Set<string>());
   const sendControllers = useRef(new Map<string, AbortController>());
   const confirmedRequests = useRef(new Set<string>());
+  const [copyingScreenshot, setCopyingScreenshot] = useState(false);
+  const screenshotBusy = useRef(false);
+  const conversationHeaderRef = useRef<HTMLDivElement>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
@@ -364,6 +368,23 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     }
   }
 
+  async function copyScreenshot() {
+    if (screenshotBusy.current || !conversationHeaderRef.current || !threadScrollRef.current) return;
+    screenshotBusy.current = true;
+    setCopyingScreenshot(true);
+    try {
+      await copyConversationScreenshot({ header: conversationHeaderRef.current, messages: threadScrollRef.current });
+      toast.success("Print copiado! Cole com Ctrl+V ou Cmd+V.");
+    } catch (error) {
+      toast.error(error instanceof DOMException && error.name === "NotAllowedError"
+        ? "O navegador bloqueou a cópia. Permita o acesso à área de transferência e tente novamente."
+        : error instanceof Error ? error.message : "Não foi possível copiar o print. Tente novamente.");
+    } finally {
+      screenshotBusy.current = false;
+      if (alive.current) setCopyingScreenshot(false);
+    }
+  }
+
   const webinars = useMemo(() => {
     const map = new Map<string, { id: string; title: string; phase: string }>();
     for (const c of conversations) {
@@ -592,10 +613,11 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
 
           {selectedConversation && (
             <>
-              <div className="flex flex-wrap items-center gap-3 border-b bg-card p-4">
+              <div ref={conversationHeaderRef} className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card p-4">
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(true)}
+                  data-screenshot-exclude
                   aria-label="Voltar às conversas"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
                 >
@@ -617,9 +639,14 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                     </a>
                   ) : null}
                 </div>
-                <button type="button" onClick={() => void copyConversationLink()} className="ml-auto inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">
+                <div data-screenshot-exclude className="ml-auto flex flex-wrap gap-2">
+                <button type="button" onClick={() => void copyScreenshot()} disabled={copyingScreenshot || !thread.length} aria-busy={copyingScreenshot} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50">
+                  <ImageIcon className="h-4 w-4" /> {copyingScreenshot ? "Copiando print…" : "Copiar print"}
+                </button>
+                <button type="button" onClick={() => void copyConversationLink()} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">
                   <Copy className="h-4 w-4" /> Copiar link
                 </button>
+                </div>
               </div>
 
               {conversationsLoaded && !filteredConversations.some(c => c.leadId === selectedLeadId) && (
