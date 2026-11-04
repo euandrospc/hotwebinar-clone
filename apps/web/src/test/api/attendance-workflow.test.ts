@@ -116,3 +116,50 @@ it("opens a shared conversation outside the date filter without changing the dai
   const missing = await GET(new Request("http://localhost/api/attendant/conversations?leadId=missing"));
   expect((await missing.json()).conversations).toHaveLength(0);
 });
+
+it("closes attendance, stops AI, blocks replies and reopens on a new customer message", async () => {
+  const { POST } = await import("@/app/api/attendant/control/route");
+  const original = await createChatMessage({ leadId, webinarId, sender: "lead", text: "Preciso de ajuda" });
+  expect((await POST(request({ leadId, action: "close" }))).status).toBe(200);
+  const closed = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+  expect(closed.attendanceClosedAt).not.toBeNull();
+  expect(closed.aiPaused).toBe(true);
+  expect(closed.aiPendingMessageId).toBeNull();
+  await expect(createChatMessage({ leadId, webinarId, sender: "team", text: "Bloqueada", authorUserId: "workflow-attendant" })).rejects.toThrow("attendance_closed");
+  expect(await prisma.leadChatMessage.count({ where: { leadId } })).toBe(1);
+  const { GET } = await import("@/app/api/attendant/conversations/route");
+  const data = await (await GET(new Request(`http://localhost/api/attendant/conversations?leadId=${leadId}`))).json();
+  expect(data.conversations[0]).toMatchObject({ pending: false, closedAt: expect.any(String) });
+  const report = await getAttendanceReport(owner, new Date("2000-01-01"), new Date("2100-01-01"));
+  expect(report).toMatchObject({ pending: 0, closed: 1, answered: 0 });
+  await createChatMessage({ leadId, webinarId, sender: "lead", text: "Tenho outra dúvida" });
+  expect((await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })).attendanceClosedAt).toBeNull();
+  expect(await prisma.leadChatMessage.findUnique({ where: { id: original.message.id } })).not.toBeNull();
+});
+
+it("transfers only to active employees and publishes the new responsible without changing messages", async () => {
+  const { POST } = await import("@/app/api/attendant/control/route");
+  const { publishConversationEvent } = await import("@/server/realtime/bus");
+  await createChatMessage({ leadId, webinarId, sender: "lead", text: "Ajuda" });
+  expect((await POST(request({ leadId, action: "transfer", attendantId: owner }))).status).toBe(200);
+  expect(await prisma.lead.findUnique({ where: { id: leadId } })).toMatchObject({ assignedAttendantId: owner, aiPaused: true, aiPendingMessageId: null });
+  expect(publishConversationEvent).toHaveBeenCalledWith(webinarId, leadId);
+  expect(await prisma.leadChatMessage.count({ where: { leadId } })).toBe(1);
+  const version = (await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })).chatVersion;
+  for (const role of ["disabled", "user"]) {
+    await prisma.user.update({ where: { id: owner }, data: { role } });
+    expect((await POST(request({ leadId, action: "transfer", attendantId: owner }))).status).toBe(400);
+  }
+  expect((await POST(request({ leadId, action: "transfer", attendantId: "missing" }))).status).toBe(400);
+  expect((await POST(request({ leadId, action: "transfer" }))).status).toBe(400);
+  expect((await prisma.lead.findUniqueOrThrow({ where: { id: leadId } })).chatVersion).toBe(version);
+});
+
+it("requires reopening a closed conversation before transferring and lets the attendant reopen it", async () => {
+  const { POST } = await import("@/app/api/attendant/control/route");
+  await POST(request({ leadId, action: "close" }));
+  expect((await POST(request({ leadId, action: "transfer", attendantId: owner }))).status).toBe(409);
+  expect((await POST(request({ leadId, action: "resume" }))).status).toBe(409);
+  expect((await POST(request({ leadId, action: "reopen" }))).status).toBe(200);
+  expect(await prisma.lead.findUnique({ where: { id: leadId } })).toMatchObject({ attendanceClosedAt: null, aiPaused: true, assignedAttendantId: "workflow-attendant" });
+});

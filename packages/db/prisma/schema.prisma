@@ -324,6 +324,7 @@ model Lead {
   utmContent        String?
   assignedAttendantId String?
   assignedAttendant User? @relation("ConversationAssignee", fields: [assignedAttendantId], references: [id], onDelete: SetNull)
+  attendanceClosedAt DateTime?
   aiPaused          Boolean @default(false)
   chatVersion       Int @default(0)
   aiPendingMessageId String?

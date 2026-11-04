@@ -185,3 +185,37 @@ describe("instant attendant inbox", () => {
     expect(screen.getByText("Conversa da Ana")).toBeInTheDocument();
   });
 });
+
+it("moves a closed conversation to Finalizados and offers reopening", async () => {
+  let closed = false;
+  vi.mocked(fetch).mockImplementation(async (url) => {
+    if (String(url).includes("/control")) { closed = true; return response({ ok: true }); }
+    if (String(url).includes("conversations")) return response({ conversations: conversations.map(c => c.leadId === "ana" && closed ? { ...c, closedAt: "2026-11-04T18:00:00Z", pending: false } : c), onlineTotal: 2 });
+    return response({ messages: [] });
+  });
+  await openInbox();
+  fireEvent.click(screen.getByRole("button", { name: "Encerrar atendimento" }));
+  await screen.findByRole("button", { name: "Reabrir e assumir" });
+  expect(screen.getByRole("tab", { name: "Finalizados 1" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.queryByPlaceholderText("Escreva uma resposta...")).not.toBeInTheDocument();
+});
+
+it("selects another employee and submits the transfer", async () => {
+  let transferred = false;
+  vi.mocked(fetch).mockImplementation(async (url, init) => {
+    if (String(url).includes("/control")) {
+      expect(JSON.parse(String(init?.body))).toEqual({ leadId: "ana", action: "transfer", attendantId: "other" });
+      transferred = true; return response({ ok: true });
+    }
+    if (String(url).includes("conversations")) return response({ conversations: conversations.map(c => c.leadId === "ana" && transferred ? { ...c, assignedAttendantId: "other", assignedAttendantName: "Maria", aiPaused: true } : c), onlineTotal: 2, attendants: [{ id: "other", name: "Maria" }] });
+    return response({ messages: [] });
+  });
+  await openInbox();
+  fireEvent.click(screen.getByRole("button", { name: "Transferir atendimento" }));
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.getByRole("button", { name: "Confirmar transferência" })).toBeDisabled();
+  fireEvent.change(dialog.getByLabelText("Novo responsável"), { target: { value: "other" } });
+  fireEvent.click(dialog.getByRole("button", { name: "Confirmar transferência" }));
+  await screen.findByText("Atendido por Maria");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});

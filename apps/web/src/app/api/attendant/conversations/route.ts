@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const leads = await prisma.lead.findMany({
     where: { ...(webinarId ? { webinarId } : {}), ...(leadId ? { id: leadId } : {}), leadChatMessages: { some: leadId ? {} : { createdAt: { gte: range.gte, lt: range.lt } } } },
     select: {
-      aiPaused: true, aiError: true, aiPendingMessageId: true, assignedAttendantId: true, assignedAttendant: { select: { name: true } },
+      aiPaused: true, attendanceClosedAt: true, aiError: true, aiPendingMessageId: true, assignedAttendantId: true, assignedAttendant: { select: { name: true } },
       id: true, name: true, phone: true, webinarId: true,
       webinar: { select: { chatAiEnabled: true, chatAiName: true, title: true, name: true, mode: true, startDate: true, endDate: true, recurring: true, recurringDays: true, timezone: true } },
       leadChatMessages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { text: true, sender: true, createdAt: true } }
@@ -44,6 +44,7 @@ export async function GET(request: Request) {
         aiEnabled: l.webinar.chatAiEnabled && !!process.env.OPENAI_API_KEY,
         aiName: l.webinar.chatAiName,
         aiPaused: l.aiPaused,
+        closedAt: l.attendanceClosedAt?.toISOString() ?? null,
         aiError: l.aiError,
         aiPending: !!l.aiPendingMessageId,
         assignedAttendantId: l.assignedAttendantId,
@@ -57,14 +58,14 @@ export async function GET(request: Request) {
         webinarStartDate: occ.startDate ? occ.startDate.toISOString() : null,
         lastText: last?.text ?? "",
         lastAt: last ? last.createdAt.toISOString() : null,
-        pending: last?.sender === "lead",
+        pending: !l.attendanceClosedAt && last?.sender === "lead",
         online: snap.leadIds.has(l.id)
       };
     })
     .sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
 
   const attendants = await prisma.user.findMany({
-    where: { OR: [{ role: { in: ["admin", "attendant"] } }, { teamChatMessages: { some: {} } }] },
+    where: { role: { in: ["admin", "attendant"] } },
     select: { id: true, name: true }, orderBy: { name: "asc" }
   });
   return NextResponse.json({ conversations, onlineTotal, attendants }, { headers: { "cache-control": "no-store" } });

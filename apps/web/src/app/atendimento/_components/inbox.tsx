@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MessageText } from "@/components/chat/message-text";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
@@ -14,6 +15,7 @@ import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
 import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
 
 interface Conversation {
+  closedAt: string | null;
   aiEnabled: boolean;
   aiPaused: boolean;
   aiName: string;
@@ -81,6 +83,8 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const [to, setTo] = useState(initialDate ?? attendanceToday());
   const [attendant, setAttendant] = useState("all");
   const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTarget, setTransferTarget] = useState("");
   const [controlBusy, setControlBusy] = useState(false);
   const [controlError, setControlError] = useState("");
   const rangeQuery = useRef("");
@@ -340,6 +344,8 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     threadController.current?.abort();
     setSelectedLeadId(leadId);
     setLinkError("");
+    setControlError("");
+    setTransferOpen(false);
     const url = new URL(window.location.href);
     url.searchParams.set("leadId", leadId);
     window.history.replaceState(null, "", url);
@@ -371,18 +377,31 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     if (attendant === "unassigned") return !c.assignedAttendantId;
     return attendant === "all" || c.assignedAttendantId === attendant;
   });
-  const filteredConversations = scopedConversations.filter(c => tab === "all" || (tab === "pending" ? c.pending : !c.pending));
+  function matchesTab(c: Conversation, value: string) {
+    if (value === "closed") return !!c.closedAt;
+    if (value === "all") return true;
+    return !c.closedAt && (value === "pending" ? c.pending : !c.pending);
+  }
+  const filteredConversations = scopedConversations.filter(c => matchesTab(c, tab));
 
-  async function changeControl(action: "takeover" | "resume") {
+  async function changeControl(action: "takeover" | "resume" | "close" | "reopen" | "transfer", targetId?: string) {
     const leadId = selectedRef.current;
     if (!leadId || controlBusy) return;
     setControlBusy(true); setControlError("");
     try {
       const response = await fetch("/api/attendant/control", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ leadId, action })
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ leadId, action, ...(targetId ? { attendantId: targetId } : {}) })
       });
       if (!response.ok) throw new Error();
       await fetchConversations();
+      await fetchLinkedConversation(leadId);
+      if (selectedRef.current === leadId) {
+        setTransferOpen(false);
+        if (action === "close") setTab("closed");
+        if (action === "reopen") setTab("all");
+      }
+      if (action === "transfer") toast.success("Atendimento transferido");
+      if (action === "close") toast.success("Atendimento encerrado");
     } catch { setControlError("Não foi possível alterar o atendimento. Tente novamente."); }
     finally { setControlBusy(false); }
   }
@@ -498,7 +517,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
               </select>
             </label>
             <div role="tablist" aria-label="Status dos atendimentos" className="flex rounded-lg bg-muted p-1">
-              {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"]].map(([value, label]) => <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={`flex-1 rounded-md px-1 py-2 text-xs ${tab === value ? "bg-background font-semibold shadow-sm" : "text-muted-foreground"}`}>{label} <span className="tabular-nums">{scopedConversations.filter(c => value === "all" || (value === "pending" ? c.pending : !c.pending)).length}</span></button>)}
+              {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"], ["closed", "Finalizados"]].map(([value, label]) => <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={`flex-1 rounded-md px-1 py-2 text-xs ${tab === value ? "bg-background font-semibold shadow-sm" : "text-muted-foreground"}`}>{label} <span className="tabular-nums">{scopedConversations.filter(c => matchesTab(c, value)).length}</span></button>)}
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -527,7 +546,8 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate font-medium">{c.leadName}</span>
-                      {c.pending && (
+                      {c.closedAt && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">finalizado</span>}
+                      {c.pending && !c.closedAt && (
                         <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
                           pendente
                         </span>
@@ -607,6 +627,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
               )}
               <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2 text-xs">
                 <div className="flex flex-wrap items-center gap-2">
+                  {selectedConversation.closedAt && <span className="rounded-full bg-muted px-2 py-1 font-medium">Finalizado</span>}
                   <span className="font-medium">{selectedConversation.assignedAttendantName
                     ? `Atendido por ${selectedConversation.assignedAttendantName}`
                     : selectedConversation.aiEnabled && !selectedConversation.aiPaused
@@ -615,9 +636,15 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                   {selectedConversation.aiEnabled && selectedConversation.aiPaused && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950 dark:text-amber-300">IA pausada</span>}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {selectedConversation.closedAt
+                    ? <button type="button" disabled={controlBusy} onClick={() => void changeControl("reopen")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Reabrir e assumir</button>
+                    : <>
+                      <button type="button" disabled={controlBusy} onClick={() => { setControlError(""); setTransferTarget(""); setTransferOpen(true); }} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Transferir atendimento</button>
+                      <button type="button" disabled={controlBusy} onClick={() => void changeControl("close")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Encerrar atendimento</button>
+                    </>}
                   {isAdmin && <a className="rounded-lg border bg-background px-3 py-2" href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}>Configurar agente</a>}
-                  {(!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
-                  {selectedConversation.aiEnabled && selectedConversation.aiPaused && <button type="button" disabled={controlBusy} onClick={() => void changeControl("resume")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Retomar IA</button>}
+                  {(!selectedConversation.closedAt && (!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId)) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
+                  {!selectedConversation.closedAt && selectedConversation.aiEnabled && selectedConversation.aiPaused && <button type="button" disabled={controlBusy} onClick={() => void changeControl("resume")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Retomar IA</button>}
                 </div>
                 {selectedConversation.aiError && <p className="w-full text-amber-700 dark:text-amber-400">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
                 {controlError && <p role="alert" className="w-full text-destructive">{controlError}</p>}
@@ -653,7 +680,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                   <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className="rounded-lg border px-3 py-1 text-xs font-medium disabled:opacity-50">Reenviar</button>
                 </div>)}
               </div>}
-              <form
+              {!selectedConversation.closedAt && <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend();
@@ -685,7 +712,20 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                 >
                   <Send className="h-4 w-4" />
                 </button>
-              </form>
+              </form>}
+              <Dialog open={transferOpen} onOpenChange={value => { if (!controlBusy) setTransferOpen(value); }}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader><DialogTitle>Transferir atendimento</DialogTitle><DialogDescription>Escolha quem dará continuidade à conversa com {selectedConversation.leadName}. A IA ficará pausada.</DialogDescription></DialogHeader>
+                  <label className="space-y-2 text-sm">Novo responsável
+                    <select aria-label="Novo responsável" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} disabled={controlBusy} className="mt-2 w-full rounded-lg border bg-background p-2">
+                      <option value="">Selecione um atendente</option>
+                      {attendants.filter(person => person.id !== selectedConversation.assignedAttendantId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+                    </select>
+                  </label>
+                  {controlError && <p role="alert" className="text-sm text-destructive">{controlError}</p>}
+                  <div className="flex justify-end gap-2"><button type="button" disabled={controlBusy} onClick={() => setTransferOpen(false)} className="rounded-lg border px-3 py-2 text-sm">Cancelar</button><button type="button" disabled={controlBusy || !transferTarget} onClick={() => void changeControl("transfer", transferTarget)} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">{controlBusy ? "Transferindo…" : "Confirmar transferência"}</button></div>
+                </DialogContent>
+              </Dialog>
             </>
           )}
         </section>

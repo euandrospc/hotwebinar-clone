@@ -28,6 +28,8 @@ export function serializeChatMessage(message: MessageRow): RealtimeChatMessage {
   };
 }
 
+export class AttendanceClosedError extends Error {}
+
 export class ChatIdempotencyConflict extends Error {
   constructor() {
     super("client_message_id_conflict");
@@ -71,15 +73,16 @@ export async function createChatMessage(input: CreateChatMessageInput) {
   try {
     row = await prisma.$transaction(async tx => {
       // Lock this conversation before changing control or appending a message.
-      await tx.lead.update({
+      const locked = await tx.lead.update({
         where: { id: input.leadId },
         data: { chatVersion: { increment: 1 } }
       });
+      if (locked.attendanceClosedAt && input.sender === "team") throw new AttendanceClosedError("attendance_closed");
       const created = await tx.leadChatMessage.create({ data: input, select: chatMessageSelect });
       await tx.lead.update({
         where: { id: input.leadId },
         data: input.sender === "lead"
-          ? { aiPendingMessageId: created.id, aiAttempts: 0, aiError: null, aiNextAttemptAt: null, aiLeaseToken: null, aiLeaseUntil: null }
+          ? { attendanceClosedAt: null, aiPendingMessageId: created.id, aiAttempts: 0, aiError: null, aiNextAttemptAt: null, aiLeaseToken: null, aiLeaseUntil: null }
           : { aiPaused: true, assignedAttendantId: input.authorUserId, aiPendingMessageId: null, aiLeaseToken: null, aiLeaseUntil: null, aiError: null }
       });
       return created;

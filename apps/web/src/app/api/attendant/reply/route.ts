@@ -4,7 +4,7 @@ import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
 import { attendantReplyLimiter } from "@/lib/rate-limit";
 import { tagKirvanoLinks } from "@/lib/kirvano-link";
-import { ChatIdempotencyConflict, createChatMessage } from "@/server/chat-message";
+import { AttendanceClosedError, ChatIdempotencyConflict, createChatMessage } from "@/server/chat-message";
 
 const schema = z.object({
   leadId: z.string().min(1),
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(message, { status: created ? 201 : 200 });
   } catch (error) {
+    if (error instanceof AttendanceClosedError) return NextResponse.json({ error: "attendance_closed" }, { status: 409 });
     if (error instanceof ChatIdempotencyConflict) {
       return NextResponse.json({ error: "client_message_id_conflict" }, { status: 409 });
     }

@@ -9,7 +9,7 @@ export async function getAttendanceReport(ownerId: string, start: Date, end: Dat
   const leadIds = [...new Set(messages.map(message => message.leadId))];
   const leads = leadIds.length ? await prisma.lead.findMany({
     where: { id: { in: leadIds } },
-    select: { leadChatMessages: { take: 1, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { sender: true } } }
+    select: { attendanceClosedAt: true, leadChatMessages: { take: 1, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { sender: true } } }
   }) : [];
   const ranking = new Map<string, { name: string; replies: number; leads: Set<string> }>();
   let human = 0;
@@ -33,10 +33,11 @@ export async function getAttendanceReport(ownerId: string, start: Date, end: Dat
     }
   }
   const total = leadIds.length;
-  const pending = leads.filter(lead => lead.leadChatMessages[0]?.sender === "lead").length;
+  const pending = leads.filter(lead => !lead.attendanceClosedAt && lead.leadChatMessages[0]?.sender === "lead").length;
+  const closed = leads.filter(lead => lead.attendanceClosedAt).length;
   const durations = [...firstReplies.values()];
   return {
-    total, pending, answered: total - pending, humanReplies: human, aiReplies: ai,
+    total, pending, closed, answered: total - pending - closed, humanReplies: human, aiReplies: ai,
     averageFirstReplySeconds: durations.length ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length / 1000) : null,
     ranking: [...ranking].map(([id, row]) => ({ id, name: row.name, replies: row.replies, conversations: row.leads.size })).sort((a, b) => b.conversations - a.conversations || b.replies - a.replies)
   };
