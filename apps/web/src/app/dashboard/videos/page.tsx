@@ -4,6 +4,9 @@ import { UploadButton } from "@/components/videos/upload-button";
 import { VideosTable, type VideoRow } from "@/components/videos/videos-table";
 import { ClientPolling } from "@/components/videos/client-polling";
 
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
+import styles from "@/components/management-v2.module.css";
+
 export default async function VideosPage() {
   const videos = await listVideos();
   const rows: VideoRow[] = videos.map((v) => ({
@@ -23,18 +26,16 @@ export default async function VideosPage() {
   const transientCount = rows.filter((r) => r.status === "QUEUED" || r.status === "PROCESSING").length;
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Vídeos</h1>
-        <UploadButton />
-      </div>
-      <div className="mt-6">
-        <UsageBar usedBytes={usedBytes} />
-      </div>
-      <div className="mt-6">
+    <AdminPage>
+      <AdminPageHeader title="Vídeos" description="Sua biblioteca para os webinars." actions={<UploadButton />} />
+      <section className={styles.surface} aria-label="Biblioteca de vídeos">
+        <div className={styles.sectionHeader}>
+          <div className="flex items-center gap-2"><h2 className={styles.sectionTitle}>Biblioteca</h2><span className={styles.count}>{rows.length}</span>{transientCount > 0 && <span className={styles.meta}>{transientCount} em processamento</span>}</div>
+          <UsageBar usedBytes={usedBytes} />
+        </div>
         <VideosTable rows={rows} />
-      </div>
+      </section>
       <ClientPolling enabled={transientCount > 0} />
-    </div>
+    </AdminPage>
   );
 }

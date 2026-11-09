@@ -20,12 +20,24 @@ async function renderConversation({ header, messages }: ConversationCapture): Pr
     font: computed.font,
     overflow: "visible"
   });
+  // The snapshot lives under <body>, outside the workspace that provides its
+  // theme tokens. Copy resolved custom properties before detaching the content.
+  for (let index = 0; index < computed.length; index += 1) {
+    const property = computed.item(index);
+    if (property.startsWith("--")) root.style.setProperty(property, computed.getPropertyValue(property));
+  }
   const heading = header.cloneNode(true) as HTMLElement;
   heading.querySelectorAll("[data-screenshot-exclude]").forEach(node => node.remove());
   const history = messages.cloneNode(true) as HTMLElement;
   Object.assign(history.style, { height: "auto", minHeight: "0", maxHeight: "none", flex: "none", overflow: "visible" });
   root.append(heading, history);
   root.querySelectorAll("[id]").forEach(node => node.removeAttribute("id"));
+  // Cloning restarts CSS entrance animations. Disable them before mounting so
+  // rendering cannot capture a first frame with transparent or shifted text.
+  for (const node of [root, ...root.querySelectorAll<HTMLElement>("*")]) {
+    node.style.setProperty("animation", "none", "important");
+    node.style.setProperty("transition", "none", "important");
+  }
   host.append(root);
   document.body.append(host);
   try {

@@ -1,3 +1,5 @@
+import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
+import styles from "@/components/webinars/webinars.module.css";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -62,24 +64,20 @@ export default async function WebinarsPage({
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold">Webinars</h1>
-        <NewWebinarButton />
-      </div>
-      <div className="mt-6">
+    <AdminPage>
+      <AdminPageHeader title="Webinars" description="Organize suas transmissões e acompanhe cada experiência."
+        actions={<NewWebinarButton label="Criar webinar" />} />
+      <AdminSurface padded={false} className={styles.tableSurface}>
         <WebinarsFilters />
-      </div>
-      <div className="mt-6">
         <WebinarsTable rows={rows} publicBaseUrl={publicBaseUrl} />
-      </div>
-      <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
+      <div className={styles.pagination}>
         <span>Total: {total} · Página {page} de {lastPage}</span>
         <div className="flex gap-2">
-          {page > 1 && <Link href={buildHref(page - 1)} className="rounded-md border px-3 py-1">Anterior</Link>}
-          {page < lastPage && <Link href={buildHref(page + 1)} className="rounded-md border px-3 py-1">Próximo</Link>}
+          {page > 1 && <Link href={buildHref(page - 1)} >Anterior</Link>}
+          {page < lastPage && <Link href={buildHref(page + 1)} >Próximo</Link>}
         </div>
       </div>
-    </div>
+      </AdminSurface>
+    </AdminPage>
   );
 }

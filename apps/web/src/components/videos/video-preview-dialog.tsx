@@ -1,8 +1,9 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 
 interface Props {
@@ -54,9 +55,10 @@ export function VideoPreviewDialog({ open, onOpenChange, name, hlsUrl }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className={`${styles.dialog} max-w-3xl`}>
         <DialogHeader>
           <DialogTitle className="truncate">{name}</DialogTitle>
+          <DialogDescription className="sr-only">Prévia do vídeo selecionado na biblioteca.</DialogDescription>
         </DialogHeader>
         {hlsUrl ? (
           <>
@@ -65,7 +67,7 @@ export function VideoPreviewDialog({ open, onOpenChange, name, hlsUrl }: Props) 
               controls
               autoPlay
               playsInline
-              className="aspect-video w-full rounded bg-black"
+              className="aspect-video w-full rounded-xl bg-black"
             />
             {error && (
               <p className="text-xs text-destructive">Erro: {error}</p>

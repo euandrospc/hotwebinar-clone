@@ -1,13 +1,15 @@
 import { resolveScheduledSales } from "@/lib/scheduled-sales";
 import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { publicWebinarDto, publicVideoDto, publicLeadWithUtmsDto } from "@/lib/public-dto";
 import { computePhase, computeInitialOffset, withOccurrence } from "@/lib/sync";
 import { maybeFireEnterWebhook } from "@/lib/webhook";
 import { isReservedSlug } from "@/lib/slug-blacklist";
+import { getClientIp, hasValidGeo } from "@/lib/geoip";
+import { queueLeadGeo } from "@/server/geoip-queue";
 import { CountdownView } from "../_components/countdown-view";
 import { ClosedView } from "../_components/closed-view";
 import { PlayerShell } from "../_components/player-shell";
@@ -41,6 +43,8 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   if (!leadId) redirect(`/${slug}`);
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
   if (!lead || lead.webinarId !== w.id) redirect(`/${slug}`);
+
+  if (!hasValidGeo(lead)) await queueLeadGeo(lead, getClientIp(await headers()));
 
   const phase = computePhase(
     { mode: w.mode, startDate: w.startDate, endDate: w.endDate },

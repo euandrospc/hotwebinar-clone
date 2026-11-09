@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowRight } from "@/components/icons";
+import { ArrowUpRight } from "@/components/icons";
 import type { RegionBreakdown } from "@/lib/dashboard-stats";
 
 const fmt = new Intl.NumberFormat("pt-BR");
@@ -14,50 +14,50 @@ export function DashboardRegionCard({
   const max = Math.max(1, ...data.rows.map((r) => r.count));
 
   return (
-    <section className="rounded-lg border bg-card p-5">
-      <header className="flex items-center gap-2">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <MapPin className="h-3.5 w-3.5" />
-        </span>
-        <h3 className="text-sm font-semibold">Leads por Região</h3>
+    <section className="flex h-full min-w-0 flex-col rounded-2xl border border-border/70 bg-card p-6 shadow-none" aria-label="Leads por região">
+      <header className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Principais regiões</h2>
+        {firstWebinarId && (
+          <Link
+            href={`/dashboard/webinars/${firstWebinarId}/leads-map`}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5141]"
+            aria-label="Abrir mapa por webinar"
+            title="Abrir mapa por webinar"
+          >
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        )}
       </header>
 
       {data.rows.length === 0 ? (
-        <div className="mt-4 flex h-40 flex-col items-center justify-center gap-1 rounded-md bg-muted/30 text-center">
+        <div className="mt-5 flex min-h-40 flex-1 flex-col items-center justify-center gap-2 rounded-xl bg-muted/30 px-4 text-center">
           <p className="text-sm text-muted-foreground">Sem dados de localização ainda.</p>
           <p className="text-xs text-muted-foreground">
             As regiões aparecem conforme os leads acessam.
           </p>
         </div>
       ) : (
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-6 space-y-4">
           {data.rows.map((r) => (
-            <li key={r.label}>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="truncate font-medium">{r.label}</span>
-                <span className="tabular-nums text-muted-foreground">
-                  {fmt.format(r.count)} · {r.pct.toFixed(1).replace(".", ",")}%
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <li key={r.label} className="grid grid-cols-[minmax(0,1fr)_minmax(48px,0.8fr)_auto] items-center gap-3 text-xs">
+              <span className="truncate text-muted-foreground" title={r.label}>{r.label}</span>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted/70" aria-hidden="true">
                 <div
-                  className="h-full rounded-full bg-destructive"
+                  className="h-full rounded-full bg-[#a8dd70]"
                   style={{ width: `${(r.count / max) * 100}%` }}
                 />
               </div>
+              <span className="whitespace-nowrap text-right tabular-nums">
+                {fmt.format(r.count)} <span className="text-muted-foreground">· {r.pct.toFixed(1).replace(".", ",")}%</span>
+              </span>
             </li>
           ))}
         </ul>
       )}
 
-      {firstWebinarId ? (
-        <Link
-          href={`/dashboard/webinars/${firstWebinarId}/leads-map`}
-          className="mt-4 inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
-        >
-          Abrir mapa por webinar <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
-      ) : null}
+      <p className="mt-auto pt-5 text-xs leading-relaxed text-muted-foreground">
+        Percentuais entre os {fmt.format(data.located)} leads com localização no período.
+      </p>
     </section>
   );
 }

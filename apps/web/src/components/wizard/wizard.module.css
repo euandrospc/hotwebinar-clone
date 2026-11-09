@@ -1,0 +1,58 @@
+.shell { min-width: 0; }
+.steps { position: sticky; top: 12px; z-index: 20; overflow-x: auto; padding: 5px; margin-bottom: 0; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card) / .96); box-shadow: 0 3px 12px -8px rgb(19 48 28 / 20%); backdrop-filter: blur(16px); scrollbar-width: thin; }
+.stepList { display: flex; gap: 4px; min-width: max-content; }
+.step { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 7px 11px; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); transition: background-color 160ms, border-color 160ms, color 160ms; white-space: nowrap; }
+.step svg { width: 14px; height: 14px; }
+.stepNumber { font-size: 9px; opacity: .65; font-variant-numeric: tabular-nums; }
+.step:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+.step[aria-current="step"] { background: #eef5e8; border-color: #dfebd5; color: #064b3c; }
+:global(.dark) .step[aria-current="step"] { background: #1b3527; border-color: #304937; color: #c5e99d; }
+.content { min-width: 0; }
+.title { margin: 0 0 4px; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: -.025em; color: hsl(var(--foreground)); }
+.description { margin: 0 0 20px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.6; }
+.singleForm, .formPanel, .previewPanel { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); padding: 18px; box-shadow: 0 3px 10px -6px rgb(27 56 34 / 9%); }
+.singleForm { width: 100%; max-width: 800px; }
+.singleForm > * + *, .formPanel > * + * { margin-top: 16px; }
+.formColumns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.form { min-width: 0; }
+.form > * + * { margin-top: 16px; }
+.formPanel { align-self: start; }
+.formSection { padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .25); }
+.previewPanel { align-self: start; }
+.previewTitle { margin-bottom: 12px; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.navFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 16px; margin-top: 22px !important; border-top: 1px solid hsl(var(--border) / .65); }
+.navFooter button, .navFooter a { min-height: 34px; height: auto; font-size: 12px; border-radius: 8px; }
+.toggle { padding: 13px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .2); }
+.toggleHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.toggleHeading h3 { font-size: 12px; font-weight: 500; }
+.toggleHeading p { margin-top: 4px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; }
+.toggleInfo { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.6; }
+.toggleInfo svg { flex-shrink: 0; width: 12px; height: 12px; margin-top: 3px; }
+.singleForm :global(label), .formPanel :global(label) { font-size: 12px; }
+.singleForm :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])), .formPanel :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])) { min-height: 34px; height: 34px; border-radius: 8px; font-size: 12px; }
+.singleForm :global([role="combobox"]), .formPanel :global([role="combobox"]) { min-height: 34px; border-radius: 8px; font-size: 12px; }
+.singleForm :global([role="tablist"]), .formPanel :global([role="tablist"]) { display: flex; flex-wrap: wrap; max-width: 100%; height: auto; min-height: 36px; gap: 3px; padding: 3px; border-radius: 9px; }
+.singleForm :global([role="tab"]), .formPanel :global([role="tab"]) { padding: 6px 12px; border-radius: 7px; font-size: 12px; }
+.singleForm :global(fieldset), .formPanel :global(fieldset) { border-radius: 10px; }
+.singleForm :global(legend), .formPanel :global(legend) { font-size: 12px; }
+.sectionAccordion { overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .15); }
+.sectionAccordion :global(button[data-state]) { padding: 12px 14px; font-size: 12px; }
+.previewToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.previewToolbar > * { flex: 1; }
+.previewButton { height: 32px; border-radius: 8px; font-size: 11px; }
+.previewList { max-height: 440px; overflow-y: auto; border: 1px solid hsl(var(--border)); border-radius: 9px; scrollbar-width: thin; }
+.previewList > * + * { border-top: 1px solid hsl(var(--border) / .7); }
+.salesEntry { min-width: 0; flex: 1; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 9px 30px 9px 10px; background: hsl(var(--muted) / .25); color: hsl(var(--foreground)); font-size: 12px; }
+.salesEntry textarea { color: inherit; font-size: 12px; }
+.salesRemove { position: absolute; top: 6px; right: 5px; display: flex; align-items: center; justify-content: center; width: 23px; height: 23px; border-radius: 6px; color: hsl(var(--muted-foreground)); }
+.salesRemove:hover { background: hsl(var(--destructive) / .08); color: hsl(var(--destructive)); }
+@media (min-width: 1280px) { .formColumns { grid-template-columns: minmax(0, 1fr) minmax(320px, 38%); } .previewPanel { position: sticky; top: 76px; } }
+@media (max-width: 639px) { .singleForm, .formPanel, .previewPanel { padding: 14px; } .steps { top: 6px; } .step { padding-inline: 9px; } .singleForm :global(input), .formPanel :global(input) { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { .shell *, .step { transition: none !important; animation: none !important; } }
+
+.fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dateTimeField { min-width: 0; }
+.dateTimeField > div { align-items: center; min-width: 0; }
+.dateTimeField :global(button[aria-haspopup="dialog"]) { flex: 1; min-width: 0; width: auto; height: 34px; border-radius: 8px; padding-inline: 12px; font-size: 12px; }
+.dateTimeField :global(input[type="time"]) { flex-shrink: 0; width: 96px; }
+@media (max-width: 639px) { .fieldGrid { grid-template-columns: minmax(0, 1fr); } }

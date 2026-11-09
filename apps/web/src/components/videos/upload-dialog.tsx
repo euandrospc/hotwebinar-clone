@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -16,16 +17,16 @@ export function UploadDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const router = useRouter();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className={styles.dialog}>
         <AlertDialogHeader>
           <AlertDialogTitle>Enviar novo vídeo</AlertDialogTitle>
           <AlertDialogDescription>
-            O upload vai direto para o storage e o transcode HLS roda em background.
+            Envie seu arquivo. O vídeo fica disponível na biblioteca assim que o processamento terminar.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <UploadDropzone onReady={() => { router.refresh(); }} />
         <AlertDialogFooter>
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
+          <AlertDialogCancel className={styles.secondaryButton}>Fechar</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

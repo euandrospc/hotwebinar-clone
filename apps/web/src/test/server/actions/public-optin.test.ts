@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import { prisma } from "db";
 
 const cookieStore = new Map<string, { value: string; options?: any }>();
@@ -6,17 +6,15 @@ const setCookieMock = vi.fn((name: string, value: string, options?: any) => {
   cookieStore.set(name, { value, options });
 });
 const getCookieMock = vi.fn((name: string) => cookieStore.get(name));
+let requestHeaders = new Headers();
+const fetchMock = vi.fn().mockRejectedValue(new Error("Unexpected external request during opt-in"));
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
     get: getCookieMock,
     set: setCookieMock
   }),
-  headers: async () =>
-    new Headers({
-      "x-forwarded-for": "1.2.3.4",
-      "user-agent": "TestAgent/1.0"
-    })
+  headers: async () => requestHeaders
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -32,11 +30,6 @@ const redirectMock = vi.fn((url: string) => {
 });
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 
-const enrichLeadGeoMock = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock("@/lib/geoip", () => ({
-  enrichLeadGeo: (...args: unknown[]) => enrichLeadGeoMock(...args)
-}));
-
 const TEST_USER = { id: "po-user", email: "po@example.com", name: "PO" };
 
 beforeEach(async () => {
@@ -45,7 +38,11 @@ beforeEach(async () => {
   setCookieMock.mockClear();
   redirectMock.mockClear();
   enqueueWebhookMock.mockClear();
-  enrichLeadGeoMock.mockClear();
+  requestHeaders = new Headers({ "x-forwarded-for": "1.2.3.4", "user-agent": "TestAgent/1.0" });
+  fetchMock.mockClear();
+  vi.stubGlobal("fetch", fetchMock);
+  await prisma.geoIpLookup.deleteMany({});
+  await prisma.geoIpProviderState.deleteMany({});
   await prisma.webhookDelivery.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
@@ -54,6 +51,11 @@ beforeEach(async () => {
   await prisma.account.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.user.create({ data: TEST_USER });
+});
+
+afterEach(() => {
+  expect(fetchMock).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });
 
 afterAll(async () => prisma.$disconnect());
@@ -117,6 +119,8 @@ describe("submitOptin", () => {
     expect(after?.name).toBe("New Name");
     expect(after?.lastSeenAt.getTime()).toBeGreaterThan(orig.lastSeenAt.getTime());
     expect(await prisma.lead.count()).toBe(1);
+    expect(await prisma.geoIpLookup.findUnique({ where: { ip: "1.2.3.4" } }))
+      .toMatchObject({ status: "PENDING", attempts: 0 });
   });
 
   it("persists UTM fields from FormData on the Lead row", async () => {
@@ -136,14 +140,36 @@ describe("submitOptin", () => {
     expect(lead?.utmContent).toBeNull();
   });
 
-  it("invokes enrichLeadGeo with lead.id + ip after persisting", async () => {
+  it("persists a normalized lookup job and redirects without contacting the provider", async () => {
+    requestHeaders = new Headers({ "x-forwarded-for": "::ffff:8.8.8.8, 10.0.0.2" });
     await makeWebinar({ slug: "demo-geo" });
     const { submitOptin } = await import("@/server/actions/public?" + (Date.now() + 9));
     const fd = new FormData();
     fd.set("name", "G"); fd.set("email", "g@e.com"); fd.set("phone", "+5511999990000");
     await expect(submitOptin("demo-geo", fd)).rejects.toThrow(/__redirect/);
     const lead = await prisma.lead.findFirst({ where: { email: "g@e.com" } });
-    expect(enrichLeadGeoMock).toHaveBeenCalledWith(lead!.id, "1.2.3.4");
+    expect(lead).toMatchObject({ ip: "8.8.8.8", lat: null, lng: null });
+    expect(await prisma.geoIpLookup.findUnique({ where: { ip: "8.8.8.8" } }))
+      .toMatchObject({ status: "PENDING", attempts: 0, lastError: null });
+    expect(await prisma.geoIpLookup.count()).toBe(1);
+  });
+
+  it("preserves a returning lead's valid location without queuing another lookup", async () => {
+    const w = await makeWebinar({ slug: "demo-geo-located" });
+    const original = await prisma.lead.create({
+      data: {
+        webinarId: w.id, name: "Located", email: "located@e.com", ip: "8.8.8.8",
+        lat: -23.5, lng: -46.6, city: "São Paulo", region: "SP", country: "BR"
+      }
+    });
+    const { submitOptin } = await import("@/server/actions/public");
+    const fd = new FormData();
+    fd.set("name", "Located"); fd.set("email", "located@e.com"); fd.set("phone", "+5511999990000");
+    await expect(submitOptin("demo-geo-located", fd)).rejects.toThrow(/__redirect/);
+    expect(await prisma.lead.findUnique({ where: { id: original.id } })).toMatchObject({
+      lat: -23.5, lng: -46.6, city: "São Paulo", region: "SP", country: "BR"
+    });
+    expect(await prisma.geoIpLookup.count()).toBe(0);
   });
 
   it("returns error when slug not found", async () => {

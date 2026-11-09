@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export interface WizardSectionAccordionProps {
@@ -13,7 +14,7 @@ export function WizardSectionAccordion({ ai, fileTitle, fileSection, individualT
   return (
     <div className="space-y-3">
       {ai}
-      <Accordion type="single" collapsible className="rounded-lg border bg-card">
+      <Accordion type="single" collapsible className={styles.sectionAccordion}>
         <AccordionItem value="file">
           <AccordionTrigger className="px-4">{fileTitle}</AccordionTrigger>
           <AccordionContent className="px-4">{fileSection}</AccordionContent>

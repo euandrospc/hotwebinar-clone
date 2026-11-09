@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useRef, useState, useTransition } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -73,9 +74,9 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">Chat scriptado</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
+      <div className={styles.formPanel}>
+        <h2 className={styles.title}>Chat scriptado</h2>
 
         <div className="space-y-2">
           <Label htmlFor="teamChatName">Nome exibido nas respostas do time</Label>

@@ -6,6 +6,8 @@ import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { listAttendantsAction } from "@/server/actions/attendants";
 import { AttendantsManager } from "./_components/attendants-manager";
 
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
+
 export const dynamic = "force-dynamic";
 
 export default async function AtendentesPage() {
@@ -16,10 +18,9 @@ export default async function AtendentesPage() {
   const attendants = await listAttendantsAction();
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-semibold">Atendentes</h1>
-      <p className="mt-2 text-muted-foreground">Crie e gerencie contas de atendentes do chat.</p>
-      <div className="mt-8">
+    <AdminPage>
+      <AdminPageHeader title="Atendentes" description="Gerencie sua equipe e os acessos ao atendimento." />
+      <div>
         <AttendantsManager
           initial={attendants.map((a) => ({
             id: a.id,
@@ -30,6 +31,6 @@ export default async function AtendentesPage() {
           }))}
         />
       </div>
-    </div>
+    </AdminPage>
   );
 }

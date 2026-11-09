@@ -5,15 +5,20 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { copyConversationScreenshot } from "@/lib/conversation-screenshot";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MessageText } from "@/components/chat/message-text";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
-import { Send, Menu, LogOut, ArrowLeft, Clock, MessageSquare, ChevronDown, Phone, Copy, Image as ImageIcon } from "@/components/icons";
+import { Send, ArrowLeft, ArrowRight, Clock, MessageSquare, ChevronDown, Phone, Copy, CheckCircle2, Sparkles, UserCheck, Users, Filter, MoreHorizontal, Image as ImageIcon } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
 import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
 import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
+
+import { ConversationMessages } from "./conversation-messages";
+import { WorkspaceHeader } from "./workspace-header";
+import styles from "./inbox.module.css";
 
 interface Conversation {
   closedAt: string | null;
@@ -430,331 +435,165 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? (linkedConversation?.leadId === selectedLeadId ? linkedConversation : null);
 
   return (
-    <div className="flex h-screen [height:100dvh] flex-col bg-background">
-      <header className="flex items-center justify-between gap-2 border-b bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen((v) => !v)}
-            aria-label="Abrir conversas"
-            aria-expanded={drawerOpen}
-            aria-controls="attendant-conversations"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MessageSquare className="h-4 w-4" />
-            </span>
-            <div className="leading-tight">
-              <h1 className="text-base font-semibold sm:text-lg">Atendimento</h1>
-              <span aria-label="Conexão do atendimento" className="mr-2 text-[10px] text-muted-foreground">
-                {status === "connected" ? "Conectado" : status === "fallback" ? "Atualização periódica" : "Reconectando…"}
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
-                </span>
-                {onlineTotal} online agora
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {isAdmin && <a href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">Dashboard</a>}
-          <span className="hidden text-sm text-muted-foreground sm:inline">Olá, {attendantName}</span>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Sair</span>
-          </button>
-        </div>
-      </header>
+    <div className={styles.workspace}>
+      <WorkspaceHeader attendantName={attendantName} isAdmin={isAdmin} status={status} onlineTotal={onlineTotal}
+        drawerOpen={drawerOpen} onToggleConversations={() => setDrawerOpen(value => !value)}
+        onLogout={handleLogout} loggingOut={loggingOut} />
 
-      <div className="relative flex-1 overflow-hidden lg:grid lg:grid-cols-[380px_1fr]">
-        <button
-          type="button"
-          aria-label="Fechar conversas"
-          aria-hidden={!drawerOpen}
-          tabIndex={-1}
-          data-ui-motion="drawer-overlay"
-          data-state={drawerOpen ? "open" : "closed"}
-          onClick={() => setDrawerOpen(false)}
-          className="absolute inset-0 z-20 bg-black/40 lg:hidden"
-        />
-
-        <aside
-          id="attendant-conversations"
-          data-ui-motion="drawer"
-          data-state={drawerOpen ? "open" : "closed"}
-          className={`absolute inset-y-0 left-0 z-30 flex min-h-0 w-[88%] max-w-[380px] flex-col border-r bg-card lg:static lg:z-0 lg:w-auto lg:max-w-none lg:translate-x-0 ${
-            drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          }`}
-        >
-          <div className="space-y-3 border-b p-4">
-            <DashboardRangePicker initialFrom={from} initialTo={to}
-              initialFromTime={fromTime} initialToTime={toTime}
-              timeZone={ATTENDANCE_TIMEZONE}
-              className="w-full justify-start"
-              onApply={selection => {
-                setFrom(selection.from);
-                setTo(selection.to);
-                setFromTime(selection.fromTime);
-                setToTime(selection.toTime);
-              }}
-            />
-            <p className="text-[11px] text-muted-foreground">Horário de Brasília</p>
-            <label className="text-xs font-medium text-muted-foreground">Responder o webinário</label>
-            <div className="relative">
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full appearance-none rounded-lg border bg-background px-3 py-2 pr-9 text-base outline-none focus:ring-1 focus:ring-ring sm:text-sm"
-              >
+      <div className={styles.layout}>
+        <button type="button" aria-label="Fechar conversas" aria-hidden={!drawerOpen} tabIndex={-1}
+          data-ui-motion="drawer-overlay" data-state={drawerOpen ? "open" : "closed"}
+          onClick={() => setDrawerOpen(false)} className="absolute inset-0 z-20 rounded-2xl bg-black/25 backdrop-blur-[2px] lg:hidden" />
+        <aside id="attendant-conversations" aria-label="Conversas" data-ui-motion="drawer" data-state={drawerOpen ? "open" : "closed"}
+          className={`${styles.panel} ${styles.list} ${drawerOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0"}`}>
+          <div className={styles.listHeading}>
+            <h2>Conversas</h2>
+            <div className="ml-auto flex items-center gap-1">
+              <Popover>
+                <PopoverTrigger asChild><button type="button" aria-label="Filtros das conversas" title="Filtros das conversas" className={`${styles.button} ${styles.quietButton}`}><Filter />{(filter !== "all" || attendant !== "all") && <span className={styles.filterDot} />}</button></PopoverTrigger>
+                <PopoverContent aria-label="Filtrar conversas" align="start" sideOffset={8} className={`${styles.floatingSurface} ${styles.filterPopover}`}>
+                  <h3 className="text-xs font-semibold">Filtrar conversas</h3>
+            <p className={styles.timezone}>Horário de Brasília</p>
+            <div className={styles.selectWrap}>
+              <label className={styles.filterLabel}>Webinar</label>
+              <select aria-label="Filtrar por webinar" value={filter} onChange={e => setFilter(e.target.value)} className={styles.select}>
                 <option value="all">Todos os webinars</option>
-                {webinars.length > 0 && <option disabled>──────────</option>}
-                {webinars.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.phase === "before" ? "[Em breve] " : w.phase === "open" ? "[Ao vivo] " : ""}
-                    {w.title}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                {webinars.map(w => <option key={w.id} value={w.id}>{w.phase === "before" ? "[Em breve] " : w.phase === "open" ? "[Ao vivo] " : ""}{w.title}</option>)}
+              </select><ChevronDown aria-hidden="true" />
             </div>
-          </div>
-
-          <div className="space-y-3 border-b px-4 pb-3">
-            <label className="block text-xs text-muted-foreground">Atendente
-              <select aria-label="Filtrar por atendente" value={attendant} onChange={e => setAttendant(e.target.value)} className="mt-1 w-full rounded-lg border bg-background p-2 text-sm">
+            <div className={styles.selectWrap}>
+              <label className={styles.filterLabel}>Responsável</label>
+              <select aria-label="Filtrar por atendente" value={attendant} onChange={e => setAttendant(e.target.value)} className={styles.select}>
                 <option value="all">Todos os atendentes</option><option value="unassigned">Sem responsável</option>
                 {attendants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-              </select>
-            </label>
-            <div role="tablist" aria-label="Status dos atendimentos" className="flex rounded-lg bg-muted p-1">
-              {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"], ["closed", "Finalizados"]].map(([value, label]) => <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={`flex-1 rounded-md px-1 py-2 text-xs ${tab === value ? "bg-background font-semibold shadow-sm" : "text-muted-foreground"}`}>{label} <span className="tabular-nums">{scopedConversations.filter(c => matchesTab(c, value)).length}</span></button>)}
+              </select><ChevronDown aria-hidden="true" />
             </div>
+
+                  {(filter !== "all" || attendant !== "all") && <button type="button" onClick={() => { setFilter("all"); setAttendant("all"); }} className={styles.clearFilters}>Limpar filtros</button>}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <button type="button" aria-label="Voltar ao atendimento" onClick={() => setDrawerOpen(false)} className={`${styles.button} ${styles.mobileOnly}`}><ArrowLeft /></button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {conversationsLoaded && filteredConversations.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
-                <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">Nenhuma conversa neste filtro.</p>
-              </div>
-            )}
-            <div className="space-y-1">
-              {filteredConversations.map((c) => (
-                <button
-                  key={c.leadId}
-                  type="button"
-                  onClick={() => selectConversation(c.leadId)}
-                  className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors ${
-                    selectedLeadId === c.leadId ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"
-                  }`}
-                >
-                  <span className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/70">
-                    {initialOf(c.leadName)}
-                    {c.online && (
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-medium">{c.leadName}</span>
-                      {c.closedAt && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">finalizado</span>}
-                      {c.pending && !c.closedAt && (
-                        <span className="shrink-0 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-500">
-                          pendente
-                        </span>
-                      )}
-                    </div>
-                    {c.leadPhone ? (
-                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <Phone className="h-2.5 w-2.5" />
-                        {c.leadPhone}
-                      </span>
-                    ) : null}
-                    <span className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/70">
-                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-emerald-500"}`} />
-                      <span className="truncate">{c.webinarTitle}</span>
-                    </span>
-                    {c.webinarPhase === "before" ? (
-                      <span className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-500">
-                        <Clock className="h-3 w-3" />
-                        começa em {formatCountdown(c.webinarStartDate, nowMs)}
-                      </span>
-                    ) : (
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{c.lastText}</p>
-                    )}
-                    <p className="mt-1 text-[11px] text-muted-foreground">{c.assignedAttendantName || (c.aiEnabled && !c.aiPaused ? `IA · ${c.aiName}` : "Sem responsável")}</p>
+          <div className={styles.filters}>
+            <DashboardRangePicker initialFrom={from} initialTo={to} initialFromTime={fromTime} initialToTime={toTime}
+              timeZone={ATTENDANCE_TIMEZONE} appearance="v2" className={styles.date}
+              onApply={selection => { setFrom(selection.from); setTo(selection.to); setFromTime(selection.fromTime); setToTime(selection.toTime); }} />
+          </div>
+          <div role="tablist" aria-label="Status dos atendimentos" className={styles.tabs}>
+            {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"], ["closed", "Finalizados"]].map(([value, label]) => (
+              <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={styles.tab}>
+                {label} <span>{scopedConversations.filter(c => matchesTab(c, value)).length}</span>
+              </button>
+            ))}
+          </div>
+          <div className={styles.conversationList}>
+            {conversationsLoaded && filteredConversations.length === 0 && <div className={styles.emptyList}>
+              <MessageSquare aria-hidden="true" /><p>Nenhuma conversa neste filtro.</p>
+            </div>}
+            {filteredConversations.map(c => (
+              <button key={c.leadId} type="button" onClick={() => selectConversation(c.leadId)} aria-pressed={selectedLeadId === c.leadId} className={styles.conversation}>
+                <span className={styles.avatar}>{initialOf(c.leadName)}{c.online && <span className={styles.presence} />}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={styles.personName}>{c.leadName}</span>
+                    {c.closedAt && <span className={styles.badge}>finalizado</span>}
+                    {c.pending && !c.closedAt && <span className={`${styles.badge} ${styles.pending}`}>pendente</span>}
                   </div>
-                </button>
-              ))}
-            </div>
+                  {c.leadPhone && <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--inbox-muted)]"><Phone className="h-2.5 w-2.5" />{c.leadPhone}</span>}
+                  <span className={styles.webinar}>
+                    <span className={`h-1 w-1 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-[#83B94D]"}`} />
+                    <span className="truncate">{c.webinarTitle}</span>
+                  </span>
+                  {c.webinarPhase === "before" ? <span className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400"><Clock className="h-3 w-3" />começa em {formatCountdown(c.webinarStartDate, nowMs)}</span>
+                    : <p className={styles.preview}>{c.lastText}</p>}
+                  <p className={styles.assignee}>{c.assignedAttendantName || (c.aiEnabled && !c.aiPaused ? `IA · ${c.aiName}` : "Sem responsável")}</p>
+                </div>
+              </button>
+            ))}
           </div>
         </aside>
 
-        <section className="flex h-full min-h-0 flex-col overflow-hidden">
-          {!selectedConversation && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-                <MessageSquare className="h-6 w-6 text-muted-foreground/50" />
-              </span>
-              <p className="text-sm text-muted-foreground">{linkError || (selectedLeadId ? "Abrindo conversa…" : "Selecione uma conversa para começar.")}</p>
-              {linkError && selectedLeadId && <button type="button" onClick={() => { setLinkError(""); void fetchLinkedConversation(selectedLeadId); }} className="rounded-lg border px-3 py-2 text-sm hover:bg-muted">Tentar novamente</button>}
+        <section aria-label="Área de atendimento" className={`${styles.panel} ${styles.chat}`}>
+          {!selectedConversation && <div className={styles.empty}>
+            <span className={styles.emptyArtwork} aria-hidden="true"><MessageSquare /></span>
+            <h2>{linkError ? "Não foi possível abrir a conversa" : selectedLeadId ? "Abrindo conversa…" : "Tudo começa com uma conversa"}</h2>
+            <p>{linkError || (selectedLeadId ? "Buscando o histórico do atendimento." : "Selecione uma conversa para acompanhar o histórico e responder ao seu público.")}</p>
+            {!selectedLeadId && <button type="button" onClick={() => setDrawerOpen(true)} className={`${styles.button} ${styles.primary} ${styles.mobileOnly} mt-2`}>Ver conversas <ArrowRight /></button>}
+            {linkError && selectedLeadId && <button type="button" onClick={() => { setLinkError(""); void fetchLinkedConversation(selectedLeadId); }} className={styles.button}>Tentar novamente</button>}
+          </div>}
+
+          {selectedConversation && <>
+            <div ref={conversationHeaderRef} className={styles.chatHeader}>
+              <button type="button" onClick={() => setDrawerOpen(true)} data-screenshot-exclude aria-label="Voltar às conversas" className={`${styles.button} ${styles.mobileOnly}`}><ArrowLeft /></button>
+              <span className={styles.avatar}>{initialOf(selectedConversation.leadName)}{selectedConversation.online && <span className={styles.presence} />}</span>
+              <div className={styles.chatIdentity}>
+                <p>{selectedConversation.leadName}</p>
+                <div className={styles.contactMeta}>
+                  <span className="truncate">{selectedConversation.webinarTitle}</span>
+                  {selectedConversation.leadPhone && <a href={`tel:${selectedConversation.leadPhone}`} className={styles.contactPhone}><Phone />{selectedConversation.leadPhone}</a>}
+                </div>
+              </div>
+              <div className={styles.headerAssignment} title={selectedConversation.assignedAttendantName ? `Atendido por ${selectedConversation.assignedAttendantName}` : selectedConversation.aiEnabled && !selectedConversation.aiPaused ? `Atendido por IA · ${selectedConversation.aiName}` : "Aguardando um atendente"}>
+                {selectedConversation.closedAt ? <CheckCircle2 aria-hidden="true" /> : selectedConversation.aiEnabled && !selectedConversation.aiPaused ? <Sparkles aria-hidden="true" /> : <UserCheck aria-hidden="true" />}
+                <span>{selectedConversation.closedAt ? "Finalizado" : (selectedConversation.assignedAttendantName ? `Atendido por ${selectedConversation.assignedAttendantName}` : null) || (selectedConversation.aiEnabled && !selectedConversation.aiPaused ? `IA · ${selectedConversation.aiName}` : "Aguardando atendente")}</span>
+                {selectedConversation.aiEnabled && selectedConversation.aiPaused && <span role="img" className={styles.pausedDot} title="IA pausada" aria-label="IA pausada" />}
+              </div>
+              <div data-screenshot-exclude className={styles.headerActions}>
+                {conversationsLoaded && !filteredConversations.some(c => c.leadId === selectedLeadId) && <Popover>
+                  <PopoverTrigger asChild><button type="button" aria-label="Conversa fora dos filtros" title="Conversa fora dos filtros" className={`${styles.button} ${styles.quietButton}`}><Filter /></button></PopoverTrigger>
+                  <PopoverContent aria-label="Conversa fora dos filtros" align="end" className={styles.floatingSurface}><p className="text-xs leading-relaxed">Esta conversa está fora dos filtros da lista. Você pode continuar o atendimento normalmente.</p></PopoverContent>
+                </Popover>}
+                {selectedConversation.closedAt
+                  ? <button type="button" disabled={controlBusy} onClick={() => void changeControl("reopen")} className={`${styles.button} ${styles.primary}`}>Reabrir e assumir</button>
+                  : (!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className={`${styles.button} ${styles.primary}`}>{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><button type="button" aria-label="Ações da conversa" title="Ações da conversa" className={`${styles.button} ${styles.quietButton}`}><MoreHorizontal /></button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className={`${styles.floatingSurface} ${styles.actionMenu}`}>
+                    <DropdownMenuItem onSelect={() => void copyScreenshot()} disabled={copyingScreenshot || !thread.length} className={styles.menuItem}><ImageIcon />{copyingScreenshot ? "Copiando print…" : "Copiar print"}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => void copyConversationLink()} className={styles.menuItem}><Copy />Copiar link</DropdownMenuItem>
+                    {!selectedConversation.closedAt && <DropdownMenuItem disabled={controlBusy} onSelect={() => { setControlError(""); setTransferTarget(""); setTransferOpen(true); }} className={styles.menuItem}><Users />Transferir atendimento</DropdownMenuItem>}
+                    {isAdmin && <DropdownMenuItem asChild className={styles.menuItem}><a href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}><Sparkles />Configurar agente</a></DropdownMenuItem>}
+                    {!selectedConversation.closedAt && selectedConversation.aiEnabled && selectedConversation.aiPaused && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("resume")} className={styles.menuItem}><Sparkles />Retomar IA</DropdownMenuItem>}
+                    {!selectedConversation.closedAt && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("close")} className={styles.menuItem}><CheckCircle2 />Encerrar atendimento</DropdownMenuItem>}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          )}
-
-          {selectedConversation && (
-            <>
-              <div ref={conversationHeaderRef} className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-card p-4">
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(true)}
-                  data-screenshot-exclude
-                  aria-label="Voltar às conversas"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border hover:bg-muted lg:hidden"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground/70">
-                  {initialOf(selectedConversation.leadName)}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{selectedConversation.leadName}</p>
-                  <p className="truncate text-xs text-muted-foreground">{selectedConversation.webinarTitle}</p>
-                  {selectedConversation.leadPhone ? (
-                    <a
-                      href={`tel:${selectedConversation.leadPhone}`}
-                      className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      <Phone className="h-3 w-3" />
-                      {selectedConversation.leadPhone}
-                    </a>
-                  ) : null}
-                </div>
-                <div data-screenshot-exclude className="ml-auto flex flex-wrap gap-2">
-                <button type="button" onClick={() => void copyScreenshot()} disabled={copyingScreenshot || !thread.length} aria-busy={copyingScreenshot} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50">
-                  <ImageIcon className="h-4 w-4" /> {copyingScreenshot ? "Copiando print…" : "Copiar print"}
-                </button>
-                <button type="button" onClick={() => void copyConversationLink()} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted">
-                  <Copy className="h-4 w-4" /> Copiar link
-                </button>
-                </div>
+            {selectedConversation.aiError && <p className="shrink-0 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
+            {controlError && <p role="alert" className="shrink-0 px-4 py-2 text-xs text-destructive">{controlError}</p>}
+            <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite" className={styles.thread}>
+              <ConversationMessages messages={thread} leadName={selectedConversation.leadName} />
+            </div>
+            {failedReplies.length > 0 && <div role="alert" className="max-h-40 shrink-0 space-y-2 overflow-y-auto px-4 py-2 text-xs text-destructive">
+              <p>Não foi possível confirmar o envio. As respostas foram mantidas.</p>
+              {failedReplies.map(attempt => <div key={attempt.clientMessageId} className="flex items-start gap-3">
+                <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{attempt.text}</p>
+                <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className={styles.button}>Reenviar</button>
+              </div>)}
+            </div>}
+            {!selectedConversation.closedAt ? <form onSubmit={e => { e.preventDefault(); handleSend(); }} className={styles.composer}>
+              <div className={styles.composerBox}>
+                <textarea value={text} onChange={e => { const leadId = selectedRef.current; if (leadId) setDrafts(previous => ({ ...previous, [leadId]: e.target.value })); }} maxLength={500}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  placeholder="Escreva uma resposta..." aria-label="Escreva uma resposta" rows={1} className={styles.input} />
+                <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar resposta" className={`${styles.button} ${styles.primary} ${styles.send}`}><Send /></button>
               </div>
-
-              {conversationsLoaded && !filteredConversations.some(c => c.leadId === selectedLeadId) && (
-                <p className="border-b bg-muted/20 px-4 py-2 text-xs text-muted-foreground">Esta conversa está fora dos filtros da lista. Você pode continuar o atendimento normalmente.</p>
-              )}
-              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedConversation.closedAt && <span className="rounded-full bg-muted px-2 py-1 font-medium">Finalizado</span>}
-                  <span className="font-medium">{selectedConversation.assignedAttendantName
-                    ? `Atendido por ${selectedConversation.assignedAttendantName}`
-                    : selectedConversation.aiEnabled && !selectedConversation.aiPaused
-                      ? `Atendido por IA · ${selectedConversation.aiName}`
-                      : "Aguardando um atendente"}</span>
-                  {selectedConversation.aiEnabled && selectedConversation.aiPaused && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950 dark:text-amber-300">IA pausada</span>}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedConversation.closedAt
-                    ? <button type="button" disabled={controlBusy} onClick={() => void changeControl("reopen")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Reabrir e assumir</button>
-                    : <>
-                      <button type="button" disabled={controlBusy} onClick={() => { setControlError(""); setTransferTarget(""); setTransferOpen(true); }} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Transferir atendimento</button>
-                      <button type="button" disabled={controlBusy} onClick={() => void changeControl("close")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Encerrar atendimento</button>
-                    </>}
-                  {isAdmin && <a className="rounded-lg border bg-background px-3 py-2" href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}>Configurar agente</a>}
-                  {(!selectedConversation.closedAt && (!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId)) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
-                  {!selectedConversation.closedAt && selectedConversation.aiEnabled && selectedConversation.aiPaused && <button type="button" disabled={controlBusy} onClick={() => void changeControl("resume")} className="rounded-lg border bg-background px-3 py-2 disabled:opacity-50">Retomar IA</button>}
-                </div>
-                {selectedConversation.aiError && <p className="w-full text-amber-700 dark:text-amber-400">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
-                {controlError && <p role="alert" className="w-full text-destructive">{controlError}</p>}
-              </div>
-              <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-background p-4">
-                {thread.map((m) => (
-                  <div key={m.id} className={`flex ${m.sender === "team" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
-                        m.sender === "team"
-                          ? "rounded-br-sm bg-primary text-primary-foreground"
-                          : "rounded-bl-sm border bg-card"
-                      }`}
-                    >
-                      <p className="mb-1 text-[10px] font-medium opacity-80">{m.sender === "team" ? m.teamName || "Equipe" : selectedConversation.leadName}</p>
-                      <MessageText text={m.text} />
-                      <p
-                        className={`mt-1 text-right text-[10px] ${
-                          m.sender === "team" ? "text-primary-foreground/70" : "text-muted-foreground"
-                        }`}
-                      >
-                        {new Date(m.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {failedReplies.length > 0 && <div role="alert" className="max-h-40 shrink-0 space-y-2 overflow-y-auto border-t px-4 py-2 text-sm text-destructive">
-                <p>Não foi possível confirmar o envio. As respostas foram mantidas.</p>
-                {failedReplies.map((attempt) => <div key={attempt.clientMessageId} className="flex items-start gap-3">
-                  <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{attempt.text}</p>
-                  <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className="rounded-lg border px-3 py-1 text-xs font-medium disabled:opacity-50">Reenviar</button>
-                </div>)}
-              </div>}
-              {!selectedConversation.closedAt && <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSend();
-                }}
-                className="flex items-end gap-2 border-t bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-              >
-                <textarea
-                  value={text}
-                  onChange={(e) => {
-                    const leadId = selectedRef.current;
-                    if (leadId) setDrafts((previous) => ({ ...previous, [leadId]: e.target.value }));
-                  }}
-                  maxLength={500}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder="Escreva uma resposta..."
-                  rows={1}
-                  className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border bg-background px-3.5 py-2.5 text-base outline-none focus:ring-1 focus:ring-ring sm:text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={!text.trim() || sending}
-                  aria-label="Enviar resposta"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>}
-              <Dialog open={transferOpen} onOpenChange={value => { if (!controlBusy) setTransferOpen(value); }}>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader><DialogTitle>Transferir atendimento</DialogTitle><DialogDescription>Escolha quem dará continuidade à conversa com {selectedConversation.leadName}. A IA ficará pausada.</DialogDescription></DialogHeader>
-                  <label className="space-y-2 text-sm">Novo responsável
-                    <select aria-label="Novo responsável" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} disabled={controlBusy} className="mt-2 w-full rounded-lg border bg-background p-2">
-                      <option value="">Selecione um atendente</option>
-                      {attendants.filter(person => person.id !== selectedConversation.assignedAttendantId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-                    </select>
-                  </label>
-                  {controlError && <p role="alert" className="text-sm text-destructive">{controlError}</p>}
-                  <div className="flex justify-end gap-2"><button type="button" disabled={controlBusy} onClick={() => setTransferOpen(false)} className="rounded-lg border px-3 py-2 text-sm">Cancelar</button><button type="button" disabled={controlBusy || !transferTarget} onClick={() => void changeControl("transfer", transferTarget)} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">{controlBusy ? "Transferindo…" : "Confirmar transferência"}</button></div>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
+              <div className={styles.composerHint}><span>Enter para enviar · Shift + Enter para nova linha</span><span>{text.length}/500</span></div>
+            </form> : <div className={styles.closed}><CheckCircle2 aria-hidden="true" />Atendimento finalizado</div>}
+            <Dialog open={transferOpen} onOpenChange={value => { if (!controlBusy) setTransferOpen(value); }}>
+              <DialogContent className="rounded-2xl sm:max-w-md">
+                <DialogHeader><DialogTitle>Transferir atendimento</DialogTitle><DialogDescription>Escolha quem dará continuidade à conversa com {selectedConversation.leadName}. A IA ficará pausada.</DialogDescription></DialogHeader>
+                <label className="space-y-2 text-sm">Novo responsável
+                  <select aria-label="Novo responsável" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} disabled={controlBusy} className="mt-2 w-full rounded-lg border bg-background p-2">
+                    <option value="">Selecione um atendente</option>{attendants.filter(person => person.id !== selectedConversation.assignedAttendantId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+                  </select>
+                </label>
+                {controlError && <p role="alert" className="text-sm text-destructive">{controlError}</p>}
+                <div className="flex justify-end gap-2"><button type="button" disabled={controlBusy} onClick={() => setTransferOpen(false)} className="rounded-lg border px-3 py-2 text-sm">Cancelar</button><button type="button" disabled={controlBusy || !transferTarget} onClick={() => void changeControl("transfer", transferTarget)} className="rounded-lg bg-[#064B3C] px-3 py-2 text-sm text-white disabled:opacity-50">{controlBusy ? "Transferindo…" : "Confirmar transferência"}</button></div>
+              </DialogContent>
+            </Dialog>
+          </>}
         </section>
       </div>
     </div>

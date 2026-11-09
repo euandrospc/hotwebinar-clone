@@ -4,6 +4,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AUTO_TIMEZONE_VALUE, zonedParts, zonedToUtc } from "@/lib/timezones";
+import styles from "./wizard.module.css";
 
 interface Schedule {
   startDate: Date;
@@ -39,12 +40,14 @@ export function RecurringScheduleFields({ startDate, endDate, timezone, onChange
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Começar a partir de</Label>
-        <DateTimePicker
-          value={firstDate}
-          onChange={(date) => date && update(date, startTime, endTime)}
-          ariaLabel="Começar a partir de"
-          showTime={false}
-        />
+        <div className={styles.dateTimeField}>
+          <DateTimePicker
+            value={firstDate}
+            onChange={(date) => date && update(date, startTime, endTime)}
+            ariaLabel="Começar a partir de"
+            showTime={false}
+          />
+        </div>
         <p className="text-xs text-muted-foreground">A primeira sessão será em um dos dias selecionados, a partir desta data.</p>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -48,7 +48,7 @@ function MapControls({ locations }: { locations: Locations }) {
 
 export function RealtimeMapCanvas({ locations }: { locations: Locations }) {
   return (
-    <div className="relative isolate h-[360px] sm:h-[420px]">
+    <div className="relative isolate h-[300px] sm:h-[350px]">
       <MapContainer center={[-15, -55]} zoom={3} scrollWheelZoom={false} className="h-full w-full" aria-label="Mapa dos espectadores online">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -60,7 +60,7 @@ export function RealtimeMapCanvas({ locations }: { locations: Locations }) {
             key={location.id}
             center={[location.lat, location.lng]}
             radius={Math.min(22, 7 + Math.log2(location.count + 1) * 3)}
-            pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#ef4444", fillOpacity: 0.85 }}
+            pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#538743", fillOpacity: 0.85 }}
           >
             <Tooltip direction="top">
               <strong>{[location.city, location.region, location.country].filter(Boolean).join(", ") || "Localização aproximada"}</strong>
@@ -70,8 +70,8 @@ export function RealtimeMapCanvas({ locations }: { locations: Locations }) {
         ))}
       </MapContainer>
       {locations.length === 0 && (
-        <div className="pointer-events-none absolute inset-x-4 bottom-9 z-[500] mx-auto max-w-sm rounded-lg border bg-card/95 p-4 text-center shadow-sm">
-          <p className="text-sm font-medium">Nenhuma localização ao vivo agora</p>
+        <div className="pointer-events-none absolute inset-x-4 bottom-9 z-[500] mx-auto max-w-sm rounded-lg border bg-card/95 p-3 text-center shadow-sm">
+          <p className="text-xs font-medium">Nenhuma localização ao vivo agora</p>
           <p className="mt-1 text-xs text-muted-foreground">O mapa aparece automaticamente quando há espectadores com localização disponível.</p>
         </div>
       )}

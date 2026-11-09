@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Image as ImageIcon, RefreshCw, Trash2, MoreHorizontal, Play } from "@/components/icons";
@@ -36,26 +37,26 @@ export function VideoRowActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" aria-label={`Ações de ${name}`} className={styles.iconButton}><MoreHorizontal className="h-4 w-4" /></Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
+        <DropdownMenuContent className={styles.menu} align="end" sideOffset={6}>
           {status === "READY" && hlsUrl && (
             <DropdownMenuItem onClick={() => setPreviewOpen(true)}>
-              <Play className="mr-2 h-4 w-4" /> Preview
+              <Play className="h-3.5 w-3.5" /> Preview
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => setThumbOpen(true)}>
-            <ImageIcon className="mr-2 h-4 w-4" /> Editar thumbnail
+            <ImageIcon className="h-3.5 w-3.5" /> Editar thumbnail
           </DropdownMenuItem>
           {status === "FAILED" && (
             <DropdownMenuItem onClick={onRetry} disabled={pending}>
-              <RefreshCw className="mr-2 h-4 w-4" /> {pending ? "..." : "Tentar novamente"}
+              <RefreshCw className="h-3.5 w-3.5" /> {pending ? "..." : "Tentar novamente"}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DeleteVideoDialog id={id} name={name}>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <Trash2 className="mr-2 h-4 w-4" /> Excluir
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
             </DropdownMenuItem>
           </DeleteVideoDialog>
         </DropdownMenuContent>

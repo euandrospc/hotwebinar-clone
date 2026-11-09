@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/wizard/wizard.module.css";
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,8 +64,8 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
   const onPublish = handleSubmit((v) => submit(v, true));
 
   return (
-    <form onSubmit={onSave} className="max-w-2xl space-y-6">
-      <h2 className="text-2xl font-semibold">Integrações</h2>
+    <form onSubmit={onSave} className={styles.singleForm}>
+      <h2 className={styles.title}>Integrações</h2>
 
       <div className="space-y-2">
         <Label htmlFor="webhookUrl">URL do webhook</Label>
@@ -100,7 +101,7 @@ export function IntegrationsForm({ webinarId, initial }: IntegrationsFormProps) 
         </div>
       ) : null}
 
-      <div className="flex justify-end gap-2">
+      <div className={`${styles.navFooter} justify-end`}>
         <Button type="submit" variant="outline" disabled={pending}>
           {pending ? "Salvando..." : "Salvar"}
         </Button>

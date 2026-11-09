@@ -9,7 +9,8 @@ import { z } from "zod";
 import { prisma } from "db";
 import { signLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
-import { enrichLeadGeo } from "@/lib/geoip";
+import { getClientIp } from "@/lib/geoip";
+import { queueLeadGeo } from "@/server/geoip-queue";
 import { optinLimiter } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
 import { enqueueDispatchWebhook } from "jobs";
@@ -27,9 +28,11 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
   if (!w || w.status !== "ACTIVE") return err("Webinar não disponível");
 
   const hdrs = await headers();
-  const ip = (hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "") || "unknown";
+  const ip = getClientIp(hdrs) ?? "unknown";
   const ua = hdrs.get("user-agent") ?? "";
-  if (!optinLimiter.check(ip)) return err("Muitas tentativas, aguarde");
+  // Preserve the existing limiter key even when an IP is unsuitable for GeoIP.
+  const rateLimitIp = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!optinLimiter.check(rateLimitIp)) return err("Muitas tentativas, aguarde");
 
   const schemaShape: Record<string, z.ZodTypeAny> = {};
   if (w.nameEnabled) {
@@ -117,7 +120,7 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
     path: "/"
   });
 
-  void enrichLeadGeo(lead.id, ip);
+  await queueLeadGeo(lead);
 
   await enqueueWebhook(w, "lead_novo", lead);
 

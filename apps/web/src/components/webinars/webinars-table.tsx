@@ -1,5 +1,8 @@
 import type { Webinar } from "db";
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { MonitorPlay } from "@/components/icons";
+import { AdminEmptyState } from "@/components/admin/admin-page";
+import styles from "./webinars.module.css";
 import {
   Table,
   TableBody,
@@ -24,13 +27,11 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
   const now = Date.now();
   if (rows.length === 0) {
     return (
-      <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">
-        Nenhum webinar — clique em "Criar novo" para começar.
-      </div>
+      <AdminEmptyState icon={<MonitorPlay />} title="Nenhum webinar encontrado" description="Ajuste os filtros ou crie seu primeiro webinar para começar." />
     );
   }
   return (
-    <Table>
+    <Table className={styles.table}>
       <TableHeader>
         <TableRow>
           <TableHead>Nome / Data e hora</TableHead>
@@ -44,7 +45,7 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
         {rows.map((r) => (
           <TableRow key={r.id}>
             <TableCell>
-              <div className="font-medium">{r.title || r.name || "Sem título"}</div>
+              <Link href={`/dashboard/webinars/${r.id}/step-1`} className={styles.webinarTitle}>{r.title || r.name || "Sem título"}</Link>
               <WebinarSchedule
                 webinar={{ mode: r.mode, startDate: r.startDate, endDate: r.endDate,
                   recurring: r.recurring, recurringDays: r.recurringDays, timezone: r.timezone }}
@@ -52,8 +53,8 @@ export function WebinarsTable({ rows, publicBaseUrl }: { rows: Row[]; publicBase
               />
             </TableCell>
             <TableCell><WebinarOnlineBadge webinarId={r.id} /></TableCell>
-            <TableCell><Badge variant={r.status === "ACTIVE" ? "default" : "outline"}>{STATUS_LABEL[r.status]}</Badge></TableCell>
-            <TableCell><Badge variant="destructive">{r.mode === "JIT" ? "JIT" : r.recurring ? "Recorrente" : "Único"}</Badge></TableCell>
+            <TableCell><span className={styles.badge} data-status={r.status}>{STATUS_LABEL[r.status]}</span></TableCell>
+            <TableCell><span className={styles.badge} data-kind={r.mode}>{r.mode === "JIT" ? "JIT" : r.recurring ? "Recorrente" : "Único"}</span></TableCell>
             <TableCell>
               <RowActions
                 id={r.id}

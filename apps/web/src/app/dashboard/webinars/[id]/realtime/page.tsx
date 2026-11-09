@@ -1,3 +1,4 @@
+import { AdminPage } from "@/components/admin/admin-page";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "db";
@@ -22,7 +23,7 @@ export default async function RealtimePage({ params }: { params: Promise<{ id: s
   const initialData = await getWebinarRealtimeSnapshot(id);
 
   return (
-    <div className="container mx-auto py-6">
+    <AdminPage>
       <WebinarTabs webinarId={id} />
       <RealtimeDashboard
         key={id}
@@ -30,6 +31,6 @@ export default async function RealtimePage({ params }: { params: Promise<{ id: s
         title={webinar.title || webinar.name || "Webinar"}
         initialData={initialData}
       />
-    </div>
+    </AdminPage>
   );
 }

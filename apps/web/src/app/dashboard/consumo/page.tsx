@@ -1,4 +1,6 @@
 import { Database, Download, Upload, Globe, DollarSign } from "@/components/icons";
+import { AdminPage, AdminPageHeader, AdminEmptyState } from "@/components/admin/admin-page";
+import styles from "@/components/management-v2.module.css";
 import { getR2Usage, R2_PRICING, type R2Usage } from "@/lib/cloudflare-usage";
 
 export const dynamic = "force-dynamic";
@@ -18,28 +20,26 @@ export default async function ConsumoPage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-semibold">Consumo</h1>
-      <p className="mt-2 text-muted-foreground">
-        Cloudflare R2 (vídeos) no mês atual{usage ? ` · bucket ${usage.bucket} · ${usage.from} a ${usage.to}` : ""}.
-      </p>
+    <AdminPage>
+      <AdminPageHeader title="Consumo" description="Armazenamento, tráfego e custo dos seus vídeos." />
+      {usage && <p className={styles.meta}>Cloudflare R2 · {usage.bucket} · {usage.from} a {usage.to}</p>}
 
       {!usage && !error ? (
-        <p className="mt-8 rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Configure <code>CLOUDFLARE_API_TOKEN</code> (permissão Account Analytics: Read) e{" "}
-          <code>CLOUDFLARE_ACCOUNT_ID</code> nas variáveis do app para ver o consumo.
-        </p>
+        <section className={styles.surface}>
+          <AdminEmptyState icon={<Database />} title="Conecte os dados de consumo" description="O consumo de vídeos aparece aqui quando a conexão com a Cloudflare estiver configurada." />
+          <details className={styles.note}><summary className="cursor-pointer font-medium">Configuração da conexão</summary><p className="mt-2">Configure <code>CLOUDFLARE_API_TOKEN</code> (permissão Account Analytics: Read) e <code>CLOUDFLARE_ACCOUNT_ID</code> nas variáveis do app para ver o consumo.</p></details>
+        </section>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-8 rounded-lg border border-destructive/40 bg-card p-6 text-sm text-destructive">
+        <p role="alert" className="rounded-xl border border-destructive/20 bg-card p-5 text-xs leading-relaxed text-destructive">
           Não foi possível ler o consumo: {error}
         </p>
       ) : null}
 
       {usage ? (
         <>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Card Icon={DollarSign} label="Custo estimado do mês" value={usd.format(usage.costUsd.total)}
+          <div className={styles.usageGrid}>
+            <Card featured Icon={DollarSign} label="Custo estimado do mês" value={usd.format(usage.costUsd.total)}
               hint={`armazenamento ${usd.format(usage.costUsd.storage)} · leituras ${usd.format(usage.costUsd.classB)} · escritas ${usd.format(usage.costUsd.classA)}`} />
             <Card Icon={Database} label="Armazenamento" value={gb(usage.storageBytes)}
               hint={`${num.format(usage.objectCount)} arquivos · ${R2_PRICING.freeStorageGb} GB grátis`} />
@@ -49,7 +49,7 @@ export default async function ConsumoPage() {
               hint={pct(usage.classA, R2_PRICING.freeClassA)} />
             <Card Icon={Globe} label="Tráfego entregue" value={gb(usage.egressBytes)} hint="egress do R2 é grátis" />
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className={styles.note}>
             Estimativa com os preços públicos do R2 (US$ {R2_PRICING.storageGbMonth}/GB-mês, US${" "}
             {R2_PRICING.classBPerMillion}/milhão de leituras, US$ {R2_PRICING.classAPerMillion}/milhão de escritas),
             já descontando o plano grátis. O valor cobrado de fato está na fatura da Cloudflare. Dados com atraso de
@@ -57,21 +57,16 @@ export default async function ConsumoPage() {
           </p>
         </>
       ) : null}
-    </div>
+    </AdminPage>
   );
 }
 
-function Card({ Icon, label, value, hint }: { Icon: typeof Database; label: string; value: string; hint: string }) {
+function Card({ Icon, label, value, hint, featured = false }: { Icon: typeof Database; label: string; value: string; hint: string; featured?: boolean }) {
   return (
-    <div className="rounded-lg border bg-card p-5">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        <span className="font-medium">{label}</span>
-      </div>
-      <p className="mt-4 text-3xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-    </div>
+    <section className={`${styles.surface} ${styles.usageCard} ${featured ? styles.usageHero : ""}`}>
+      <h2><Icon aria-hidden="true" /><span>{label}</span></h2>
+      <p className={styles.usageValue}>{value}</p>
+      <p className={styles.usageHint}>{hint}</p>
+    </section>
   );
 }

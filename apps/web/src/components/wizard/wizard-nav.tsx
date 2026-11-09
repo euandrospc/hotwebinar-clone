@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import styles from "./wizard.module.css";
 import { ArrowLeft, ArrowRight } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +17,7 @@ export function WizardNav({
 }) {
   const prev = step > 1 ? `/dashboard/webinars/${webinarId}/step-${step - 1}` : null;
   return (
-    <div className="mt-8 flex items-center justify-between border-t pt-4">
+    <div className={styles.navFooter}>
       {prev ? (
         <Button asChild variant="outline" type="button">
           <Link href={prev}><ArrowLeft className="h-4 w-4" /> Voltar</Link>

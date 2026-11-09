@@ -1,3 +1,5 @@
+import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
+import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, MousePointerClick, Download } from "@/components/icons";
@@ -84,31 +86,17 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   const qParam = `${dateQuery ? `&${dateQuery}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}${clicked ? "&clicked=1" : ""}`;
 
   return (
-    <div className="container mx-auto py-6">
+    <AdminPage>
       <WebinarTabs webinarId={id} />
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold">Leads</h1>
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            {fmtNum.format(total)} {total === 1 ? "lead" : "leads"}
-          </p>
-          <a
-            href={`/api/webinars/${id}/leads/export?${new URLSearchParams({
-              ...dateParams,
-              ...(q ? { q } : {}),
-              ...(clicked ? { clicked: "1" } : {})
-            }).toString()}`}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-          >
-            <Download className="h-4 w-4" />
-            Exportar CSV
-          </a>
-        </div>
-      </div>
-
-      <div className="mt-4">
+      <AdminPageHeader title="Leads" description={`${fmtNum.format(total)} ${total === 1 ? "registro" : "registros"} · ${w.title || w.name}`} actions={
+        <a href={`/api/webinars/${id}/leads/export?${new URLSearchParams({ ...dateParams, ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}) }).toString()}`} className={styles.linkButton}><Download className="h-3.5 w-3.5" />Exportar CSV</a>
+      } />
+      <AdminSurface padded={false} className={styles.table}>
+      <div className={styles.toolbar}>
+      <div className="min-w-0">
         <DashboardRangePicker
+          appearance="v2"
           key={`${dateParams.from ?? ""}-${dateParams.to ?? ""}`}
           allowAll
           initialFrom={dateRange ? selectedDates.from.slice(0, 10) : ""}
@@ -119,39 +107,36 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         />
       </div>
 
-      <form action={baseHref} method="get" className="mt-4 flex flex-wrap items-center gap-3">
+      <form action={baseHref} method="get" className="min-w-[min(100%,220px)] flex-1 sm:max-w-sm">
         <input
           type="search"
           name="q"
           defaultValue={q}
           placeholder="Buscar por nome / email / cidade…"
-          className="h-10 w-full max-w-md rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Buscar leads" className={styles.search}
         />
         {Object.entries(dateParams).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
         {clicked ? <input type="hidden" name="clicked" value="1" /> : null}
       </form>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      </div>
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
         <a
           href={`${baseHref}?${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
-            clicked ? "hover:bg-accent" : "border-primary bg-primary/10 font-medium text-primary"
-          }`}
+          className={styles.filter} aria-current={!clicked ? "true" : undefined}
         >
           Todos
         </a>
         <a
           href={`${baseHref}?clicked=1&${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
-            clicked ? "border-primary bg-primary/10 font-medium text-primary" : "hover:bg-accent"
-          }`}
+          className={styles.filter} aria-current={clicked ? "true" : undefined}
         >
           <MousePointerClick className="h-3.5 w-3.5" />
           Clicaram na oferta
         </a>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg border bg-card">
+      <div className={styles.tableScroll}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -175,15 +160,15 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-medium">{r.name || "—"}</TableCell>
-                <TableCell className="text-sm">
+                <TableCell className="text-xs">
                   {r.email && !r.email.endsWith("@no-email.invalid") ? (
                     r.email
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{r.phone ?? "—"}</TableCell>
-                <TableCell className="text-sm">
+                <TableCell className="text-xs text-muted-foreground">{r.phone ?? "—"}</TableCell>
+                <TableCell className="text-xs">
                   {r.country || r.city ? (
                     <span className="inline-flex items-center gap-1.5">
                       <span aria-hidden>{flagEmoji(r.country)}</span>
@@ -216,7 +201,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
       </div>
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
+        <div className={styles.pagination}>
           <p className="text-muted-foreground">
             Página {page} de {totalPages}
           </p>
@@ -224,7 +209,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {page > 1 && (
               <a
                 href={`${baseHref}?page=${page - 1}${qParam}`}
-                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-accent"
+                className={styles.linkButton}
               >
                 <ArrowLeft className="h-4 w-4" /> Anterior
               </a>
@@ -232,7 +217,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
             {page < totalPages && (
               <a
                 href={`${baseHref}?page=${page + 1}${qParam}`}
-                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-accent"
+                className={styles.linkButton}
               >
                 Próxima <ArrowRight className="h-4 w-4" />
               </a>
@@ -240,6 +225,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       )}
-    </div>
+      </AdminSurface>
+    </AdminPage>
   );
 }

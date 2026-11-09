@@ -12,7 +12,7 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ i
   const w = await prisma.webinar.findUnique({ where: { id } });
   if (!w || w.ownerId !== session.user.id) notFound();
   return (
-    <div className="container mx-auto space-y-8 py-10">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-2 xl:items-start">
       <IntegrationsForm
         webinarId={id}
         initial={{

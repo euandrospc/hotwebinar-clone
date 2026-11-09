@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useTransition } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,9 +45,9 @@ export function Step8Form({ webinarId, durationSec, seed, initial }: Step8FormPr
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_minmax(0,420px)]">
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Audiência</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
+      <div className={styles.formPanel}>
+        <h2 className={styles.title}>Audiência</h2>
 
         <section className="space-y-3 rounded-lg border bg-card p-4">
           <Label>Modo</Label>
@@ -119,8 +120,8 @@ export function Step8Form({ webinarId, durationSec, seed, initial }: Step8FormPr
         <WizardNav webinarId={webinarId} step={8} submitting={pending} />
       </div>
 
-      <aside className="space-y-3 lg:sticky lg:top-6 lg:h-fit">
-        <h3 className="text-sm font-medium text-muted-foreground">Prévia da curva</h3>
+      <aside className={`${styles.previewPanel} space-y-3`}>
+        <h3 className={styles.previewTitle}>Prévia da curva</h3>
         <AudienceChart
           mode={(watched.audienceMode as "NONE" | "FIXED" | "DYNAMIC") ?? "NONE"}
           min={Number(watched.audienceMin ?? 0)}

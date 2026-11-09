@@ -1,3 +1,5 @@
+import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
+import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -54,22 +56,17 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
   });
 
   return (
-    <div className="container mx-auto py-10">
+    <AdminPage>
       <ClientPolling enabled intervalMs={15_000} />
-      <div className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="text-3xl font-semibold">Ao vivo agora · {leads.length}</h1>
-        {webinarId ? (
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground underline">
-            <Link href={`/dashboard/webinars/${webinarId}/realtime`}>Voltar ao tempo real</Link>
-            <Link href="/dashboard/online">Ver todos os webinars</Link>
-          </div>
-        ) : null}
-      </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Quem está com o player aberto e o vídeo rodando (sinal nos últimos 45 s). Atualiza a cada 15 s.
-      </p>
+      <AdminPageHeader title="Ao vivo agora" description="Pessoas com o player aberto e o vídeo rodando. Atualização a cada 15 segundos." actions={
+        <div className={styles.controls}>
+          <span className="inline-flex items-center gap-2 rounded-lg bg-[#ECF4E5] px-3 py-2 text-xs font-medium text-[#064B3C] dark:bg-[#203725] dark:text-[#C5E99D]"><span className="h-1.5 w-1.5 rounded-full bg-[#83B94D]" />{leads.length} online</span>
+          {webinarId && <><Link href={`/dashboard/webinars/${webinarId}/realtime`} className={styles.linkButton}>Tempo real</Link><Link href="/dashboard/online" className={styles.linkButton}>Todos os webinars</Link></>}
+        </div>
+      } />
+      <p className={styles.caption}>Presença confirmada por atividade nos últimos 45 segundos.</p>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border">
+      <AdminSurface padded={false} className={styles.table}><div className={styles.tableScroll}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -119,7 +116,7 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
             ))}
           </TableBody>
         </Table>
-      </div>
-    </div>
+      </div></AdminSurface>
+    </AdminPage>
   );
 }

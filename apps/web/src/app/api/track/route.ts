@@ -6,6 +6,8 @@ import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
 import { touchLegacyPresence } from "@/server/realtime/presence";
+import { getClientIp, hasValidGeo } from "@/lib/geoip";
+import { queueLeadGeo } from "@/server/geoip-queue";
 
 const inputSchema = z.object({
   videoSec: z.number().int().min(0),
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
     where: { id: lead.id },
     data: { watchedSec: newWatched, lastSeenAt: now, leaveFired: false }
   });
+  if (!hasValidGeo(lead)) await queueLeadGeo(lead, getClientIp(request.headers));
   if (parsed.data.presenceTransport !== "websocket") await touchLegacyPresence(lead.id, lead.webinarId);
 
   const w = lead.webinar;

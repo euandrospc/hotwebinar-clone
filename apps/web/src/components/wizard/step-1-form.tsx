@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useTransition } from "react";
+import styles from "./wizard.module.css";
+import { useEffect, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,8 @@ export interface Step1FormProps {
 
 export function Step1Form({ webinarId, initial }: Step1FormProps) {
   const router = useRouter();
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
   const [pending, startTransition] = useTransition();
   const {
     register,
@@ -57,9 +60,10 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
-      <h2 className="text-2xl font-semibold">Início</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.singleForm}>
+      <h2 className={styles.title}>Início</h2>
 
+      <div className={styles.fieldGrid}>
       <div className="space-y-2">
         <Label htmlFor="name">Nome interno</Label>
         <Input id="name" {...register("name")} />
@@ -72,11 +76,13 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
         {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
       </div>
 
+      </div>
+      <div className={styles.fieldGrid}>
       <div className="space-y-2">
         <Label htmlFor="slug">URL amigável</Label>
         <Input id="slug" {...register("slug")} />
         <p className="text-xs text-muted-foreground">
-          {(typeof window !== "undefined" ? window.location.origin : "")}/<span className="font-mono">{watch("slug") || "<slug>"}</span>
+          {origin}/<span className="font-mono">{watch("slug") || "<slug>"}</span>
         </p>
         {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
       </div>
@@ -87,6 +93,7 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
         {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
       </div>
 
+      </div>
       <Controller
         control={control}
         name="accessFacilitated"

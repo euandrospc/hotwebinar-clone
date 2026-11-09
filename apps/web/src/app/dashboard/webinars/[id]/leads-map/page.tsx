@@ -1,3 +1,4 @@
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -44,13 +45,13 @@ export default async function LeadsMapPage({ params }: { params: Promise<{ id: s
   );
 
   return (
-    <div className="container mx-auto py-6">
+    <AdminPage>
       <WebinarTabs webinarId={id} />
-      <h1 className="mt-6 text-3xl font-semibold">Mapa de leads</h1>
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_320px]">
+      <AdminPageHeader title="Mapa de leads" description={w.title || w.name} />
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <LeadsMapClient pins={agg.pins} />
         <LeadsSummaryAside agg={agg} />
       </div>
-    </div>
+    </AdminPage>
   );
 }

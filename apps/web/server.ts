@@ -28,6 +28,8 @@ const { startAttendanceAiWorker } = await import("./src/server/attendance/ai");
 const stopAttendanceAi = startAttendanceAiWorker();
 const { startAudienceRecorder } = await import("./src/server/audience-history");
 const stopAudienceRecorder = startAudienceRecorder();
+const { startGeoIpWorker } = await import("./src/server/geoip-worker");
+const stopGeoIpWorker = startGeoIpWorker();
 server.on("upgrade", (request, socket, head) => {
   if (!request.url?.startsWith("/socket.io/")) void upgrade(request, socket, head);
 });
@@ -48,6 +50,7 @@ async function shutdown() {
   timeout.unref();
   stopAttendanceAi();
   stopAudienceRecorder();
+  await stopGeoIpWorker();
   await gateway.close();
   await closeRedis();
   await app.close();

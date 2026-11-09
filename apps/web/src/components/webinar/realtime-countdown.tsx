@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Clock, Flag, Play, Radio } from "@/components/icons";
 import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
 
+import styles from "./webinar-operations.module.css";
+
 export function formatCountdown(ms: number) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -62,14 +64,14 @@ export function RealtimeCountdown({ data }: { data: WebinarRealtimeSnapshot }) {
   ];
 
   return (
-    <section aria-label="Cronograma do webinar" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Cronograma do webinar" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {rows.map(({ icon: Icon, label, value, color }) => (
-        <div key={label} className="min-w-0 rounded-lg border bg-card p-5 text-card-foreground">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div key={label} className={styles.surface}>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", color)} />
             <span>{label}</span>
           </div>
-          <p className={cn("mt-3 text-xl font-semibold tracking-tight tabular-nums", color)}>{value}</p>
+          <p className={cn("mt-2 text-base font-semibold tracking-tight tabular-nums", color)}>{value}</p>
         </div>
       ))}
     </section>

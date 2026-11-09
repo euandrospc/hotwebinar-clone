@@ -1,28 +1,25 @@
 "use client";
-import { TrendingUp, Info } from "@/components/icons";
+import { TrendingUp } from "@/components/icons";
 import { Area, AreaChart, XAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { useReducedMotion } from "framer-motion";
+import styles from "@/components/webinar/webinar-operations.module.css";
 import type { RetentionPoint } from "@/lib/dashboard-stats";
 
 export function MetricsVideoRetention({ data }: { data: RetentionPoint[] }) {
+  const reducedMotion = useReducedMotion();
   return (
-    <section className="rounded-lg border bg-card p-5">
-      <header className="flex items-center gap-2">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          <TrendingUp className="h-3.5 w-3.5" />
-        </span>
-        <h3 className="text-sm font-semibold">Métricas do vídeo</h3>
-        <Info className="h-3.5 w-3.5 text-muted-foreground" />
-      </header>
+    <section className={styles.surface}>
+      <h3 className={styles.surfaceTitle}><TrendingUp aria-hidden="true" />Métricas do vídeo</h3>
 
       <p className="mt-2 text-xs text-muted-foreground">Retenção sobre os espectadores que iniciaram o vídeo, no período selecionado.</p>
 
-      <div className="mt-4 h-64">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="mt-4 h-48 min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
             <defs>
               <linearGradient id="retentionFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#16a34a" stopOpacity={0.85} />
-                <stop offset="100%" stopColor="#16a34a" stopOpacity={0.04} />
+                <stop offset="0%" stopColor="#83b94d" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#83b94d" stopOpacity={0.04} />
               </linearGradient>
             </defs>
             <XAxis
@@ -48,7 +45,8 @@ export function MetricsVideoRetention({ data }: { data: RetentionPoint[] }) {
             <Area
               type="monotone"
               dataKey="count"
-              stroke="#16a34a"
+              stroke="#568a3f"
+              isAnimationActive={!reducedMotion}
               strokeWidth={2}
               fill="url(#retentionFill)"
             />

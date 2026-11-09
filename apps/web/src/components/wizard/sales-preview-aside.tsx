@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import Link from "next/link";
 import { useState } from "react";
 import { Download, Trash2 } from "@/components/icons";
@@ -44,10 +45,10 @@ export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete
     : notifications.map((n, i) => [n, i] as const);
 
   return (
-    <aside className="flex h-fit flex-col gap-3 rounded-lg border bg-card p-4">
-      <h3 className="text-sm font-semibold">Prévia das vendas</h3>
+    <aside className={`${styles.previewPanel} flex flex-col gap-3`}>
+      <h3 className="text-[13px] font-semibold">Prévia das vendas</h3>
       <Button asChild variant="outline"><Link href={`/dashboard/webinars/${webinarId}/sales-preview`}>Simular notificações salvas</Link></Button>
-      <Button asChild type="button" className="w-full bg-emerald-800 text-white hover:bg-emerald-900">
+      <Button asChild type="button" variant="outline" className={`${styles.previewButton} w-full`}>
         <a href={`/api/webinars/${webinarId}/sales/export`} download>
           <Download className="mr-2 h-4 w-4" /> Exportar vendas em XLSX
         </a>
@@ -63,7 +64,7 @@ export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete
             <span className="w-16 shrink-0 pt-2 font-mono text-xs text-muted-foreground tabular-nums">
               {formatHms(n.showAtSec)}
             </span>
-            <div className="relative flex-1 rounded-md bg-yellow-200/80 p-2 text-sm text-zinc-900 shadow-sm">
+            <div className={`${styles.salesEntry} relative`}>
               <textarea
                 value={n.buyerName}
                 onChange={(e) => onUpdate(originalIdx, { buyerName: e.target.value })}
@@ -79,7 +80,7 @@ export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete
                 type="button"
                 onClick={() => onDelete(originalIdx)}
                 aria-label="Remover"
-                className="absolute -right-2 -top-2 hidden h-6 w-6 items-center justify-center rounded-full border bg-background text-destructive shadow group-hover:flex"
+                className={styles.salesRemove}
               >
                 <Trash2 className="h-3 w-3" />
               </button>
@@ -88,7 +89,7 @@ export function SalesPreviewAside({ webinarId, notifications, onUpdate, onDelete
         ))}
         {filtered.length === 0 && <p className="text-center text-xs text-muted-foreground">Nenhuma venda.</p>}
       </div>
-      <Button type="button" variant="outline" onClick={onDeleteAll} className="w-full text-destructive">
+      <Button type="button" variant="outline" onClick={onDeleteAll} className={`${styles.previewButton} w-full text-destructive`}>
         <Trash2 className="mr-2 h-4 w-4" /> Excluir
       </Button>
     </aside>

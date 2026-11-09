@@ -1,0 +1,57 @@
+.surface {
+  border-color: rgb(40 73 52 / 11%);
+  background: linear-gradient(155deg, #fff 0%, #fff 65%, #f8faf6 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 95%), 0 2px 5px rgb(24 48 33 / 3%), 0 16px 40px -20px rgb(24 48 33 / 20%);
+}
+
+.link {
+  -webkit-tap-highlight-color: transparent;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.link:active {
+  transform: scale(.98);
+}
+
+.activeItem {
+  background: linear-gradient(115deg, #e2efd7, #edf5e5 65%, #f3f8ee);
+  box-shadow: inset 0 0 0 1px rgb(84 127 55 / 8%), inset 0 1px 0 rgb(255 255 255 / 85%), 0 2px 4px rgb(37 72 30 / 4%);
+}
+
+.hoverItem {
+  background: linear-gradient(115deg, rgb(232 239 227 / 75%), rgb(244 247 241 / 85%));
+  box-shadow: inset 0 0 0 1px rgb(69 96 51 / 4%);
+}
+
+.toggle {
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.toggle:hover {
+  box-shadow: inset 0 0 0 1px rgb(84 127 55 / 8%);
+}
+
+.toggle:active {
+  transform: scale(.92);
+}
+
+:global(.dark) .surface {
+  border-color: rgb(184 214 186 / 13%);
+  background: linear-gradient(155deg, #141b17, #101512 65%, #111911);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 2px 5px rgb(0 0 0 / 12%), 0 16px 40px -20px rgb(0 0 0 / 45%);
+}
+
+:global(.dark) .activeItem {
+  background: linear-gradient(115deg, #1e4430, #1c3727 65%, #1b3023);
+  box-shadow: inset 0 0 0 1px rgb(183 221 137 / 13%), inset 0 1px 0 rgb(223 248 205 / 6%), 0 2px 5px rgb(0 0 0 / 12%);
+}
+
+:global(.dark) .hoverItem {
+  background: linear-gradient(115deg, rgb(57 79 53 / 40%), rgb(39 53 37 / 45%));
+  box-shadow: inset 0 0 0 1px rgb(183 221 137 / 6%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link, .toggle { transition: none; }
+  .link:active, .toggle:active { transform: none; }
+}

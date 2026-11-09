@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useState } from "react";
 import { Download, Search, Trash2, Rocket, Pencil, Check, Zap } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -42,10 +43,10 @@ export function ChatPreviewAside({ webinarId, slug, messages, onUpdate, onDelete
     : messages.map((m, i) => [m, i] as const);
 
   return (
-    <aside className="flex h-fit flex-col gap-3 rounded-xl border bg-card p-4">
-      <h3 className="text-sm font-semibold">Prévia do chat</h3>
+    <aside className={`${styles.previewPanel} flex flex-col gap-3`}>
+      <h3 className="text-[13px] font-semibold">Prévia do chat</h3>
 
-      <Button asChild type="button" className="w-full bg-emerald-800 text-white hover:bg-emerald-900">
+      <Button asChild type="button" variant="outline" className={`${styles.previewButton} w-full`}>
         <a href={`/api/webinars/${webinarId}/messages/export`} download>
           <Download className="mr-2 h-4 w-4" /> Exportar mensagens em XLSX
         </a>
@@ -56,7 +57,7 @@ export function ChatPreviewAside({ webinarId, slug, messages, onUpdate, onDelete
         <Input placeholder="Buscar mensagens" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
       </div>
 
-      <div className="max-h-[460px] divide-y overflow-y-auto rounded-lg border">
+      <div className={styles.previewList}>
         {filtered.length === 0 && <p className="p-6 text-center text-xs text-muted-foreground">Nenhuma mensagem.</p>}
 
         {filtered.map(([m, originalIdx]) => {
@@ -103,8 +104,8 @@ export function ChatPreviewAside({ webinarId, slug, messages, onUpdate, onDelete
 
           return (
             <div key={m.id ?? `idx-${originalIdx}`} className="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40">
-              <span className="w-16 shrink-0 text-xs tabular-nums text-muted-foreground">{formatTime(m.showAtSec)}</span>
-              <p className="min-w-0 flex-1 truncate text-sm">
+              <span className="w-14 shrink-0 text-[10px] tabular-nums text-muted-foreground">{formatTime(m.showAtSec)}</span>
+              <p className="min-w-0 flex-1 truncate text-xs">
                 <span className="font-medium text-muted-foreground">{m.authorName || "Sem nome"}</span>{" "}
                 <span>{m.text}</span>
                 {m.isOwner && <Zap className="ml-1 inline h-3.5 w-3.5 text-amber-500" aria-label="Apresentador" />}
@@ -132,12 +133,12 @@ export function ChatPreviewAside({ webinarId, slug, messages, onUpdate, onDelete
         })}
       </div>
 
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/5" onClick={onDeleteAll}>
+      <div className={`${styles.previewToolbar} flex gap-2`}>
+        <Button type="button" variant="outline" className={`${styles.previewButton} flex-1 border-destructive/20 text-destructive hover:bg-destructive/5`} onClick={onDeleteAll}>
           <Trash2 className="mr-2 h-4 w-4" /> Excluir todo o chat
         </Button>
         {slug ? (
-          <Button asChild type="button" className="flex-1 bg-emerald-800 text-white hover:bg-emerald-900">
+          <Button asChild type="button" className={`${styles.previewButton} flex-1`}>
             <a href={`/${slug}/live`} target="_blank" rel="noopener noreferrer">
               <Rocket className="mr-2 h-4 w-4" /> Testar no player
             </a>

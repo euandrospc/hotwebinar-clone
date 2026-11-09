@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import { prisma } from "db";
 import { signLeadCookie } from "@/lib/lead-session";
 
 const cookieGetMock = vi.fn();
+const fetchMock = vi.fn().mockRejectedValue(new Error("Unexpected external request during a heartbeat"));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: cookieGetMock })
 }));
@@ -17,6 +18,10 @@ const TEST_USER = { id: "tk-user", email: "tk@example.com", name: "TK" };
 
 beforeEach(async () => {
   process.env.LEAD_SESSION_SECRET = "test-secret-min-32-chars-aaaaaaaaaa";
+  fetchMock.mockClear();
+  vi.stubGlobal("fetch", fetchMock);
+  await prisma.geoIpLookup.deleteMany({});
+  await prisma.geoIpProviderState.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
   await prisma.webinar.deleteMany({});
@@ -27,6 +32,11 @@ beforeEach(async () => {
   await prisma.user.create({ data: TEST_USER });
   cookieGetMock.mockReset();
   queueAddMock.mockClear();
+});
+
+afterEach(() => {
+  expect(fetchMock).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });
 
 afterAll(async () => prisma.$disconnect());
@@ -53,7 +63,7 @@ describe("POST /api/track", () => {
     const { POST } = await import("@/app/api/track/route");
     const req = new Request("http://localhost/api/track", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
     });
     const res = await POST(req);
@@ -73,11 +83,12 @@ describe("POST /api/track", () => {
     const { POST } = await import("@/app/api/track/route?" + Date.now());
     const req = new Request("http://localhost/api/track", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
     });
     const res = await POST(req);
     expect(res.status).toBe(429);
+    expect(await prisma.geoIpLookup.count()).toBe(0);
   });
 
   it("fires PITCH_REACHED + webhook once when crossing pitchAtSec", async () => {
@@ -115,10 +126,57 @@ describe("POST /api/track", () => {
     const { POST } = await import("@/app/api/track/route?" + (Date.now() + 3));
     const req = new Request("http://localhost/api/track", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
     });
     const res = await POST(req);
     expect(res.status).toBe(401);
+    expect(await prisma.geoIpLookup.count()).toBe(0);
+  });
+
+  it("recovers a legacy lead's missing IP through an authenticated heartbeat", async () => {
+    const { lead } = await makeWebinarWithLead();
+    await prisma.lead.update({ where: { id: lead.id }, data: { ip: "unknown" } });
+    const { POST } = await import("@/app/api/track/route");
+    const res = await POST(new Request("http://localhost/api/track", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "::ffff:8.8.8.8, 10.0.0.2" },
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+    }));
+    expect(res.status).toBe(200);
+    expect(await prisma.lead.findUnique({ where: { id: lead.id } }))
+      .toMatchObject({ ip: "8.8.8.8", lat: null, lng: null, watchedSec: 30 });
+    expect(await prisma.geoIpLookup.findUnique({ where: { ip: "8.8.8.8" } }))
+      .toMatchObject({ status: "PENDING", attempts: 0 });
+  });
+
+  it("does not overwrite a valid location or create jobs for an already located viewer", async () => {
+    const { lead } = await makeWebinarWithLead();
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { ip: "1.1.1.1", lat: -23.5, lng: -46.6, city: "São Paulo", country: "BR" }
+    });
+    const { POST } = await import("@/app/api/track/route");
+    const res = await POST(new Request("http://localhost/api/track", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
+      body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
+    }));
+    expect(res.status).toBe(200);
+    expect(await prisma.lead.findUnique({ where: { id: lead.id } }))
+      .toMatchObject({ ip: "1.1.1.1", lat: -23.5, lng: -46.6, city: "São Paulo", country: "BR" });
+    expect(await prisma.geoIpLookup.count()).toBe(0);
+  });
+
+  it("does not enqueue a lookup for an invalid heartbeat payload", async () => {
+    await makeWebinarWithLead();
+    const { POST } = await import("@/app/api/track/route");
+    const res = await POST(new Request("http://localhost/api/track", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
+      body: JSON.stringify({ videoSec: -1, watchedSecDelta: 30 })
+    }));
+    expect(res.status).toBe(400);
+    expect(await prisma.geoIpLookup.count()).toBe(0);
   });
 });

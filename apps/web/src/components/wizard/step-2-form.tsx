@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,8 +61,8 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-3xl space-y-6">
-      <h2 className="text-2xl font-semibold">Webinar</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.singleForm}>
+      <h2 className={styles.title}>Webinar</h2>
 
       <Controller
         control={control}
@@ -158,7 +159,9 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               control={control}
               name="startDate"
               render={({ field }) => (
-                <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Início" />
+                <div className={styles.dateTimeField}>
+                  <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Início" />
+                </div>
               )}
             />
             {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
@@ -169,7 +172,9 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               control={control}
               name="endDate"
               render={({ field }) => (
-                <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Fim" />
+                <div className={styles.dateTimeField}>
+                  <DateTimePicker value={field.value} onChange={field.onChange} ariaLabel="Fim" />
+                </div>
               )}
             />
             {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}

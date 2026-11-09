@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import { useEffect, useState } from "react";
-import { Radio } from "@/components/icons";
+import styles from "./webinars.module.css";
 
 const counts = new Map<string, number>();
 const subscribers = new Set<() => void>();
@@ -48,12 +48,9 @@ export function WebinarOnlineBadge({ webinarId }: { webinarId: string }) {
   return (
     <Link
       href={`/dashboard/webinars/${webinarId}/realtime`}
-      className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-500/20"
+      className={styles.online}
     >
-      <span className="relative flex h-1.5 w-1.5">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
-      </span>
+      <span className={styles.onlineDot} aria-hidden="true" />
       {online} online
     </Link>
   );

@@ -28,7 +28,7 @@ export function WebinarSchedule({ webinar, initialNow }: {
   }, [recurring]);
 
   return (
-    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
       {recurring && <span>{computePhase(occurrence, new Date(now)) === "open" ? "Sessão atual:" : "Próxima sessão:"}</span>}
       <span>{occurrence.startDate ? formatWebinarDateTime(occurrence.startDate, webinar.timezone) : "—"}</span>
       <ArrowRight className="h-3 w-3 shrink-0" />

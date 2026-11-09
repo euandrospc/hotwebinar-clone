@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -52,7 +53,7 @@ export function DeleteVideoDialog({ id, name, children }: { id: string; name: st
   return (
     <AlertDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className={styles.dialog}>
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir vídeo?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -91,10 +92,11 @@ export function DeleteVideoDialog({ id, name, children }: { id: string; name: st
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel className={styles.secondaryButton}>Cancelar</AlertDialogCancel>
           <AlertDialogAction asChild>
             <Button
               variant="destructive"
+              className="h-[34px] rounded-lg px-3 text-xs"
               disabled={pending || !confirmed || (webinars.length > 0 && !force)}
               onClick={(e) => {
                 e.preventDefault();

@@ -28,6 +28,16 @@ const response = (body: unknown, ok = true) => ({ ok, json: async () => body }) 
 const log = () => within(screen.getByRole("log", { name: "Mensagens da conversa" }));
 const composer = () => screen.getByPlaceholderText("Escreva uma resposta...");
 async function select(name: string) { await act(async () => { fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${name.slice(0, 1)} ${name} `) })); }); }
+async function openConversationActions() {
+  const openMenu = screen.queryByRole("menu");
+  if (openMenu) return within(openMenu);
+  await act(async () => {
+    const trigger = screen.getByRole("button", { name: "Ações da conversa" });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+  });
+  return within(await screen.findByRole("menu"));
+}
 
 beforeEach(() => {
   screenshot.mockReset().mockResolvedValue(undefined);
@@ -198,7 +208,8 @@ it("moves a closed conversation to Finalizados and offers reopening", async () =
     return response({ messages: [] });
   });
   await openInbox();
-  fireEvent.click(screen.getByRole("button", { name: "Encerrar atendimento" }));
+  const actions = await openConversationActions();
+  fireEvent.click(actions.getByRole("menuitem", { name: "Encerrar atendimento" }));
   await screen.findByRole("button", { name: "Reabrir e assumir" });
   expect(screen.getByRole("tab", { name: "Finalizados 1" })).toHaveAttribute("aria-selected", "true");
   expect(screen.queryByPlaceholderText("Escreva uma resposta...")).not.toBeInTheDocument();
@@ -215,7 +226,8 @@ it("selects another employee and submits the transfer", async () => {
     return response({ messages: [] });
   });
   await openInbox();
-  fireEvent.click(screen.getByRole("button", { name: "Transferir atendimento" }));
+  const actions = await openConversationActions();
+  fireEvent.click(actions.getByRole("menuitem", { name: "Transferir atendimento" }));
   const dialog = within(screen.getByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Confirmar transferência" })).toBeDisabled();
   fireEvent.change(dialog.getByLabelText("Novo responsável"), { target: { value: "other" } });
@@ -232,11 +244,16 @@ it("copies only the selected conversation and disables duplicate captures while 
     ? response({ conversations, onlineTotal: 2 }) : response({ messages: [message("capture", "Mensagem para o print")] }));
   await openInbox();
   await screen.findByText("Mensagem para o print");
-  fireEvent.click(screen.getByRole("button", { name: "Copiar print" }));
+  const actions = await openConversationActions();
+  fireEvent.click(actions.getByRole("menuitem", { name: "Copiar print" }));
   expect(screenshot).toHaveBeenCalledTimes(1);
   expect(screenshot.mock.calls[0][0].header.textContent).toContain("Ana");
   expect(screenshot.mock.calls[0][0].messages.textContent).toContain("Mensagem para o print");
-  expect(screen.getByRole("button", { name: "Copiando print…" })).toBeDisabled();
+  const busyActions = await openConversationActions();
+  const busyCapture = busyActions.getByRole("menuitem", { name: "Copiando print…" });
+  expect(busyCapture).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(busyCapture);
+  expect(screenshot).toHaveBeenCalledTimes(1);
   await act(async () => finish());
-  expect(screen.getByRole("button", { name: "Copiar print" })).toBeEnabled();
+  expect(busyActions.getByRole("menuitem", { name: "Copiar print" })).not.toHaveAttribute("aria-disabled", "true");
 });

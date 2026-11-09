@@ -1,0 +1,24 @@
+{
+  "name": "Bravy Lives v2 — Dashboard principal e sidebar",
+  "date": "2026-11-04",
+  "status": "proposal_for_review",
+  "reference": "../references/fintpay/02-full-dashboard.png",
+  "direction": "../visual-direction.md",
+  "preview": "dashboard-sidebar-v2.png",
+  "staticHtmlExport": "dashboard.html",
+  "canvas": {
+    "file": "/Users/jpasv/.pencil/documents/d4c4f1b5-4704-4ca7-8c97-ff1d8b4b145c/untitled.pen",
+    "nodeId": "oeuhj",
+    "name": "Bravy Lives V2 · Dashboard principal · Fintpay",
+    "width": 1920,
+    "height": 1240
+  },
+  "notes": [
+    "Dados, nomes e datas agendadas são ilustrativos.",
+    "O protótipo preserva os módulos existentes do dashboard; o botão Criar webinar promove uma ação já existente na tela Webinars.",
+    "Participantes e dispositivos representam sessões do período; audiência online é instantânea.",
+    "A marca foi reaproveitada do SVG original apps/web/src/components/logo.tsx.",
+    "Revisado visualmente em PNG; não é uma implementação funcional nem foi testado como aplicação.",
+    "Nenhum arquivo de runtime da aplicação foi alterado nesta tarefa."
+  ]
+}

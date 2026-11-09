@@ -1,4 +1,7 @@
 "use client";
+import { Search } from "@/components/icons";
+import styles from "./webinars.module.css";
+import adminStyles from "@/components/admin/admin-page.module.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
@@ -23,22 +26,25 @@ export function WebinarsFilters() {
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Pesquisar</label>
+    <div className={styles.filters}>
+      <div className={styles.filter}>
+        <label htmlFor="webinars-search">Pesquisar</label>
+        <div className={styles.search}><Search aria-hidden="true" />
         <Input
+          id="webinars-search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onBlur={() => onChange("q", q)}
+          onKeyDown={event => { if (event.key === "Enter") onChange("q", q); }}
           placeholder="Nome ou título"
-          className="w-64"
         />
+        </div>
       </div>
-      <div className="space-y-1">
+      <div className={styles.filter}>
         <label className="text-xs text-muted-foreground">Status</label>
         <Select value={params.get("status") ?? "ALL"} onValueChange={(v) => onChange("status", v)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger aria-label="Status"><SelectValue /></SelectTrigger>
+          <SelectContent className={adminStyles.portal}>
             <SelectItem value="ALL">Todos</SelectItem>
             <SelectItem value="DRAFT">Rascunho</SelectItem>
             <SelectItem value="ACTIVE">Ativo</SelectItem>
@@ -46,11 +52,11 @@ export function WebinarsFilters() {
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1">
+      <div className={styles.filter}>
         <label className="text-xs text-muted-foreground">Tipo</label>
         <Select value={params.get("tipo") ?? "ALL"} onValueChange={(v) => onChange("tipo", v)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger aria-label="Tipo"><SelectValue /></SelectTrigger>
+          <SelectContent className={adminStyles.portal}>
             <SelectItem value="ALL">Todos</SelectItem>
             <SelectItem value="UNICO">Único</SelectItem>
             <SelectItem value="RECURRING">Recorrente</SelectItem>
@@ -58,11 +64,11 @@ export function WebinarsFilters() {
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1">
+      <div className={styles.filter}>
         <label className="text-xs text-muted-foreground">Ordenar</label>
         <Select value={params.get("sort") ?? "recent"} onValueChange={(v) => onChange("sort", v)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger aria-label="Ordenar"><SelectValue /></SelectTrigger>
+          <SelectContent className={adminStyles.portal}>
             <SelectItem value="recent">Mais recentes</SelectItem>
             <SelectItem value="oldest">Mais antigos</SelectItem>
             <SelectItem value="az">A–Z</SelectItem>

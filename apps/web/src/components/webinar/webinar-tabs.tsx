@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import styles from "./webinar-operations.module.css";
 
 interface Props {
   webinarId: string;
@@ -19,25 +20,29 @@ const TABS = [
 
 export function WebinarTabs({ webinarId }: Props) {
   const pathname = usePathname() ?? "";
+  const navigation = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = navigation.current;
+    const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !active) return;
+    const bounds = nav.getBoundingClientRect();
+    const target = active.getBoundingClientRect();
+    if (target.left < bounds.left || target.right > bounds.right) nav.scrollLeft += target.left - bounds.left - (bounds.width - target.width) / 2;
+  }, [pathname]);
   const base = `/dashboard/webinars/${webinarId}`;
   return (
-    <nav aria-label="Navegação do webinar" className="flex gap-1 overflow-x-auto border-b">
+    <nav ref={navigation} aria-label="Navegação do webinar" className={styles.navigation}>
       {TABS.map((t) => {
         const href = `${base}${t.suffix}`;
         const active =
           pathname === href ||
-          (t.suffix === "/step-1" && pathname.includes(`${base}/step-`));
+          (t.suffix === "/step-1" && (pathname.includes(`${base}/step-`) || pathname === `${base}/integrations` || pathname === `${base}/sales-preview`));
         return (
           <Link
             key={t.label}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={cn(
-              "shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-sm transition-colors",
-              active
-                ? "border-primary text-foreground font-medium"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
+            className={styles.navLink}
           >
             {t.label}
           </Link>

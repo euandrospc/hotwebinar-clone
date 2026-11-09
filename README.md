@@ -77,7 +77,7 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 
 - Step 8 (Audiência) — new sub-plan: 3 modos (NONE / FIXED / DYNAMIC), min/max participantes, switch "AO VIVO" badge, prévia da curva (Recharts).
 - Player `/[slug]/live` header: `<AudienceBadge>` mostra `🔴 AO VIVO · 1.234 assistindo` quando `audienceMode != NONE`. Counter determinístico via hash(`webinarId:leadId`); DYNAMIC tick 5 s.
-- Lead enrichment: opt-in dispara `enrichLeadGeo(leadId, ip)` (fire-and-forget) — busca city/region/lat/lng via ipapi.co. Falha silenciosa em IP privado / rede / rate-limit.
+- Lead enrichment: opt-in, reentrada e heartbeat enfileiram os IPs públicos sem coordenadas válidas. O worker GeoIP consulta ipapi.co fora das requisições do player; veja a recuperação abaixo.
 - Schema migration: `20260505230000_d4_audience_and_geo` — enum `AudienceMode`, 4 cols Webinar (`audienceMode/Min/Max/LiveBadge`), 4 cols Lead (`city/region/lat/lng`).
 - Mapa de leads = futuro D5.
 
@@ -131,6 +131,44 @@ Os testes Redis são opt-in e usam prefixo separado do ambiente de desenvolvimen
 ```bash
 REALTIME_REDIS_TEST_URL=redis://127.0.0.1:6382 pnpm --filter web test src/test/lib/realtime-presence.test.ts src/test/lib/realtime-bus.test.ts src/test/lib/realtime-gateway.test.ts
 ```
+
+## Recuperação de geolocalização
+
+O worker iniciado em `apps/web/server.ts` usa PostgreSQL como fila e cache por IP
+(`geo_ip_lookup`). Cadastro, reentrada por cookie e heartbeat apenas enfileiram;
+não fazem chamadas externas. IPs de espectadores ativos têm prioridade sobre o
+histórico. Uma varredura paginada a cada 10s também recupera cadastros antigos com
+atividade nas últimas 24h e enfileiramentos perdidos, sem ficar presa nos primeiros
+IPs inválidos. O histórico inativo não consome a quota; será enfileirado ao retornar.
+
+- Resultado válido é reutilizado por 24h para leads do mesmo IP. Coordenadas já
+  válidas são preservadas, inclusive quando o provedor falha ou responde incompleto.
+- Timeout de 5s; até 5 tentativas para falhas transitórias, espaçadas em 30s, 2min,
+  10min e 1h. Erro definitivo/esgotamento fica em cache negativo por 24h.
+- Uma reserva compartilhada limita o provedor a uma chamada por vez e no mínimo
+  1s entre chamadas. `429`/`RateLimited` respeita `Retry-After` (1h se ausente),
+  pausa globalmente e não consome tentativas. Fila, cooldown e leases sobrevivem
+  a reinícios. Redis não é obrigatório para recuperar a localização.
+- `lastError`, `attempts`, `nextAttemptAt` e `status` permitem diagnosticar falhas
+  por consulta ao banco; erros não incluem corpo da resposta, chave nem IP nos logs.
+- `GEOIP_API_KEY` aceita uma chave ipapi.co opcional; `GEOIP_MIN_INTERVAL_MS`
+  permite reduzir a frequência. O retry não aumenta a quota contratada nem garante
+  coordenadas para IPs sem cobertura. IPs privados/reservados não são consultados.
+
+As migrations `20261104233000_geoip_recovery` e `20261104234500_geoip_priority`
+são aditivas para os dados de negócio: criam a fila/controle e índices. Devem ser
+aplicadas antes de iniciar o servidor atualizado. Não exigem Trigger.dev.
+
+Validação local, exclusivamente no banco de testes separado:
+
+```sh
+pnpm db:generate
+DATABASE_URL='postgresql://hotwebinar:hotwebinar@localhost:5452/hotwebinar_test?schema=public' pnpm --filter db migrate:deploy
+pnpm --filter web test src/test/lib/geoip.test.ts src/test/server/geoip-queue.test.ts src/test/server/geoip-worker.test.ts src/test/server/actions/public-optin.test.ts src/test/server/live-geoip.test.ts src/test/api/track.test.ts src/test/lib/webinar-realtime.test.ts
+```
+
+Os testes simulam o provedor e não fazem consultas externas. Não rode duas suítes
+Vitest de integração ao mesmo tempo: elas compartilham `hotwebinar_test`.
 
 ## Testes locais
 

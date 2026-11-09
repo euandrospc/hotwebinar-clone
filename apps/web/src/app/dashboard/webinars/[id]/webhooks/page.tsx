@@ -1,3 +1,5 @@
+import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
+import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -52,22 +54,24 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="container mx-auto py-6">
+    <AdminPage>
       <WebinarTabs webinarId={id} />
-      <h1 className="mt-6 text-2xl font-semibold">Webhooks — {w.title}</h1>
-      <div className="mt-4 flex gap-2 text-sm">
+      <AdminPageHeader title="Webhooks" description={w.title || w.name} />
+      <AdminSurface padded={false} className={styles.table}>
+      <div className={styles.toolbar}><div className={styles.controls}>
         <FilterLink id={id} label="Todos" sp={sp} apply={{ status: undefined }} />
-        <FilterLink id={id} label="Pending" sp={sp} apply={{ status: "PENDING" }} />
-        <FilterLink id={id} label="Success" sp={sp} apply={{ status: "SUCCESS" }} />
-        <FilterLink id={id} label="Failed" sp={sp} apply={{ status: "FAILED" }} />
+        <FilterLink id={id} label="Pendentes" sp={sp} apply={{ status: "PENDING" }} />
+        <FilterLink id={id} label="Enviados" sp={sp} apply={{ status: "SUCCESS" }} />
+        <FilterLink id={id} label="Falhas" sp={sp} apply={{ status: "FAILED" }} />
       </div>
-      <table className="mt-4 w-full text-sm">
+      </div>
+      <div className={styles.tableScroll}><table className="w-full text-xs">
         <thead>
           <tr className="border-b text-left">
             <th className="px-3 py-2">Evento</th>
             <th className="px-3 py-2">Lead</th>
             <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2 text-right">Attempts</th>
+            <th className="px-3 py-2 text-right">Tentativas</th>
             <th className="px-3 py-2 text-right">HTTP</th>
             <th className="px-3 py-2">Quando</th>
             <th className="px-3 py-2 text-right">Ações</th>
@@ -79,17 +83,18 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
           ) : null}
           {data.map((r) => <WebhookRow key={r.id} row={r} />)}
         </tbody>
-      </table>
-      <div className="mt-4 flex items-center justify-between text-sm">
+      </table></div>
+      <div className={styles.pagination}>
         <span className="text-muted-foreground">
           {total} entrada{total === 1 ? "" : "s"}, página {page}/{totalPages}
         </span>
         <div className="flex gap-2">
-          {page > 1 ? <Link href={`?page=${page - 1}`} className="rounded border px-3 py-1">Anterior</Link> : null}
-          {page < totalPages ? <Link href={`?page=${page + 1}`} className="rounded border px-3 py-1">Próximo</Link> : null}
+          {page > 1 ? <Link href={`?page=${page - 1}`} className={styles.linkButton}>Anterior</Link> : null}
+          {page < totalPages ? <Link href={`?page=${page + 1}`} className={styles.linkButton}>Próximo</Link> : null}
         </div>
       </div>
-    </div>
+      </AdminSurface>
+    </AdminPage>
   );
 }
 
@@ -105,5 +110,5 @@ function FilterLink({
   if (apply.status === undefined) delete next.status;
   const qs = new URLSearchParams(next as Record<string, string>).toString();
   const href = `/dashboard/webinars/${id}/webhooks${qs ? "?" + qs : ""}`;
-  return <Link href={href} className="rounded border px-3 py-1">{label}</Link>;
+  return <Link href={href} aria-current={sp.status === apply.status ? "true" : undefined} className={styles.filter}>{label}</Link>;
 }

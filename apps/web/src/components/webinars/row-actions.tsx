@@ -1,4 +1,5 @@
 "use client";
+import adminStyles from "@/components/admin/admin-page.module.css";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Pencil, Files, Trash2, Users, BarChart3, Radio, MoreHorizontal } from "@/components/icons";
@@ -48,9 +49,9 @@ export function RowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" aria-label={`Ações do webinar ${title || "Sem título"}`}><MoreHorizontal className="h-4 w-4" /></Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent align="end" className={adminStyles.portal}>
         <DropdownMenuItem onClick={() => router.push(`/dashboard/webinars/${id}/step-1`)}>
           <Pencil className="mr-2 h-4 w-4" /> Editar
         </DropdownMenuItem>

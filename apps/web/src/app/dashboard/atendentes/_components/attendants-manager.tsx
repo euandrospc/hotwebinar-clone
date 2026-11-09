@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AdminEmptyState } from "@/components/admin/admin-page";
+import styles from "@/components/management-v2.module.css";
 import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
-import { Trash2 } from "@/components/icons";
+import { Trash2, Plus, Users } from "@/components/icons";
 import { createAttendantAction, toggleAttendantAction, deleteAttendantAction } from "@/server/actions/attendants";
 
 export interface AttendantRow {
@@ -22,6 +24,7 @@ export interface AttendantRow {
 }
 
 export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
+  const [createOpen, setCreateOpen] = useState(false);
   const [rows, setRows] = useState(initial);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,6 +38,7 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
       const result = await createAttendantAction({ name, email, password });
       if ("ok" in result) {
         toast.success("Atendente criado");
+        setCreateOpen(false);
         setName("");
         setEmail("");
         setPassword("");
@@ -75,8 +79,15 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
   }
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={handleCreate} className="max-w-xl space-y-4 rounded-md border bg-card p-6">
+    <div className={styles.surface}>
+      <div className={styles.sectionHeader}>
+        <div className="flex items-center gap-2"><h2 className={styles.sectionTitle}>Sua equipe</h2><span className={styles.count}>{rows.length}</span><span className={styles.meta}>{rows.filter(row => row.role !== "disabled").length} ativos</span></div>
+        <Button className={styles.primaryButton} onClick={() => setCreateOpen(true)}><Plus className="h-3.5 w-3.5" />Novo atendente</Button>
+      </div>
+      <Dialog open={createOpen} onOpenChange={value => { if (!isPending) setCreateOpen(value); }}>
+        <DialogContent className={`${styles.dialog} sm:max-w-md`}>
+          <DialogHeader><DialogTitle>Novo atendente</DialogTitle><DialogDescription>Crie um acesso para sua equipe responder às conversas.</DialogDescription></DialogHeader>
+          <form onSubmit={handleCreate} className={styles.form}>
         <div className="space-y-2">
           <Label htmlFor="attendant-name">Nome</Label>
           <Input id="attendant-name" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -102,17 +113,17 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
             required
           />
         </div>
-        <Button type="submit" disabled={isPending}>
+        <div className={styles.formFooter}><Button type="button" variant="outline" className={styles.secondaryButton} disabled={isPending} onClick={() => setCreateOpen(false)}>Cancelar</Button><Button className={styles.primaryButton} type="submit" disabled={isPending}>
           {isPending ? "Criando..." : "Criar atendente"}
-        </Button>
-      </form>
+        </Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {rows.length === 0 ? (
-        <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">
-          Nenhum atendente cadastrado.
-        </div>
+        <AdminEmptyState icon={<Users />} title="Sua equipe começa aqui" description="Adicione um atendente para dividir as conversas com sua equipe." />
       ) : (
-        <Table>
+        <Table className={styles.table}>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
@@ -125,15 +136,17 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.name}</TableCell>
+                <TableCell><div className="flex items-center gap-2.5"><span className={styles.avatar} aria-hidden="true">{r.name.trim().slice(0, 2).toUpperCase()}</span><span className="font-medium">{r.name}</span></div></TableCell>
                 <TableCell>{r.email}</TableCell>
                 <TableCell>
-                  <Badge variant={r.role === "disabled" ? "destructive" : "default"}>
+                  <span className={styles.status} data-status={r.role === "disabled" ? "disabled" : "active"}>
                     {r.role === "disabled" ? "Desativado" : "Ativo"}
-                  </Badge>
+                  </span>
                 </TableCell>
                 <TableCell>
                   <Switch
+                    aria-label={`Ativar ou desativar ${r.name}`}
+                    className="data-[state=checked]:bg-[#548D45]"
                     checked={r.role !== "disabled"}
                     disabled={isPending}
                     onCheckedChange={(checked) => handleToggle(r.id, !checked)}
@@ -142,10 +155,10 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
                 <TableCell className="text-right">
                   {confirmId === r.id ? (
                     <span className="inline-flex items-center gap-2">
-                      <Button size="sm" variant="destructive" disabled={isPending} onClick={() => handleDelete(r.id)}>
+                      <Button className="h-8 rounded-lg text-xs" size="sm" variant="destructive" disabled={isPending} onClick={() => handleDelete(r.id)}>
                         Confirmar
                       </Button>
-                      <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setConfirmId(null)}>
+                      <Button className={styles.secondaryButton} size="sm" variant="ghost" disabled={isPending} onClick={() => setConfirmId(null)}>
                         Cancelar
                       </Button>
                     </span>
@@ -153,7 +166,7 @@ export function AttendantsManager({ initial }: { initial: AttendantRow[] }) {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="text-muted-foreground hover:text-destructive"
+                      className={`${styles.iconButton} hover:text-destructive`}
                       aria-label="Excluir atendente"
                       onClick={() => setConfirmId(r.id)}
                     >

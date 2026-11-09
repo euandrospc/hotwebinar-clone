@@ -10,7 +10,7 @@ export interface WaitingTemplatePickerProps {
 
 export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePickerProps) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {WAITING_TEMPLATES.map((t) => {
         const selected = t.id === value;
         return (
@@ -20,12 +20,12 @@ export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePicker
             onClick={() => onChange(t.id)}
             aria-pressed={selected}
             className={cn(
-              "relative rounded-md border bg-card p-4 text-left transition",
-              selected ? "ring-2 ring-primary" : "hover:border-primary/50"
+              "relative rounded-lg border bg-card px-3 py-3 pr-7 text-left transition-colors motion-reduce:transition-none",
+              selected ? "border-primary/30 bg-primary/5" : "hover:border-primary/50"
             )}
           >
-            <p className="text-sm font-semibold">{t.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>
+            <p className="text-xs font-medium">{t.label}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t.description}</p>
             {selected ? (
               <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
             ) : null}

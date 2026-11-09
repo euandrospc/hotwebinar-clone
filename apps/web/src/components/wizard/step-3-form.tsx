@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useRef, useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,11 +99,11 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <h2 className="text-2xl font-semibold">Login</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+      <h2 className={styles.title}>Login</h2>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
-        <div className="space-y-6">
+      <div className={styles.formColumns}>
+        <div className={styles.formPanel}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="logoUrl">Logo do webinar (URL)</Label>
@@ -122,6 +123,7 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                   type="button"
                   variant="outline"
                   size="icon"
+                  className="h-[34px] w-[34px] shrink-0"
                   disabled={logoUploading}
                   onClick={() => logoInputRef.current?.click()}
                   aria-label="Enviar logo"
@@ -148,6 +150,7 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
                           type="button"
                           variant={selected ? "default" : "outline"}
                           size="icon"
+                          className="h-[34px] w-[34px]"
                           onClick={() => field.onChange(a)}
                           aria-pressed={selected}
                           aria-label={`Alinhar à ${a.toLowerCase()}`}
@@ -162,7 +165,7 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
             </div>
           </div>
 
-          <fieldset className="space-y-3 rounded-md border p-4">
+          <fieldset className="space-y-3 rounded-md border p-3">
             <legend className="px-1 text-sm font-semibold">Barra de progresso</legend>
             <Controller
               control={control}
@@ -170,7 +173,7 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               render={({ field }) => (
                 <label className="flex items-center gap-3">
                   <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  <span className="text-sm">Exibir barra de progresso</span>
+                  <span className="text-xs">Exibir barra de progresso</span>
                 </label>
               )}
             />
@@ -241,7 +244,7 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
             </div>
           </div>
 
-          <fieldset className="space-y-3 rounded-md border p-4">
+          <fieldset className="space-y-3 rounded-md border p-3">
             <legend className="px-1 text-sm font-semibold">Formulário de acesso à sala</legend>
             <p className="text-xs text-muted-foreground">
               Reordene os campos com as setas. Desative campos que não deseja exibir.
@@ -250,22 +253,22 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               control={control}
               name="formFieldOrder"
               render={({ field }) => (
-                <ol className="space-y-2">
+                <ol className="space-y-1.5">
                   {field.value.map((key, idx) => (
-                    <li key={key} className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
-                      <span className="w-24 text-sm font-medium">{FIELD_LABEL[key]}</span>
-                      <div className="flex flex-1 items-center gap-3">
+                    <li key={key} className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5">
+                      <span className="w-20 shrink-0 text-xs font-medium">{FIELD_LABEL[key]}</span>
+                      <div className="flex flex-1 items-center gap-2">
                         <Switch
                           checked={isFieldEnabled(key)}
                           onCheckedChange={(v) => toggleFieldEnabled(key, v)}
                         />
-                        <span className="text-xs text-muted-foreground">Exibir</span>
+                        <span className="text-[11px] text-muted-foreground">Exibir</span>
                       </div>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, -1)} aria-label="Subir">
-                        <ArrowUp className="h-4 w-4" />
+                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 shrink-0 p-0" onClick={() => moveField(idx, -1)} aria-label="Subir">
+                        <ArrowUp className="h-3.5 w-3.5" />
                       </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => moveField(idx, 1)} aria-label="Descer">
-                        <ArrowDown className="h-4 w-4" />
+                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 shrink-0 p-0" onClick={() => moveField(idx, 1)} aria-label="Descer">
+                        <ArrowDown className="h-3.5 w-3.5" />
                       </Button>
                     </li>
                   ))}
@@ -277,29 +280,29 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
             )}
           </fieldset>
 
-          <fieldset className="space-y-3 rounded-md border p-4">
+          <fieldset className="space-y-3 rounded-md border p-3">
             <legend className="px-1 text-sm font-semibold">Campos obrigatórios</legend>
             <Controller control={control} name="nameRequired" render={({ field }) => (
               <label className="flex items-center gap-3">
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir Nome como requisito obrigatório</span>
+                <span className="text-xs">Incluir Nome como requisito obrigatório</span>
               </label>
             )} />
             <Controller control={control} name="emailRequired" render={({ field }) => (
               <label className="flex items-center gap-3">
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir E-mail como requisito obrigatório</span>
+                <span className="text-xs">Incluir E-mail como requisito obrigatório</span>
               </label>
             )} />
             <Controller control={control} name="phoneRequired" render={({ field }) => (
               <label className="flex items-center gap-3">
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-sm">Incluir WhatsApp como requisito obrigatório</span>
+                <span className="text-xs">Incluir WhatsApp como requisito obrigatório</span>
               </label>
             )} />
           </fieldset>
 
-          <fieldset className="space-y-3 rounded-md border p-4">
+          <fieldset className="space-y-3 rounded-md border p-3">
             <legend className="px-1 text-sm font-semibold">Campos do formulário</legend>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="space-y-1">
@@ -318,7 +321,8 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
           </fieldset>
         </div>
 
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        <aside className={styles.previewPanel}>
+          <h3 className={styles.previewTitle}>Prévia do acesso</h3>
           <LoginPreview
             logoUrl={watch("logoUrl") || ""}
             loginLogoAlign={watch("loginLogoAlign")}

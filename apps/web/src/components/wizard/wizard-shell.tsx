@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
+import styles from "./wizard.module.css";
 import {
   Flag,
   MonitorPlay,
@@ -38,50 +40,47 @@ const STEPS: ReadonlyArray<StepDef> = [
 export interface WizardShellProps {
   webinarId: string;
   children: React.ReactNode;
+  webinarTitle?: string;
 }
 
-export function WizardShell({ webinarId, children }: WizardShellProps) {
+export function WizardShell({ webinarId, children, webinarTitle }: WizardShellProps) {
   const pathname = usePathname() ?? "";
+  const stepsRef = useRef<HTMLElement>(null);
 
   const activeIndex = STEPS.findIndex((s) => s.matchPath(pathname, webinarId));
 
+  useEffect(() => {
+    const container = stepsRef.current;
+    const activeStep = container?.querySelector<HTMLAnchorElement>('[aria-current="step"]');
+    if (!container || !activeStep) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeStep.getBoundingClientRect();
+    if (activeRect.left >= containerRect.left && activeRect.right <= containerRect.right) return;
+
+    const centeredLeft = container.scrollLeft + activeRect.left - containerRect.left
+      - (container.clientWidth - activeRect.width) / 2;
+    container.scrollTo({
+      left: Math.max(0, Math.min(container.scrollWidth - container.clientWidth, centeredLeft)),
+      behavior: "auto"
+    });
+  }, [activeIndex, webinarId]);
+
   return (
-    <div className="flow-root">
-      <nav aria-label="Etapas do webinar" className="sticky top-3 z-20 mx-3 mt-3 overflow-x-auto rounded-xl border bg-card px-4 py-4 shadow-sm sm:px-6">
-        <ol className="mx-auto flex min-w-max justify-center">
-          {STEPS.map((s, i) => {
-            const isActive = i === activeIndex;
-            const isPast = activeIndex >= 0 && i < activeIndex;
-            const iconColor = isActive ? "text-red-600" : isPast ? "text-emerald-600" : "text-gray-400";
-            const labelColor = isActive ? "text-red-600 font-semibold" : isPast ? "text-emerald-700" : "text-gray-500";
-            const circleColor = isActive ? "bg-emerald-600 text-white" : isPast ? "bg-emerald-600 text-white" : "bg-gray-200 text-gray-500";
-            const lineColor = isPast ? "bg-emerald-600" : "bg-gray-300";
-            const showLine = i < STEPS.length - 1;
-            return (
-              <li key={s.num} className="flex w-20 flex-col items-center sm:w-24">
-                <Link href={s.href(webinarId)} className="group flex flex-col items-center">
-                  <s.Icon className={cn("mb-1 h-7 w-7", iconColor)} />
-                  <span className={cn("text-center text-xs", labelColor)}>{s.label}</span>
-                </Link>
-                <div className="relative mt-2 flex h-7 w-full items-center justify-center">
-                  {showLine ? (
-                    <span className={cn("absolute left-1/2 top-1/2 h-0.5 w-full -translate-y-1/2", lineColor)} />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                      circleColor
-                    )}
-                  >
-                    {s.num}
-                  </span>
-                </div>
-              </li>
-            );
-          })}
+    <AdminPage className={styles.shell}>
+      <AdminPageHeader title={webinarTitle || "Configurar webinar"} description="Configure a experiência do seu público, do acesso à oferta."
+        back={{ href: "/dashboard/webinars", label: "Webinars" }} />
+      <nav ref={stepsRef} aria-label="Etapas do webinar" className={styles.steps}>
+        <ol className={styles.stepList}>
+          {STEPS.map((step, index) => <li key={step.num}>
+            <Link href={step.href(webinarId)} className={styles.step} aria-current={index === activeIndex ? "step" : undefined}>
+              <step.Icon aria-hidden="true" />
+              <span>{step.label}</span><span className={styles.stepNumber}>{String(step.num).padStart(2, "0")}</span>
+            </Link>
+          </li>)}
         </ol>
       </nav>
-      <div className="container mx-auto px-6 py-6">{children}</div>
-    </div>
+      <div className={styles.content}>{children}</div>
+    </AdminPage>
   );
 }

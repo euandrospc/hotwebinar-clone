@@ -1,3 +1,4 @@
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { getAudienceSummary } from "@/server/audience-history";
 import { AudienceSummary } from "@/components/dashboard/audience-summary";
 import { headers } from "next/headers";
@@ -144,24 +145,15 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
   });
 
   return (
-    <div className="container mx-auto py-6">
+    <AdminPage>
       <WebinarTabs webinarId={id} />
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{webinar.title || "Métricas"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Resultados do período selecionado</p>
-        </div>
-        <DashboardRangePicker
-          initialFrom={toIsoDate(rangeStart)}
-          initialTo={toIsoDate(rangeEnd)}
-          initialFromTime={toIsoTime(rangeStart)}
-          initialToTime={toIsoTime(rangeEnd)}
-        />
-      </div>
+      <AdminPageHeader title="Métricas" description={webinar.title || "Resultados do período selecionado"} actions={
+        <DashboardRangePicker appearance="v2" initialFrom={toIsoDate(rangeStart)} initialTo={toIsoDate(rangeEnd)} initialFromTime={toIsoTime(rangeStart)} initialToTime={toIsoTime(rangeEnd)} />
+      } />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_minmax(0,340px)]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0 space-y-4">
           <AudienceSummary data={audience} timezone={webinar.timezone} />
           <MetricsVideoRetention data={retention} />
           <MetricsConversionFunnel
@@ -175,16 +167,16 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
               comprou: kpis.comprou
             }}
           />
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
             <DashboardParticipantesChart data={participantes} />
             <DashboardDispositivosChart devices={devices} />
           </div>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="min-w-0 space-y-2.5">
           <MetricsKpiList kpis={kpis} webinarId={id} />
         </div>
       </div>
-    </div>
+    </AdminPage>
   );
 }

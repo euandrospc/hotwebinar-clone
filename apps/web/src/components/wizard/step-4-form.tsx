@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,8 +95,8 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
   }
 
   return (
-    <form onSubmit={onFormSubmit} className="max-w-3xl space-y-6">
-      <h2 className="text-2xl font-semibold">Vídeo</h2>
+    <form onSubmit={onFormSubmit} className={styles.singleForm}>
+      <h2 className={styles.title}>Vídeo</h2>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)}>
         <TabsList>
@@ -127,7 +128,7 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
         </TabsContent>
       </Tabs>
 
-      <div className="space-y-2">
+      <div className="flex flex-col items-start gap-2">
         <Label>Momento "chegou no pitch"</Label>
         <Controller
           control={externalForm.control}
@@ -140,7 +141,7 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
 
       {tab === "external" && <WizardNav webinarId={webinarId} step={4} submitting={pending} />}
       {tab === "library" && (
-        <div className="mt-8 flex items-center justify-between border-t pt-4">
+        <div className={styles.navFooter}>
           <a href={`/dashboard/webinars/${webinarId}/step-3`} className="inline-flex items-center gap-1 rounded-md border px-4 py-2 text-sm"><ArrowLeft className="h-4 w-4" /> Voltar</a>
           <button
             type="button"

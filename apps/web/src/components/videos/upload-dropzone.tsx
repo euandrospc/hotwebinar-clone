@@ -1,4 +1,6 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
+import { Upload } from "@/components/icons";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { usePresignedUpload } from "@/lib/hooks/use-presigned-upload";
@@ -22,9 +24,10 @@ export function UploadDropzone({ onReady }: UploadDropzoneProps) {
   }
 
   return (
-    <div className="space-y-3 rounded-md border-2 border-dashed border-input p-8 text-center">
+    <div className={styles.dropzone}>
+      <span className={styles.iconBadge}><Upload aria-hidden="true" /></span>
       <p className="text-sm text-muted-foreground">Selecione um arquivo de vídeo (até 10 GiB)</p>
-      <Button type="button" onClick={pickFile} disabled={state.status !== "idle" && state.status !== "failed" && state.status !== "ready"}>
+      <Button className={styles.primaryButton} type="button" onClick={pickFile} disabled={state.status !== "idle" && state.status !== "failed" && state.status !== "ready"}>
         Escolher arquivo
       </Button>
       <input ref={inputRef} type="file" accept="video/*" hidden onChange={onChange} />

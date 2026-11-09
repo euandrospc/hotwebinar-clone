@@ -7,7 +7,7 @@ const LeadsMapCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[600px] animate-pulse rounded-lg border bg-muted" aria-label="Carregando mapa" />
+      <div className="h-[420px] animate-pulse motion-reduce:animate-none rounded-2xl border bg-muted" aria-label="Carregando mapa" />
     )
   }
 );

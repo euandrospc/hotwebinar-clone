@@ -1,3 +1,5 @@
+import { AdminPage } from "@/components/admin/admin-page";
+import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { prisma } from "db";
@@ -14,5 +16,5 @@ export default async function SalesPreviewPage({ params }: { params: Promise<{ i
     select: { title: true, saleNotifications: { orderBy: { showAtSec: "asc" } } }
   });
   if (!webinar) notFound();
-  return <SalesSimulation title={webinar.title} notifications={webinar.saleNotifications.map(publicSaleNotificationDto)} />;
+  return <AdminPage><WebinarTabs webinarId={id} /><SalesSimulation title={webinar.title} notifications={webinar.saleNotifications.map(publicSaleNotificationDto)} /></AdminPage>;
 }

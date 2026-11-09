@@ -1,4 +1,5 @@
 "use client";
+import adminStyles from "@/components/admin/admin-page.module.css";
 import { useTransition } from "react";
 import {
   AlertDialog,
@@ -22,7 +23,7 @@ export function DeleteConfirmDialog({ id, title, children }: { id: string; title
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className={adminStyles.portal}>
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir webinar?</AlertDialogTitle>
           <AlertDialogDescription>

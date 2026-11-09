@@ -1,4 +1,6 @@
 "use client";
+import { Globe } from "@/components/icons";
+import styles from "@/components/management-v2.module.css";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,7 +42,9 @@ export function SettingsForm({ initial }: SettingsFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-xl space-y-6">
+    <section className={styles.surface}>
+      <div className={styles.sectionHeader}><div className="flex items-center gap-3"><span className={styles.iconBadge}><Globe aria-hidden="true" /></span><div><h2 className={styles.sectionTitle}>Padrões dos webinars</h2><p className={styles.description}>Aplicados aos novos webinars.</p></div></div></div>
+      <form onSubmit={handleSubmit(onSubmit)} className={`${styles.form} ${styles.sectionBody}`}>
       <div className="space-y-2">
         <Label htmlFor="brandName">Nome da marca</Label>
         <Input id="brandName" {...register("brandName")} placeholder="Ex.: Hotwebinar" />
@@ -59,9 +63,10 @@ export function SettingsForm({ initial }: SettingsFormProps) {
         />
         {errors.defaultTimezone && <p className="text-sm text-destructive">{errors.defaultTimezone.message}</p>}
       </div>
-      <Button type="submit" disabled={isSubmitting}>
+      <div className={styles.formFooter}><Button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Salvando..." : "Salvar"}
-      </Button>
-    </form>
+      </Button></div>
+      </form>
+    </section>
   );
 }

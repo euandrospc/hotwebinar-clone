@@ -1,0 +1,99 @@
+.card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgb(39 70 46 / 10%);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff 65%, #fcfdfb);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 2px 3px rgb(24 48 33 / 2%), 0 12px 28px -22px rgb(24 48 33 / 18%);
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+@media (min-width: 640px) {
+  .card { padding: 18px; }
+}
+
+/* Keep chart hit targets still while the surface responds to inspection. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: rgb(92 129 68 / 22%);
+    box-shadow: inset 0 1px 0 #fff, 0 3px 8px rgb(24 48 33 / 3%), 0 16px 32px -22px rgb(24 48 33 / 25%);
+  }
+}
+
+.card:focus-within { border-color: rgb(92 129 68 / 30%); }
+
+.financial {
+  color: #fff;
+  border-color: rgb(139 185 119 / 24%);
+  background: radial-gradient(ellipse at top left, rgb(183 225 129 / 20%), transparent 70%), linear-gradient(135deg, #0d5843, #064b3b 75%, #084733);
+  box-shadow: inset 0 1px 0 rgb(223 248 205 / 15%), 0 3px 7px rgb(5 55 39 / 5%), 0 14px 30px -20px rgb(5 55 39 / 30%);
+}
+
+.financial:hover, .financial:focus-within {
+  border-color: rgb(174 216 150 / 42%);
+  box-shadow: inset 0 1px 0 rgb(223 248 205 / 20%), 0 3px 8px rgb(5 55 39 / 7%), 0 16px 32px -20px rgb(5 55 39 / 36%);
+}
+
+.inset {
+  border: 1px solid rgb(85 121 61 / 5%);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f5f8f1, #fafcf7);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #f2f5ef;
+  box-shadow: inset 0 1px 2px rgb(24 48 33 / 4%);
+}
+
+.segment {
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  color: #748075;
+  font-size: 11px;
+  line-height: 16px;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.segment:hover { color: #175039; }
+.segment[aria-pressed="true"] {
+  color: #175039;
+  font-weight: 500;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(24 48 33 / 9%), inset 0 0 0 1px rgb(62 95 45 / 5%);
+}
+.segment:focus-visible { outline: 2px solid #83b94d; outline-offset: 2px; }
+
+:global(.dark) .card {
+  border-color: rgb(184 214 186 / 12%);
+  background: linear-gradient(145deg, #131a16, #101612);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%), 0 2px 4px rgb(0 0 0 / 10%), 0 14px 30px -22px rgb(0 0 0 / 40%);
+}
+:global(.dark) .card:hover, :global(.dark) .card:focus-within { border-color: rgb(184 214 186 / 23%); }
+:global(.dark) .financial {
+  border-color: rgb(163 206 132 / 22%);
+  background: radial-gradient(ellipse at top left, rgb(183 225 129 / 12%), transparent 70%), linear-gradient(135deg, #124a36, #083e2e 75%, #0b382a);
+}
+:global(.dark) .inset {
+  border-color: rgb(184 214 186 / 5%);
+  background: linear-gradient(135deg, #17271b, #152219);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+:global(.dark) .segmented { background: #1b261e; }
+:global(.dark) .segment { color: #99a69b; }
+:global(.dark) .segment:hover { color: #d0ebb7; }
+:global(.dark) .segment[aria-pressed="true"] {
+  color: #c5e99d;
+  background: #2a3c2c;
+  box-shadow: inset 0 0 0 1px rgb(184 214 186 / 8%), 0 1px 3px rgb(0 0 0 / 12%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .segment { transition: none; }
+}

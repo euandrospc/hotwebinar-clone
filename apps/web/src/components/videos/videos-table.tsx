@@ -1,4 +1,6 @@
-import { Badge } from "@/components/ui/badge";
+import { Video } from "@/components/icons";
+import { AdminEmptyState } from "@/components/admin/admin-page";
+import styles from "@/components/management-v2.module.css";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
@@ -47,17 +49,17 @@ function formatDuration(sec: number | null): string {
 
 export function VideosTable({ rows }: { rows: VideoRow[] }) {
   if (rows.length === 0) {
-    return <div className="rounded-md border bg-card p-8 text-center text-sm text-muted-foreground">Nenhum vídeo — envie o primeiro.</div>;
+    return <AdminEmptyState icon={<Video />} title="Sua biblioteca começa aqui" description="Envie o primeiro vídeo para utilizá-lo nos seus webinars." />;
   }
   return (
-    <Table>
+    <Table className={styles.table}>
       <TableHeader>
         <TableRow>
           <TableHead>Vídeo</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Duração</TableHead>
           <TableHead>Tamanho</TableHead>
-          <TableHead className="w-12" />
+          <TableHead className="w-12"><span className="sr-only">Ações</span></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -67,28 +69,28 @@ export function VideosTable({ rows }: { rows: VideoRow[] }) {
             <TableRow key={v.id}>
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <div className="aspect-video h-12 w-20 overflow-hidden rounded bg-muted">
-                    {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" /> : null}
+                  <div className={styles.thumbnail}>
+                    {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" /> : <Video aria-hidden="true" />}
                   </div>
-                  <div>
-                    <p className="font-medium">{v.name}</p>
+                  <div className="min-w-0">
+                    <p title={v.name} className={styles.videoName}>{v.name}</p>
                     {v.errorMessage && <p className="text-xs text-destructive">{v.errorMessage}</p>}
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={v.status === "READY" ? "default" : v.status === "FAILED" ? "destructive" : "outline"}>
+                <span className={styles.status} data-status={v.status}>
                   {STATUS_LABEL[v.status]}
-                </Badge>
+                </span>
                 {(v.status === "PROCESSING" || v.status === "QUEUED") && (
-                  <div className="mt-2 w-32 space-y-1">
-                    <div className="h-2 w-full overflow-hidden rounded bg-muted">
+                  <div className="mt-2 w-24 space-y-1">
+                    <div className={styles.progress}>
                       <div
-                        className="h-full bg-primary transition-[width] duration-300 ease-out"
+
                         style={{ width: `${v.progress}%` }}
                       />
                     </div>
-                    <p className="text-xs tabular-nums text-muted-foreground">{v.progress}%</p>
+                    <p className="text-[10px] tabular-nums text-muted-foreground">{v.progress}%</p>
                   </div>
                 )}
               </TableCell>

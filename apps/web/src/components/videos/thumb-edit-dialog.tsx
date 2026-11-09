@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -55,21 +56,21 @@ export function ThumbEditDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className={styles.dialog}>
         <AlertDialogHeader>
           <AlertDialogTitle>Editar thumbnail</AlertDialogTitle>
           <AlertDialogDescription>
             Envie uma imagem JPG/PNG (até 5 MB) ou deixe a thumbnail automática gerada pelo transcode.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {currentCustomThumbUrl && <img src={currentCustomThumbUrl} alt="thumb atual" className="aspect-video w-full rounded border object-cover" />}
-        <div className="flex gap-2">
-          <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+        {currentCustomThumbUrl && <img src={currentCustomThumbUrl} alt="thumb atual" className="aspect-video w-full rounded-xl border object-cover" />}
+        <div className="flex flex-wrap gap-2">
+          <Button className={styles.primaryButton} onClick={() => inputRef.current?.click()} disabled={uploading}>
             {uploading ? "Enviando..." : "Selecionar arquivo"}
           </Button>
           {currentCustomThumbUrl && (
             <Button
-              variant="outline"
+              variant="outline" className={styles.secondaryButton}
               onClick={async () => {
                 await setCustomThumb(videoId, null);
                 toast.success("Voltou para thumbnail automática");
@@ -92,7 +93,7 @@ export function ThumbEditDialog({
           }}
         />
         <AlertDialogFooter>
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
+          <AlertDialogCancel className={styles.secondaryButton}>Fechar</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

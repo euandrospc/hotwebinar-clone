@@ -7,8 +7,9 @@ import { LEADS_CLUSTER_THRESHOLD, type LeadPin } from "@/lib/leads-map-aggregate
 
 const PIN_ICON = L.divIcon({
   className: "hw-pin",
-  html: `<div style="font-size: 22px; line-height: 22px; transform: translate(-50%, -100%);">📍</div>`,
-  iconSize: [22, 22]
+  html: `<span style="display:block;width:14px;height:14px;border:2px solid white;border-radius:50%;background:#538743;box-shadow:0 1px 6px #173f2633"></span>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
 });
 
 const ptDate = new Intl.DateTimeFormat("pt-BR", {
@@ -43,12 +44,12 @@ export function LeadsMapCanvas({ pins }: { pins: LeadPin[] }) {
   ));
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border/70">
       <MapContainer
         center={[-15, -55]}
         zoom={3}
         scrollWheelZoom
-        style={{ height: 600 }}
+        style={{ height: 420 }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

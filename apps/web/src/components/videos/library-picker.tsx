@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import { Check } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ export function LibraryPicker({
     return <p className="text-sm text-muted-foreground">Biblioteca vazia. Envie pela aba "Enviar novo".</p>;
   }
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div className={styles.libraryGrid}>
       {videos.map((v) => {
         const thumb = v.customThumbUrl ?? v.thumbUrl;
         const selected = v.id === selectedId;
@@ -41,9 +42,9 @@ export function LibraryPicker({
             key={v.id}
             type="button"
             onClick={() => onSelect(v.id)}
+            aria-pressed={selected}
             className={cn(
-              "relative overflow-hidden rounded-md border text-left transition",
-              selected ? "ring-2 ring-primary" : "hover:border-primary/50"
+              "relative", styles.libraryCard
             )}
           >
             <div className="aspect-video bg-muted">
@@ -55,17 +56,17 @@ export function LibraryPicker({
                 </div>
               )}
             </div>
-            <div className="p-2">
-              <p className="line-clamp-1 text-sm font-medium">{v.name}</p>
+            <div className="space-y-1 p-2.5">
+              <p className="line-clamp-1 text-xs font-medium">{v.name}</p>
               {v.durationSec ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-muted-foreground">
                   {formatDuration(v.durationSec)}
                 </p>
               ) : null}
             </div>
             {selected && (
-              <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Check className="h-4 w-4" />
+              <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#064B3C] text-white shadow-sm">
+                <Check className="h-3 w-3" />
               </div>
             )}
           </button>

@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AnimatedCharactersLoginPage } from "@/components/ui/animated-characters-login-page";
 
+import { AdminAuthFrame } from "@/components/admin/admin-auth-frame";
+import styles from "@/components/admin/admin-auth-frame.module.css";
+
 export function LoginClient({ brandName }: { brandName: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -52,18 +55,16 @@ export function LoginClient({ brandName }: { brandName: string }) {
   }
 
   if (challenge) return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
-      <form onSubmit={verifySecondFactor} className="w-full max-w-sm space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Verificação em duas etapas</h1>
-        <p className="text-sm text-muted-foreground">{backup ? "Digite um dos códigos de recuperação que você salvou." : "Digite o código de 6 dígitos do seu aplicativo autenticador."}</p>
-        <div className="space-y-2"><Label htmlFor="second-factor">{backup ? "Código de recuperação" : "Código do autenticador"}</Label>
-          <Input id="second-factor" autoFocus autoComplete="one-time-code" inputMode={backup ? "text" : "numeric"} value={code} onChange={e => setCode(e.target.value)} required maxLength={backup ? 64 : 6} /></div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="w-full" disabled={loading}>{loading ? "Validando…" : "Confirmar acesso"}</Button>
-        <Button type="button" variant="ghost" className="w-full" disabled={loading} onClick={() => { setBackup(!backup); setCode(""); setError(null); }}>{backup ? "Usar aplicativo autenticador" : "Usar código de recuperação"}</Button>
-        <Button type="button" variant="ghost" className="w-full" disabled={loading} onClick={() => { setChallenge(false); setCode(""); setError(null); }}>Voltar ao login</Button>
+    <AdminAuthFrame title="Verificação em duas etapas" description={backup ? "Digite um dos códigos de recuperação que você salvou." : "Digite o código de 6 dígitos do seu aplicativo autenticador."}>
+      <form onSubmit={verifySecondFactor} className={styles.form}>
+        <div className={styles.field}><Label htmlFor="second-factor" className={styles.label}>{backup ? "Código de recuperação" : "Código do autenticador"}</Label>
+          <Input className={styles.input} id="second-factor" autoFocus autoComplete="one-time-code" inputMode={backup ? "text" : "numeric"} value={code} onChange={e => setCode(e.target.value)} required maxLength={backup ? 64 : 6} /></div>
+        {error && <p role="alert" className={styles.error}>{error}</p>}
+        <Button type="submit" className={styles.submit} disabled={loading}>{loading ? "Validando…" : "Confirmar acesso"}</Button>
+        <Button type="button" variant="ghost" className={styles.secondary} disabled={loading} onClick={() => { setBackup(!backup); setCode(""); setError(null); }}>{backup ? "Usar aplicativo autenticador" : "Usar código de recuperação"}</Button>
+        <Button type="button" variant="ghost" className={styles.secondary} disabled={loading} onClick={() => { setChallenge(false); setCode(""); setError(null); }}>Voltar ao login</Button>
       </form>
-    </main>
+    </AdminAuthFrame>
   );
 
   return (

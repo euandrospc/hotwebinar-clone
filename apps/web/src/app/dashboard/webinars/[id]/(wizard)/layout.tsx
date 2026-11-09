@@ -18,7 +18,7 @@ export default async function WizardLayout({
   if (!w || w.ownerId !== session.user.id) notFound();
 
   return (
-    <WizardShell webinarId={id}>
+    <WizardShell webinarId={id} webinarTitle={w.title || w.name || "Webinar sem título"}>
       {children}
     </WizardShell>
   );

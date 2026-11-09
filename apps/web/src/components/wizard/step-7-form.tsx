@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { useRef, useState, useTransition } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -75,9 +76,9 @@ export function Step7Form({ webinarId, slug, initial }: Step7FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">Vendas</h2>
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className={styles.formColumns}>
+      <div className={styles.formPanel}>
+        <h2 className={styles.title}>Vendas</h2>
 
         <WizardSectionAccordion
           ai={

@@ -1,4 +1,5 @@
 "use client";
+import adminStyles from "@/components/admin/admin-page.module.css";
 import {
   Select,
   SelectContent,
@@ -24,10 +25,10 @@ export function TimezoneSelect({ value, onChange }: TimezoneSelectProps) {
 
   return (
     <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger>
+      <SelectTrigger aria-label="Fuso horário">
         <SelectValue placeholder="Escolha um fuso" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className={adminStyles.portal}>
         {TIMEZONES.map((t) => (
           <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
         ))}

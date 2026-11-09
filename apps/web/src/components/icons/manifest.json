@@ -86,7 +86,8 @@
     "Zap": "picker/bolt",
     "Gauge": "ui/pieChart",
     "Database": "picker/database",
-    "Globe": "ui/public"
+    "Globe": "ui/public",
+    "PanelLeft": "ui/sidebar"
   },
   "sha256": {
     "picker/bolt": "9e01895e974ec4024a4efcdb551744cd7778dbe9ed3cb648ed56ebf281368f67",
@@ -168,6 +169,7 @@
     "ui/warning": "98d99dccc4b325b32af5d8f9119e6a85e658d07a84a47dab2a125de3bd0bee51",
     "ui/pieChart": "4620ca43664d49363cc08a1d0bf412ffd1ef997853a3c1192d8993fecf0c5cfc",
     "picker/database": "017dd0caed60296921ec6c733e57e6bc5962b49efd3e48532b8f25d1c1568c0c",
-    "ui/public": "e41104259b6058d86f1f623ca464e8a297c99747b3283fc3129fadcd9193b9bc"
+    "ui/public": "e41104259b6058d86f1f623ca464e8a297c99747b3283fc3129fadcd9193b9bc",
+    "ui/sidebar": "608663d4f42a38722582c38b119afca99bb3fe2013e3ca72214a0d15fa7989e7"
   }
 }

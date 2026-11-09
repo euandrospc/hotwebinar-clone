@@ -1,4 +1,5 @@
 "use client";
+import styles from "./wizard.module.css";
 import { OfferTitleEditor } from "./offer-title-editor";
 import { useTransition } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
@@ -45,9 +46,9 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-8 lg:grid-cols-[1fr_minmax(0,420px)]">
-      <div className="space-y-6">
-        <h2 className="text-2xl font-semibold">Oferta</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
+      <div className={styles.formPanel}>
+        <h2 className={styles.title}>Oferta</h2>
 
         <section className="space-y-4">
           <div className="space-y-1">
@@ -242,8 +243,8 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
         <WizardNav webinarId={webinarId} step={5} submitting={pending} />
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-        <h3 className="text-sm font-medium text-muted-foreground">Prévia da oferta</h3>
+      <aside className={`${styles.previewPanel} space-y-4`}>
+        <h3 className={styles.previewTitle}>Prévia da oferta</h3>
         <OfferPreviewDesktop
           offerTitle={watched.offerTitle ?? ""}
           offerTitleStyle={watched.offerTitleStyle}

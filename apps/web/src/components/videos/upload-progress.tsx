@@ -1,4 +1,5 @@
 "use client";
+import styles from "@/components/management-v2.module.css";
 import type { UploadState } from "@/lib/hooks/use-presigned-upload";
 
 export function UploadProgress({ state }: { state: UploadState }) {
@@ -33,12 +34,12 @@ export function UploadProgress({ state }: { state: UploadState }) {
       break;
   }
   return (
-    <div className="mt-2 space-y-1 text-sm">
+    <div className="mt-2 space-y-2 text-xs">
       <p className={state.status === "failed" ? "text-destructive" : "text-muted-foreground"}>{label}</p>
       {showBar ? (
-        <div className="h-2 w-full overflow-hidden rounded bg-muted">
+        <div className={styles.progress}>
           <div
-            className="h-full bg-primary transition-[width] duration-300 ease-out"
+
             style={{ width: `${pct}%` }}
           />
         </div>

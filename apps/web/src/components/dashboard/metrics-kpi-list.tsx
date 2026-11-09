@@ -1,3 +1,4 @@
+import styles from "@/components/webinar/webinar-operations.module.css";
 import Link from "next/link";
 import {
   Lock,
@@ -30,19 +31,19 @@ function Row({
 }) {
   const inner = (
     <>
-      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+      <span className={styles.kpiIcon}>
         <Icon className="h-4 w-4" />
       </span>
-      <span className="flex flex-1 items-center gap-1 text-sm">
+      <span className="flex min-w-0 flex-1 items-center gap-1 text-xs">
         {label}
-        {href ? <ArrowUpRight className="h-3 w-3 text-muted-foreground" /> : <Info className="h-3 w-3 text-muted-foreground" />}
+        {href ? <ArrowUpRight className="h-3 w-3 text-muted-foreground" /> : null}
       </span>
-      <span className="text-lg font-semibold tabular-nums">{fmt.format(value)}</span>
+      <span className={styles.kpiValue}>{fmt.format(value)}</span>
     </>
   );
-  const cls = "flex items-center gap-3 rounded-lg border bg-card px-4 py-3";
+  const cls = styles.kpiRow;
   return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:border-primary/50 hover:bg-accent`}>
+    <Link href={href} className={cls}>
       {inner}
     </Link>
   ) : (
@@ -52,7 +53,7 @@ function Row({
 
 export function MetricsKpiList({ kpis, webinarId }: { kpis: WebinarKpis; webinarId: string }) {
   return (
-    <div className="space-y-2.5">
+    <div className={styles.kpiList}>
       <Row icon={Lock} label="Visitas" value={kpis.visitas} />
       <Row icon={LogIn} label="Acessou o webinar" value={kpis.acessou} />
       <Row icon={MousePointerClick} label="Clicou no vídeo" value={kpis.clicouVideo} />

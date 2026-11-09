@@ -341,7 +341,47 @@ model Lead {
 
   @@unique([webinarId, email])
   @@index([webinarId, sessionStart])
+  @@index([ip])
   @@map("lead")
+}
+
+enum GeoIpStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// A durable job and a shared cache: one provider lookup per normalized IP.
+model GeoIpLookup {
+  ip            String      @id
+  status        GeoIpStatus @default(PENDING)
+  priority      Int         @default(0)
+  attempts      Int         @default(0)
+  nextAttemptAt DateTime    @default(now())
+  leaseToken    String?
+  leaseUntil    DateTime?
+  country       String?
+  region        String?
+  city          String?
+  lat           Float?
+  lng           Float?
+  lastError     String?
+  expiresAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([status, priority, nextAttemptAt])
+  @@map("geo_ip_lookup")
+}
+
+// The provider's pacing/cooldown is shared by all application instances.
+model GeoIpProviderState {
+  id            String   @id
+  nextRequestAt DateTime @default(now())
+  leaseToken    String?
+  leaseUntil    DateTime?
+
+  @@map("geo_ip_provider_state")
 }
 
 model Event {
