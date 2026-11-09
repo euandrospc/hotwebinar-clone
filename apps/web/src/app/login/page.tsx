@@ -1,13 +1,23 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import { prisma } from "db";
 import { LoginClient } from "./login-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+const getLoginBrandName = cache(async () => {
   const setting = await prisma.accountSettings.findFirst({
     where: { brandName: { not: null } },
     select: { brandName: true }
   });
-  const brandName = setting?.brandName?.trim() || "HotWebinar";
+  return setting?.brandName?.trim() || "Bravy Lives";
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: `Entrar | ${await getLoginBrandName()}` };
+}
+
+export default async function LoginPage() {
+  const brandName = await getLoginBrandName();
   return <LoginClient brandName={brandName} />;
 }

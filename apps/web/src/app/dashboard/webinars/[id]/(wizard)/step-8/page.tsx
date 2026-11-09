@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { Step8Form } from "@/components/wizard/step-8-form";
+
+export const metadata: Metadata = { title: "Audiência do webinar" };
 
 export default async function Step8Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

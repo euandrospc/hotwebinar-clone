@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { IntegrationsForm } from "@/components/webinar/integrations-form";
 import { SalesWebhookCard } from "@/components/sales-webhook-card";
+
+export const metadata: Metadata = { title: "Integrações do webinar" };
 
 export default async function IntegrationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

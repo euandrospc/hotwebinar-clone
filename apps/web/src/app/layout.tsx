@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "HotWebinar",
+  title: "Bravy Lives",
   description: "Webinars automáticos simulando ao vivo"
 };
 

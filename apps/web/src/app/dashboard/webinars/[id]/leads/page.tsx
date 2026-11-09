@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
 import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
@@ -11,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { defaultLeadsDateParams, leadsDateRange } from "@/lib/leads-date-range";
+
+export const metadata: Metadata = { title: "Leads do webinar" };
 
 const PAGE_SIZE = 50;
 

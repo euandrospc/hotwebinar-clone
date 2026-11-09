@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
 import styles from "@/components/webinars/webinars.module.css";
 import Link from "next/link";
@@ -9,6 +10,8 @@ import { auth } from "@/lib/auth";
 import { WebinarsFilters } from "@/components/webinars/webinars-filters";
 import { WebinarsTable } from "@/components/webinars/webinars-table";
 import { NewWebinarButton } from "@/components/webinars/new-webinar-button";
+
+export const metadata: Metadata = { title: "Webinars" };
 
 const PAGE_SIZE = 20;
 

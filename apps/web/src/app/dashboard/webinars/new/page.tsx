@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createDraftWebinar } from "@/server/actions/webinar";
+
+export const metadata: Metadata = { title: "Criar webinar" };
 
 export default async function NewWebinarPage() {
   const { id } = await createDraftWebinar();

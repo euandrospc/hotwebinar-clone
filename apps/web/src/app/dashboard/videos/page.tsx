@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { listVideos } from "@/server/actions/video";
 import { UsageBar } from "@/components/videos/usage-bar";
 import { UploadButton } from "@/components/videos/upload-button";
@@ -6,6 +7,8 @@ import { ClientPolling } from "@/components/videos/client-polling";
 
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import styles from "@/components/management-v2.module.css";
+
+export const metadata: Metadata = { title: "Vídeos" };
 
 export default async function VideosPage() {
   const videos = await listVideos();

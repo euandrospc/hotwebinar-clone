@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -5,6 +6,8 @@ import { prisma } from "db";
 import { Step4Form } from "@/components/wizard/step-4-form";
 import type { LibraryVideo } from "@/components/videos/library-picker";
 import { proxifyHlsUrl } from "@/lib/public-dto";
+
+export const metadata: Metadata = { title: "Vídeo do webinar" };
 
 export default async function Step4Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

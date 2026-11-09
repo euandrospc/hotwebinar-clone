@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -7,6 +8,8 @@ import { listAttendantsAction } from "@/server/actions/attendants";
 import { AttendantsManager } from "./_components/attendants-manager";
 
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
+
+export const metadata: Metadata = { title: "Atendentes" };
 
 export const dynamic = "force-dynamic";
 

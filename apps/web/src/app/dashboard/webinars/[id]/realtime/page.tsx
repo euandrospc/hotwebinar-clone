@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage } from "@/components/admin/admin-page";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -6,6 +7,8 @@ import { auth } from "@/lib/auth";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { RealtimeDashboard } from "@/components/webinar/realtime-dashboard";
 import { getWebinarRealtimeSnapshot } from "@/server/webinar-realtime";
+
+export const metadata: Metadata = { title: "Tempo real do webinar" };
 
 export const dynamic = "force-dynamic";
 

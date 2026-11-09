@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
 import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
@@ -9,6 +10,8 @@ import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { getOnlineSnapshot } from "@/lib/online";
 import { ClientPolling } from "@/components/videos/client-polling";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+export const metadata: Metadata = { title: "Pessoas online" };
 
 export const dynamic = "force-dynamic";
 

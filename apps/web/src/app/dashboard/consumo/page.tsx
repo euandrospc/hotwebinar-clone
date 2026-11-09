@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { Database, Download, Upload, Globe, DollarSign } from "@/components/icons";
 import { AdminPage, AdminPageHeader, AdminEmptyState } from "@/components/admin/admin-page";
 import styles from "@/components/management-v2.module.css";
 import { getR2Usage, R2_PRICING, type R2Usage } from "@/lib/cloudflare-usage";
+
+export const metadata: Metadata = { title: "Consumo" };
 
 export const dynamic = "force-dynamic";
 

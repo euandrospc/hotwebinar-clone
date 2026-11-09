@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
 import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
@@ -7,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebhookRow, type WebhookRowData } from "@/components/webinar/webhook-row";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
+
+export const metadata: Metadata = { title: "Webhooks do webinar" };
 
 const PAGE_SIZE = 50;
 

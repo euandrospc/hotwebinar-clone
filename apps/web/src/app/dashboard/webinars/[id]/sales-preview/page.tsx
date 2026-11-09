@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage } from "@/components/admin/admin-page";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { notFound } from "next/navigation";
@@ -6,6 +7,8 @@ import { prisma } from "db";
 import { auth } from "@/lib/auth";
 import { publicSaleNotificationDto } from "@/lib/public-dto";
 import { SalesSimulation } from "./sales-simulation";
+
+export const metadata: Metadata = { title: "Simulação de vendas" };
 
 export default async function SalesPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });

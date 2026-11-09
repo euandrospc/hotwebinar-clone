@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { Step2Form } from "@/components/wizard/step-2-form";
+
+export const metadata: Metadata = { title: "Configuração do webinar" };
 
 export default async function Step2Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

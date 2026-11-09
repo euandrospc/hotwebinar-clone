@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { getAudienceSummary } from "@/server/audience-history";
 import { AudienceSummary } from "@/components/dashboard/audience-summary";
@@ -18,6 +19,8 @@ import {
   buildRetention,
   type WebinarKpis
 } from "@/lib/dashboard-stats";
+
+export const metadata: Metadata = { title: "Métricas do webinar" };
 
 export const dynamic = "force-dynamic";
 

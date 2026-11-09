@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -7,6 +8,8 @@ import { aggregateLeadsForMap } from "@/lib/leads-map-aggregate";
 import { LeadsMapClient } from "@/components/leads-map/leads-map-client";
 import { LeadsSummaryAside } from "@/components/leads-map/leads-summary-aside";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
+
+export const metadata: Metadata = { title: "Mapa do público" };
 
 export default async function LeadsMapPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

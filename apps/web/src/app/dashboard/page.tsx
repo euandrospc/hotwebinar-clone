@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "db";
@@ -8,6 +9,7 @@ import { createDashboardDemo, isDashboardDemoEnabled } from "@/lib/dashboard-dem
 import { zonedParts, zonedToUtc } from "@/lib/timezones";
 import { getDashboardOverview } from "@/server/dashboard/overview";
 import { getDashboardInsights } from "@/server/dashboard/insights";
+import { getAdminBrandName } from "@/server/admin-brand";
 import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 import { DashboardFunnelOverview } from "@/components/dashboard/dashboard-funnel-overview";
 import { DashboardMotion } from "@/components/dashboard/dashboard-motion";
@@ -19,7 +21,9 @@ import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-pic
 import { DashboardRealtimePreview } from "@/components/dashboard/dashboard-realtime-preview";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Visão geral | Bravy Lives" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: { absolute: `Dashboard | ${await getAdminBrandName()}` } };
+}
 
 interface PageProps {
   searchParams: Promise<{ from?: string; to?: string; webinarId?: string; demo?: string }>;
