@@ -95,7 +95,8 @@ Produção usa a branch `main` no GitHub e no Coolify (`hotwebinar-web`).
 Cada push em `main` executa `.github/workflows/deploy-production.yml`, que solicita
 um deploy pela API do Coolify. O token fica no secret `COOLIFY_DEPLOY_TOKEN` do
 repositório. O webhook nativo de auto-deploy fica desativado para evitar disparos duplicados.
-O workflow confirma o enfileiramento; acompanhe a conclusão nos Deployment Logs do Coolify.
+O workflow acompanha o deploy até a conclusão, confirma o commit publicado e valida
+`/api/health` (aplicação e banco). Os detalhes do build ficam nos Deployment Logs do Coolify.
 
 Fluxo normal: validar as alterações, commitar na `main` e executar `git push origin main`.
 A branch `feat/capture-phase` fica preservada como histórico e não publica produção.
