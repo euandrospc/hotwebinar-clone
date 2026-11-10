@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import Form from "next/form";
 import { AdminPage, AdminPageHeader, AdminSurface } from "@/components/admin/admin-page";
 import styles from "@/components/webinar/webinar-operations.module.css";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, MousePointerClick, Download } from "@/components/icons";
+import { MousePointerClick, Download } from "@/components/icons";
 import { auth } from "@/lib/auth";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
@@ -12,14 +14,14 @@ import { Badge } from "@/components/ui/badge";
 
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { defaultLeadsDateParams, leadsDateRange } from "@/lib/leads-date-range";
+import { getLeadsPage, parseLeadsPagination } from "@/lib/leads-pagination";
+import { LeadsResults } from "@/components/webinar/leads-results";
 
 export const metadata: Metadata = { title: "Leads do webinar" };
 
-const PAGE_SIZE = 50;
-
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ q?: string; page?: string; clicked?: string; from?: string; to?: string; period?: string }>;
+  searchParams: Promise<Partial<Record<"q" | "page" | "pageSize" | "clicked" | "from" | "to" | "period", string | string[]>>>;
 }
 
 const fmtNum = new Intl.NumberFormat("pt-BR");
@@ -34,20 +36,21 @@ function flagEmoji(code: string | null): string {
 
 export default async function LeadsPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const sp = await searchParams;
+  const rawParams = await searchParams;
+  const sp = Object.fromEntries(Object.entries(rawParams).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]));
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
-  const w = await prisma.webinar.findUnique({ where: { id } });
+  const w = await prisma.webinar.findUnique({ where: { id }, select: { id: true, ownerId: true, title: true, name: true } });
   if (!w || w.ownerId !== session.user.id) notFound();
 
   const q = (sp.q ?? "").trim();
   const clicked = sp.clicked === "1";
-  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const { page: requestedPage, pageSize } = parseLeadsPagination(sp);
 
   const selectedDates = leadsDateRange(sp.from, sp.to) ? { from: sp.from!, to: sp.to! } : defaultLeadsDateParams();
   const dateRange = sp.period === "all" ? undefined : leadsDateRange(selectedDates.from, selectedDates.to);
   const dateParams: Record<string, string> = dateRange ? selectedDates : { period: "all" };
-  const dateQuery = new URLSearchParams(dateParams).toString();
+  const filters = { ...dateParams, ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}) };
 
   const where = {
     ...(dateRange && { sessionStart: dateRange }),
@@ -62,38 +65,40 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
     })
   };
 
-  const [total, rows] = await Promise.all([
-    prisma.lead.count({ where }),
-    prisma.lead.findMany({
-      where,
-      orderBy: { sessionStart: "desc" },
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        city: true,
-        region: true,
-        country: true,
-        sessionStart: true,
-        pitchFired: true,
-        ctaClicks: true
-      }
-    })
-  ]);
+  // Resolve the bounds before querying rows, so stale or invalid URLs never
+  // trigger an enormous OFFSET or show an empty page beyond the last result.
+  const total = await prisma.lead.count({ where });
+  const page = getLeadsPage(requestedPage, total, pageSize);
+  const rows = total === 0 ? [] : await prisma.lead.findMany({
+    where,
+    orderBy: [{ sessionStart: "desc" }, { id: "desc" }],
+    take: pageSize,
+    skip: (page - 1) * pageSize,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      city: true,
+      region: true,
+      country: true,
+      sessionStart: true,
+      pitchFired: true,
+      ctaClicks: true
+    }
+  });
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const baseHref = `/dashboard/webinars/${id}/leads`;
-  const qParam = `${dateQuery ? `&${dateQuery}` : ""}${q ? `&q=${encodeURIComponent(q)}` : ""}${clicked ? "&clicked=1" : ""}`;
+  const filterHref = (offerClicked: boolean) => `${baseHref}?${new URLSearchParams({
+    ...dateParams, ...(q ? { q } : {}), ...(offerClicked ? { clicked: "1" } : {}), pageSize: String(pageSize)
+  })}`;
 
   return (
     <AdminPage>
       <WebinarTabs webinarId={id} />
 
       <AdminPageHeader title="Leads" description={`${fmtNum.format(total)} ${total === 1 ? "registro" : "registros"} · ${w.title || w.name}`} actions={
-        <a href={`/api/webinars/${id}/leads/export?${new URLSearchParams({ ...dateParams, ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}) }).toString()}`} className={styles.linkButton}><Download className="h-3.5 w-3.5" />Exportar CSV</a>
+        <a href={`/api/webinars/${id}/leads/export?${new URLSearchParams(filters)}`} className={styles.linkButton}><Download className="h-3.5 w-3.5" />Exportar CSV</a>
       } />
       <AdminSurface padded={false} className={styles.table}>
       <div className={styles.toolbar}>
@@ -106,12 +111,13 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
           initialTo={dateRange ? selectedDates.to.slice(0, 10) : ""}
           initialFromTime={dateRange ? selectedDates.from.slice(11, 16) : "00:00"}
           initialToTime={dateRange ? selectedDates.to.slice(11, 16) : "23:59"}
-          queryParams={{ ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}) }}
+          queryParams={{ ...(q ? { q } : {}), ...(clicked ? { clicked: "1" } : {}), pageSize: String(pageSize) }}
         />
       </div>
 
-      <form action={baseHref} method="get" className="min-w-[min(100%,220px)] flex-1 sm:max-w-sm">
+      <Form action={baseHref} scroll={false} className="min-w-[min(100%,220px)] flex-1 sm:max-w-sm">
         <input
+          key={q}
           type="search"
           name="q"
           defaultValue={q}
@@ -120,25 +126,27 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         />
         {Object.entries(dateParams).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
         {clicked ? <input type="hidden" name="clicked" value="1" /> : null}
-      </form>
+        <input type="hidden" name="pageSize" value={pageSize} />
+      </Form>
 
       </div>
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
-        <a
-          href={`${baseHref}?${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        <Link
+          href={filterHref(false)} prefetch={false} scroll={false}
           className={styles.filter} aria-current={!clicked ? "true" : undefined}
         >
           Todos
-        </a>
-        <a
-          href={`${baseHref}?clicked=1&${dateQuery}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        </Link>
+        <Link
+          href={filterHref(true)} prefetch={false} scroll={false}
           className={styles.filter} aria-current={clicked ? "true" : undefined}
         >
           <MousePointerClick className="h-3.5 w-3.5" />
           Clicaram na oferta
-        </a>
+        </Link>
       </div>
 
+      <LeadsResults baseHref={baseHref} filters={filters} page={page} pageSize={pageSize} total={total}>
       <div className={styles.tableScroll}>
         <Table>
           <TableHeader>
@@ -203,31 +211,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className={styles.pagination}>
-          <p className="text-muted-foreground">
-            Página {page} de {totalPages}
-          </p>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <a
-                href={`${baseHref}?page=${page - 1}${qParam}`}
-                className={styles.linkButton}
-              >
-                <ArrowLeft className="h-4 w-4" /> Anterior
-              </a>
-            )}
-            {page < totalPages && (
-              <a
-                href={`${baseHref}?page=${page + 1}${qParam}`}
-                className={styles.linkButton}
-              >
-                Próxima <ArrowRight className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+      </LeadsResults>
       </AdminSurface>
     </AdminPage>
   );

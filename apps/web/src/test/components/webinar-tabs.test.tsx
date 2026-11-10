@@ -9,26 +9,28 @@ vi.mock("next/navigation", () => ({
 
 describe("WebinarTabs", () => {
   beforeEach(() => {
-    vi.mocked(usePathname).mockReturnValue("/dashboard/webinars/w1/leads-map");
+    vi.mocked(usePathname).mockReturnValue("/dashboard/webinars/w1/metrics");
   });
 
   it("renders the six webinar tab links", () => {
     render(<WebinarTabs webinarId="w1" />);
-    for (const label of ["Editor", "Leads", "Mapa", "Métricas", "Tempo real", "Webhooks"]) {
+    for (const label of ["Editor", "Leads", "Métricas", "Tempo real", "Agente IA", "Webhooks"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+    expect(screen.getAllByRole("link")).toHaveLength(6);
+    expect(screen.queryByRole("link", { name: "Mapa" })).not.toBeInTheDocument();
   });
   it("Editor href points to step-1; other tabs point to their suffix", () => {
     render(<WebinarTabs webinarId="w1" />);
     expect(screen.getByText("Editor").getAttribute("href")).toBe("/dashboard/webinars/w1/step-1");
     expect(screen.getByText("Leads").getAttribute("href")).toBe("/dashboard/webinars/w1/leads");
-    expect(screen.getByText("Mapa").getAttribute("href")).toBe("/dashboard/webinars/w1/leads-map");
     expect(screen.getByText("Métricas").getAttribute("href")).toBe("/dashboard/webinars/w1/metrics");
     expect(screen.getByText("Tempo real").getAttribute("href")).toBe("/dashboard/webinars/w1/realtime");
+    expect(screen.getByText("Agente IA").getAttribute("href")).toBe("/dashboard/webinars/w1/chat-ai");
     expect(screen.getByText("Webhooks").getAttribute("href")).toBe("/dashboard/webinars/w1/webhooks");
   });
   it.each([
-    ["Mapa", "leads-map"],
+    ["Métricas", "metrics"],
     ["Tempo real", "realtime"]
   ])("marks only %s as the current page for its route", (label, suffix) => {
     vi.mocked(usePathname).mockReturnValue(`/dashboard/webinars/w1/${suffix}`);

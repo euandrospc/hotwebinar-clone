@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { BarChart3, MapPin, Pencil, Radio, Sparkles, Users, Webhook } from "@/components/icons";
+import { BarChart3, Pencil, Radio, Sparkles, Users, Webhook } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import sidebarStyles from "@/components/admin/sidebar.module.css";
 import styles from "./webinar-tabs.module.css";
@@ -14,7 +14,6 @@ interface Props {
 const TABS = [
   { label: "Editor", suffix: "/step-1", icon: Pencil },
   { label: "Leads", suffix: "/leads", icon: Users },
-  { label: "Mapa", suffix: "/leads-map", icon: MapPin },
   { label: "Métricas", suffix: "/metrics", icon: BarChart3 },
   { label: "Tempo real", suffix: "/realtime", icon: Radio },
   { label: "Agente IA", suffix: "/chat-ai", icon: Sparkles },

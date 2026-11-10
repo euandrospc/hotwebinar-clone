@@ -180,3 +180,11 @@ JP aprovou o formato horizontal com cinco segmentos afunilados e pediu mais inte
 Hover antecipa a etapa; clique/toque mantém a seleção; teclado permite explorar e voltar à seleção. Manter os dados atualizados sem perder a etapa escolhida, reservar altura para o detalhe e preservar tema escuro, foco visível e movimento reduzido. A forma pode se alargar quando uma contagem posterior for maior; não alterar os dados para forçar queda contínua.
 
 Os percentuais deste funil são razões em relação às visitas de hoje, no fuso do webinar. Compradores são contados separadamente das visitas, portanto etapas não comprovam passagem sequencial, perdas individuais ou abandono. Sem visitas, o percentual fica indisponível; percentuais acima de 100% não devem ser truncados. Esta direção é específica de `DashboardFunnel` no Tempo real e não substitui o funil em camadas do dashboard principal. Publicação exige solicitação específica.
+
+### Remoção da página separada de mapa — 10/11/2026
+
+JP pediu retirar a aba e a página "Mapa" do webinar. A navegação operacional mantém Editor, Leads, Métricas, Tempo real, Agente IA e Webhooks. Links antigos para `/dashboard/webinars/[id]/leads-map` redirecionam para Tempo real, onde o mapa já está integrado às métricas. Não reintroduzir a página separada nem a aba. Preservar o mapa individual do Tempo real, seus controles e o mapa por UF do dashboard principal.
+
+### Paginação de Leads — 10/11/2026
+
+JP relatou lentidão na aba Leads e pediu paginação. A listagem busca somente a página atual no servidor: 25 registros por padrão, com opções de 50 e 100. Controles compactos no topo e no rodapé mostram o intervalo e permitem avançar, voltar ou selecionar a página; no mobile, priorizar anterior/próxima e a posição atual. Navegar sem recarregar o painel, sinalizar carregamento e preservar busca, período e filtro de oferta. Mudanças de filtro ou quantidade voltam à primeira página. A exportação CSV continua incluindo todo o resultado filtrado, independentemente da página visível.

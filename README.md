@@ -79,15 +79,15 @@ Reserved slugs (cannot be used as webinar slug): `login`, `dashboard`, `api`, `_
 - Player `/[slug]/live` header: `<AudienceBadge>` mostra `🔴 AO VIVO · 1.234 assistindo` quando `audienceMode != NONE`. Counter determinístico via hash(`webinarId:leadId`); DYNAMIC tick 5 s.
 - Lead enrichment: opt-in, reentrada e heartbeat enfileiram os IPs públicos sem coordenadas válidas. O worker GeoIP consulta ipapi.co fora das requisições do player; veja a recuperação abaixo.
 - Schema migration: `20260505230000_d4_audience_and_geo` — enum `AudienceMode`, 4 cols Webinar (`audienceMode/Min/Max/LiveBadge`), 4 cols Lead (`city/region/lat/lng`).
-- Mapa de leads = futuro D5.
+- A geolocalização alimenta o mapa integrado do Tempo real e o mapa por UF do dashboard.
 
-## Mapa de Leads (sub-plan D5)
+## Mapas do público
 
-- Nova rota `/dashboard/webinars/[id]/leads-map` exibe mapa Leaflet (OpenStreetMap tiles) com pins individuais até 500 leads, cluster (`react-leaflet-cluster`) acima.
-- Sidebar mostra total + geo count + top 5 países (com flag emoji) + top 5 cidades + leads sem geo.
-- Mapa lazy-loaded via `next/dynamic({ ssr: false })` (Leaflet usa `window`).
-- Tabs `<WebinarTabs>` adicionadas em `/leads`, `/leads-map`, `/metrics`, `/webhooks` — Editor / Leads / Mapa / Métricas / Webhooks.
-- Sem schema novo — consome `Lead.city/region/country/lat/lng` populados em D4.
+- O mapa do webinar fica em `/dashboard/webinars/[id]/realtime`, ao lado das métricas, com um pin por pessoa online com localização disponível.
+- A aba e a página separada "Mapa" foram removidas a pedido do JP. A rota antiga `/dashboard/webinars/[id]/leads-map` redireciona para Tempo real.
+- O mapa por UF do dashboard principal permanece disponível, com seleção direta dos estados.
+- Navegação operacional: Editor / Leads / Métricas / Tempo real / Agente IA / Webhooks.
+- Os mapas consomem `Lead.city/region/country/lat/lng`; a remoção da página separada não altera dados de geolocalização.
 
 ## Deploy (Coolify)
 

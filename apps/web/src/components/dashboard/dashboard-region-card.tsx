@@ -19,10 +19,10 @@ export function DashboardRegionCard({
         <h2 className="text-sm font-semibold">Principais regiões</h2>
         {firstWebinarId && (
           <Link
-            href={`/dashboard/webinars/${firstWebinarId}/leads-map`}
+            href={`/dashboard/webinars/${firstWebinarId}/realtime`}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b5141]"
-            aria-label="Abrir mapa por webinar"
-            title="Abrir mapa por webinar"
+            aria-label="Abrir mapa em tempo real"
+            title="Abrir mapa em tempo real"
           >
             <ArrowUpRight className="h-4 w-4" />
           </Link>
