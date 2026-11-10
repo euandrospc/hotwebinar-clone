@@ -172,3 +172,11 @@ O mapa de Tempo real mostra um pin para cada pessoa com localização disponíve
 ### Navegação operacional alinhada à sidebar — 09/11/2026
 
 JP rejeitou a faixa de abas larga e desalinhada com a sidebar. A navegação operacional do webinar passa a ser um painel flutuante compacto, limitado à largura do conteúdo, com superfície e seleção reutilizadas da sidebar. No desktop, o painel começa a 12 px do topo, alinhado à sidebar; links de 34 px, texto de 12 px e ícones de 15 px mantêm a escala compacta. Em telas estreitas, preservar rolagem horizontal interna e revelar a aba ativa ao navegar ou redimensionar. Manter nomes, destinos, teclado, tema escuro e movimento reduzido. O alinhamento se aplica somente às páginas iniciadas por essa navegação; não alterar o wizard do editor nem páginas sem abas operacionais.
+
+### Funil do Tempo real: contagens no fluxo e exploração por etapa — 09/11/2026
+
+JP aprovou o formato horizontal com cinco segmentos afunilados e pediu mais interação e menos ruído. A direção final mantém as contagens sempre visíveis em pílulas nas entradas/junções dos segmentos; não esconder os números apenas no hover nem recriar a grade de cinco indicadores acima. Rótulos curtos acompanham o fluxo, e um único detalhe abaixo apresenta o nome completo e o percentual da etapa explorada, sem repetir a contagem.
+
+Hover antecipa a etapa; clique/toque mantém a seleção; teclado permite explorar e voltar à seleção. Manter os dados atualizados sem perder a etapa escolhida, reservar altura para o detalhe e preservar tema escuro, foco visível e movimento reduzido. A forma pode se alargar quando uma contagem posterior for maior; não alterar os dados para forçar queda contínua.
+
+Os percentuais deste funil são razões em relação às visitas de hoje, no fuso do webinar. Compradores são contados separadamente das visitas, portanto etapas não comprovam passagem sequencial, perdas individuais ou abandono. Sem visitas, o percentual fica indisponível; percentuais acima de 100% não devem ser truncados. Esta direção é específica de `DashboardFunnel` no Tempo real e não substitui o funil em camadas do dashboard principal. Publicação exige solicitação específica.

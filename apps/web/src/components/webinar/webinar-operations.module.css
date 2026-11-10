@@ -80,12 +80,10 @@ a.kpiRow:hover { background: #f1f5ee; }
 .realtimeSchedule .surface > p { font-size: 14px; }
 .realtimeAudience { min-width: 0; order: 3; }
 .realtimeFunnel { min-width: 0; order: 4; container-type: inline-size; }
-.realtimeFunnel > section > div:first-of-type { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .realtimeMapPanel { display: flex; min-width: 0; flex-direction: column; overflow: hidden; order: 1; border: 1px solid hsl(var(--border) / .7); border-radius: 15px; background: hsl(var(--card)); box-shadow: 0 2px 8px -5px rgb(31 62 38 / 12%); }
 .realtimeMapViewport { position: relative; min-height: 360px; flex: 1; }
 .realtimeMapViewport > div { position: absolute; inset: 0; height: 100%; }
 .realtimeDetails { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
-@container (min-width: 420px) { .realtimeFunnel > section > div:first-of-type { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1024px) {
   .realtimeOverview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: stretch; }
   .realtimeMetrics { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
