@@ -42,8 +42,26 @@ export function createLimiter(opts: LimiterOptions): Limiter {
   };
 }
 
+export function limitFromEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
 // Per IP: mobile carriers (CGNAT) and office Wi-Fi put many real leads behind one IP.
 export const optinLimiter = createLimiter({ max: 30, windowMs: 60_000 });
 export const leadChatLimiter = createLimiter({ max: 30, windowMs: 60_000 });
 export const offerClickLimiter = createLimiter({ max: 10, windowMs: 60_000 });
-export const attendantReplyLimiter = createLimiter({ max: 60, windowMs: 60_000 });
+// Per attendant. High enough for shared logins and fast bursts across many conversations.
+export const attendantReplyLimiter = createLimiter({
+  max: limitFromEnv("RATE_LIMIT_ATTENDANT_REPLY_PER_MIN", 600),
+  windowMs: 60_000
+});
+// All team replies in this process combined. Each reply is a few short queries plus one
+// Redis publish to the lead and staff rooms, so this bounds total writes far below what
+// the 20-connection pool sustains, protecting the live player even if a client misbehaves.
+export const teamReplyGlobalLimiter = createLimiter({
+  max: limitFromEnv("RATE_LIMIT_TEAM_REPLY_GLOBAL_PER_MIN", 1200),
+  windowMs: 60_000
+});
+export const staffLinkPreviewLimiter = createLimiter({ max: 300, windowMs: 60_000 });
+export const leadLinkPreviewLimiter = createLimiter({ max: 60, windowMs: 60_000 });

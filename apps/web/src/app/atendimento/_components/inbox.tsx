@@ -206,12 +206,14 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     finally { clearTimeout(timeout); }
   }, [receive]);
 
+  // Chat events already patch the list locally; the refetch only picks up new conversations
+  // and status changes. At a live's peak events arrive constantly, so coalesce them.
   const refreshConversationsSoon = useCallback(() => {
     if (eventRefreshTimer.current) return;
     eventRefreshTimer.current = setTimeout(() => {
       eventRefreshTimer.current = null;
       void fetchConversations();
-    }, 150);
+    }, 1_500);
   }, [fetchConversations]);
 
   const { status } = useRealtimeChannel(

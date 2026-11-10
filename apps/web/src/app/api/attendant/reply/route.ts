@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "db";
 import { requireAttendant } from "@/lib/attendant-session";
-import { attendantReplyLimiter } from "@/lib/rate-limit";
+import { attendantReplyLimiter, teamReplyGlobalLimiter } from "@/lib/rate-limit";
 import { tagKirvanoLinks } from "@/lib/kirvano-link";
 import { AttendanceClosedError, ChatIdempotencyConflict, createChatMessage } from "@/server/chat-message";
 
@@ -15,8 +15,8 @@ const schema = z.object({
 export async function POST(request: Request) {
   const session = await requireAttendant();
   if (!session) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  if (!attendantReplyLimiter.check(session.user.id)) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (!attendantReplyLimiter.check(session.user.id) || !teamReplyGlobalLimiter.check("all")) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": "1" } });
   }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });

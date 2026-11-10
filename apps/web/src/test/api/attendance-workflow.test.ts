@@ -4,6 +4,7 @@ import { attendanceRange } from "@/lib/attendance-range";
 import { createChatMessage } from "@/server/chat-message";
 import { processAiConversation } from "@/server/attendance/ai";
 import { getAttendanceReport } from "@/server/attendance/report";
+import { clearConversationListCache, sharedConversationList } from "@/server/attendance/conversation-list";
 
 vi.mock("@/lib/attendant-session", () => ({ requireAttendant: async () => ({ user: { id: "workflow-attendant", role: "attendant" } }) }));
 vi.mock("@/server/realtime/bus", () => ({ publishChatEvent: vi.fn(), publishConversationEvent: vi.fn() }));
@@ -22,6 +23,7 @@ beforeEach(async () => {
   await prisma.webinar.create({ data: { id: webinarId, ownerId: owner, title: "Curso", chatAiEnabled: true, chatAiInstructions: "O curso oferece aulas gravadas. Dúvidas fora disso devem ir ao humano." } });
   await prisma.lead.create({ data: { id: leadId, webinarId, name: "Lead", email: "workflow-lead@example.test" } });
   vi.stubEnv("OPENAI_API_KEY", "test-key-not-real");
+  clearConversationListCache();
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 afterAll(async () => {
@@ -44,8 +46,34 @@ it("filters conversations by message activity, not registration date", async () 
   const today = await GET(new Request("http://localhost/api/attendant/conversations?webinarId=workflow-webinar&from=2026-11-03&to=2026-11-03"));
   expect((await today.json()).conversations).toHaveLength(0);
   await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "Hoje", createdAt: new Date("2026-11-03T03:00:00Z") } });
+  // Identical lists are shared for a short window; skip it to observe the new message now.
+  clearConversationListCache();
   const result = await GET(new Request("http://localhost/api/attendant/conversations?webinarId=workflow-webinar&from=2026-11-03&to=2026-11-03"));
   expect((await result.json()).conversations).toEqual([expect.objectContaining({ leadId, pending: true, lastText: "Hoje" })]);
+});
+it("shares one database load between identical concurrent list requests", async () => {
+  await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "Primeira", createdAt: new Date("2026-11-03T10:00:00Z") } });
+  await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "Última", createdAt: new Date("2026-11-03T11:00:00Z") } });
+  const { GET } = await import("@/app/api/attendant/conversations/route");
+  const url = "http://localhost/api/attendant/conversations?webinarId=workflow-webinar&from=2026-11-03&to=2026-11-03";
+  const responses = await Promise.all(Array.from({ length: 5 }, () => GET(new Request(url))));
+  const bodies = await Promise.all(responses.map(r => r.json()));
+  for (const body of bodies) expect(body.conversations).toEqual([expect.objectContaining({ leadId, lastText: "Última", pending: true })]);
+
+  const payload = { conversations: [], onlineTotal: 0, attendants: [] };
+  const load = vi.fn(async () => payload);
+  const shared = await Promise.all(Array.from({ length: 5 }, () => sharedConversationList("same-range", load)));
+  expect(load).toHaveBeenCalledTimes(1);
+  expect(new Set(shared).size).toBe(1);
+  expect(await sharedConversationList("other-range", load)).toBe(payload);
+  expect(load).toHaveBeenCalledTimes(2);
+});
+it("does not keep a failed list load", async () => {
+  const payload = { conversations: [], onlineTotal: 0, attendants: [] };
+  const load = vi.fn().mockRejectedValueOnce(new Error("db_down")).mockResolvedValue(payload);
+  await expect(sharedConversationList("failing-range", load)).rejects.toThrow("db_down");
+  expect(await sharedConversationList("failing-range", load)).toBe(payload);
+  expect(load).toHaveBeenCalledTimes(2);
 });
 it("publishes one AI reply even with concurrent workers", async () => {
   await createChatMessage({ leadId, webinarId, sender: "lead", text: "Tem gravação?" });

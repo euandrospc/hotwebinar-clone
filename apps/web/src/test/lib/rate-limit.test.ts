@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { createLimiter } from "@/lib/rate-limit";
+import { createLimiter, limitFromEnv } from "@/lib/rate-limit";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -32,5 +32,22 @@ describe("createLimiter", () => {
     expect(limiter.check("k")).toBe(false);
     vi.advanceTimersByTime(61_000);
     expect(limiter.check("k")).toBe(true);
+  });
+});
+
+describe("limitFromEnv", () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it("uses a positive integer from the environment", () => {
+    vi.stubEnv("TEST_LIMIT_PER_MIN", "2400");
+    expect(limitFromEnv("TEST_LIMIT_PER_MIN", 1200)).toBe(2400);
+  });
+
+  it("falls back when the value is missing, invalid or not positive", () => {
+    expect(limitFromEnv("TEST_LIMIT_MISSING", 1200)).toBe(1200);
+    for (const value of ["", "abc", "0", "-5", "1.5"]) {
+      vi.stubEnv("TEST_LIMIT_PER_MIN", value);
+      expect(limitFromEnv("TEST_LIMIT_PER_MIN", 1200)).toBe(1200);
+    }
   });
 });
