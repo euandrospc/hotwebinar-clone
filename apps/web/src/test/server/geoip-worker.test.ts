@@ -92,8 +92,12 @@ it("recovers a failed lookup and moves the same online viewers onto the map", as
 
   const after = buildWebinarRealtimeSnapshot(await prisma.lead.findMany({ where: { webinarId } }));
   expect(after).toMatchObject({ online: 2, located: 2, unlocated: 0 });
-  expect(after.locations).toHaveLength(1);
-  expect(after.locations[0].count).toBe(2);
+  // Shared IP results preserve the same coordinates, with one pin per viewer.
+  expect(after.locations).toHaveLength(2);
+  expect(after.locations).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: first.id, ...geo, count: 1 }),
+    expect.objectContaining({ id: second.id, ...geo, count: 1 })
+  ]));
   expect(provider.notify).toHaveBeenCalledWith(webinarId);
   expect(await prisma.geoIpLookup.findUnique({ where: { ip } })).toMatchObject({
     status: "SUCCESS", attempts: 2, lastError: null, expiresAt: new Date(baseTime + 30_000 + day)

@@ -160,3 +160,15 @@ JP pediu refazer as demais telas seguindo o padrão da sidebar, dashboard e aten
 - A direção v2 é administrativa: não sobrescrever a aparência pública dos webinars ou do player, nem as personalizações e o conteúdo das prévias configuradas no editor. Login/2FA mantém o fluxo de autenticação e recuperação existente.
 
 Esta revisão visual permanece em avaliação pelo JP. Deploy em produção exige solicitação específica.
+
+### Tempo real: mapa no topo e pins individuais — 09/11/2026
+
+JP pediu a composição `[métricas | mapa]`, com o mapa alinhado ao início dos contadores no desktop. Contadores, audiência, contagem regressiva e funil ficam à esquerda; dispositivos e rankings vêm abaixo. No mobile, exibir contadores e mapa antes dos detalhes, sem rolagem horizontal. O painel deve conter apenas o mapa e seus controles, sem faixa de cabeçalho, título, contagem ou rodapé com descrição, botão de espectadores e texto de presença.
+
+O card "Pessoas ao vivo" usa o mesmo fundo verde do faturamento do dashboard, mantendo escala compacta e contraste de textos e ícone.
+
+O mapa de Tempo real mostra um pin para cada pessoa com localização disponível, identificado pelo nome no tooltip e no popup. Não agrupar por cidade nem por coordenadas. Pins coincidentes/próximos recebem deslocamento apenas na tela para permitir seleção individual; preservar as coordenadas originais, informar que a localização é aproximada e mostrar a conexão com a origem ao interagir com um pin deslocado. Manter atualização automática, zoom/posição durante refresh, centralização, seleção por teclado e contagem das pessoas sem localização. O scroll sobre o mapa deve aproximar e afastar o zoom. Rankings de cidades/países permanecem agregados; o mapa por UF do dashboard não muda.
+
+### Navegação operacional alinhada à sidebar — 09/11/2026
+
+JP rejeitou a faixa de abas larga e desalinhada com a sidebar. A navegação operacional do webinar passa a ser um painel flutuante compacto, limitado à largura do conteúdo, com superfície e seleção reutilizadas da sidebar. No desktop, o painel começa a 12 px do topo, alinhado à sidebar; links de 34 px, texto de 12 px e ícones de 15 px mantêm a escala compacta. Em telas estreitas, preservar rolagem horizontal interna e revelar a aba ativa ao navegar ou redimensionar. Manter nomes, destinos, teclado, tema escuro e movimento reduzido. O alinhamento se aplica somente às páginas iniciadas por essa navegação; não alterar o wizard do editor nem páginas sem abas operacionais.

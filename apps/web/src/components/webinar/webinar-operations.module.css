@@ -1,8 +1,3 @@
-.navigation { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; overflow-x: auto; padding: 5px; border: 1px solid hsl(var(--border) / .65); border-radius: 12px; background: hsl(var(--card)); scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
-.navLink { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; min-height: 33px; padding: 7px 12px; border-radius: 8px; color: hsl(var(--muted-foreground)); white-space: nowrap; font-size: 12px; line-height: 18px; font-weight: 500; transition: background-color 160ms, color 160ms; }
-.navLink:hover { background: #f1f5ee; color: #064b3c; }
-.navLink[aria-current="page"] { color: #064b3c; background: #edf5e7; box-shadow: inset 0 0 0 1px rgb(6 75 60 / 5%); }
-.navLink:focus-visible { outline: 2px solid #83b94d; outline-offset: -2px; }
 .surface { min-width: 0; border: 1px solid hsl(var(--border) / .7); border-radius: 15px; padding: 17px; background: hsl(var(--card)); box-shadow: 0 2px 8px -5px rgb(31 62 38 / 12%); }
 .surfaceTitle { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; font-size: 13px; line-height: 18px; font-weight: 600; letter-spacing: -.015em; }
 .surfaceTitle > svg { width: 15px; height: 15px; color: #538743; }
@@ -54,11 +49,52 @@ a.kpiRow:hover { background: #f1f5ee; }
 .flowDetail { margin-top: 9px; font-size: 10px; color: hsl(var(--muted-foreground)); }
 .flowChannel { margin-top: 9px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 10px; color: hsl(var(--muted-foreground)); }
 .flowChannel strong { color: hsl(var(--foreground)); font-size: 15px; font-weight: 500; }
-:global(.dark) .navLink:hover, :global(.dark) .linkButton:hover, :global(.dark) a.kpiRow:hover { background: #1a3023; color: #c5e99d; }
-:global(.dark) .navLink[aria-current="page"], :global(.dark) .filter[aria-current="true"], :global(.dark) .flowStep:last-child { background: #203725; color: #c5e99d; border-color: #345034; }
+:global(.dark) .linkButton:hover, :global(.dark) a.kpiRow:hover { background: #1a3023; color: #c5e99d; }
+:global(.dark) .filter[aria-current="true"], :global(.dark) .flowStep:last-child { background: #203725; color: #c5e99d; border-color: #345034; }
 :global(.dark) .heroMetric { background: linear-gradient(120deg,#183728,#121d16); border-color: #294432; }
 :global(.dark) .kpiIcon { background: #213826; color: #b5d994; }
 :global(.dark) .metricLabel > svg, :global(.dark) .surfaceTitle > svg { color: #a1c97d; }
-@media (max-width:639px) { .navLink { padding-inline: 10px; font-size: 11px; } .surface { padding: 14px; } .formFields { grid-template-columns: minmax(0, 1fr); } .metricValue { font-size: 24px; } }
+@media (max-width:639px) { .surface { padding: 14px; } .formFields { grid-template-columns: minmax(0, 1fr); } .metricValue { font-size: 24px; } }
 @media (max-width:639px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .flowStep:last-child { grid-column: 1 / -1; } .flowLabel, .flowDetail, .flowChannel { font-size: 11px; } }
-@media (prefers-reduced-motion:reduce) { .navLink, .linkButton { transition: none; } }
+@media (prefers-reduced-motion:reduce) { .linkButton { transition: none; } }
+
+
+/* Keep the live map beside the metrics, and ahead of secondary data on mobile. */
+.realtimeOverview { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
+.realtimeMetrics { display: contents; }
+.realtimeCounts { display: grid; min-width: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; order: 0; }
+.realtimeCount { padding: 13px; }
+.realtimeCount .metricLabel { align-items: flex-start; gap: 5px; }
+.realtimeCount .metricLabel > svg { flex-shrink: 0; }
+.realtimeCount .metricLabel h2 { min-width: 0; }
+.realtimeCount .metricValue { font-size: 26px; }
+.realtimeCount .metricHint { line-height: 1.5; }
+.realtimeCount.realtimeLiveCount { padding: 13px; border-radius: 15px; }
+.realtimeLiveCount .metricLabel { color: rgb(255 255 255 / 85%); }
+.realtimeLiveCount .metricLabel > svg { color: #bddf9e; }
+.realtimeLiveCount .metricHint { color: rgb(255 255 255 / 70%); }
+.realtimeSchedule { min-width: 0; order: 2; }
+.realtimeSchedule:empty { display: none; }
+.realtimeSchedule > section { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.realtimeSchedule .surface { padding: 13px; }
+.realtimeSchedule .surface > p { font-size: 14px; }
+.realtimeAudience { min-width: 0; order: 3; }
+.realtimeFunnel { min-width: 0; order: 4; container-type: inline-size; }
+.realtimeFunnel > section > div:first-of-type { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.realtimeMapPanel { display: flex; min-width: 0; flex-direction: column; overflow: hidden; order: 1; border: 1px solid hsl(var(--border) / .7); border-radius: 15px; background: hsl(var(--card)); box-shadow: 0 2px 8px -5px rgb(31 62 38 / 12%); }
+.realtimeMapViewport { position: relative; min-height: 360px; flex: 1; }
+.realtimeMapViewport > div { position: absolute; inset: 0; height: 100%; }
+.realtimeDetails { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; }
+@container (min-width: 420px) { .realtimeFunnel > section > div:first-of-type { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1024px) {
+  .realtimeOverview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: stretch; }
+  .realtimeMetrics { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
+  .realtimeMapViewport { min-height: 500px; }
+  .realtimeDetails { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+}
+@media (max-width: 479px) {
+  .realtimeCounts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .realtimeCount:first-child { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+  .realtimeCount:first-child .metricValue { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }
+  .realtimeCount:first-child .metricHint { margin-top: 3px; }
+}

@@ -2,20 +2,23 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import styles from "./webinar-operations.module.css";
+import { BarChart3, MapPin, Pencil, Radio, Sparkles, Users, Webhook } from "@/components/icons";
+import { cn } from "@/lib/utils";
+import sidebarStyles from "@/components/admin/sidebar.module.css";
+import styles from "./webinar-tabs.module.css";
 
 interface Props {
   webinarId: string;
 }
 
 const TABS = [
-  { label: "Editor", suffix: "/step-1" },
-  { label: "Leads", suffix: "/leads" },
-  { label: "Mapa", suffix: "/leads-map" },
-  { label: "Métricas", suffix: "/metrics" },
-  { label: "Tempo real", suffix: "/realtime" },
-  { label: "Agente IA", suffix: "/chat-ai" },
-  { label: "Webhooks", suffix: "/webhooks" }
+  { label: "Editor", suffix: "/step-1", icon: Pencil },
+  { label: "Leads", suffix: "/leads", icon: Users },
+  { label: "Mapa", suffix: "/leads-map", icon: MapPin },
+  { label: "Métricas", suffix: "/metrics", icon: BarChart3 },
+  { label: "Tempo real", suffix: "/realtime", icon: Radio },
+  { label: "Agente IA", suffix: "/chat-ai", icon: Sparkles },
+  { label: "Webhooks", suffix: "/webhooks", icon: Webhook }
 ] as const;
 
 export function WebinarTabs({ webinarId }: Props) {
@@ -25,14 +28,22 @@ export function WebinarTabs({ webinarId }: Props) {
     const nav = navigation.current;
     const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
     if (!nav || !active) return;
-    const bounds = nav.getBoundingClientRect();
-    const target = active.getBoundingClientRect();
-    if (target.left < bounds.left || target.right > bounds.right) nav.scrollLeft += target.left - bounds.left - (bounds.width - target.width) / 2;
+    const revealActive = () => {
+      const bounds = nav.getBoundingClientRect();
+      const target = active.getBoundingClientRect();
+      if (target.left < bounds.left || target.right > bounds.right) nav.scrollLeft += target.left - bounds.left - (bounds.width - target.width) / 2;
+    };
+    revealActive();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(revealActive);
+    observer.observe(nav);
+    return () => observer.disconnect();
   }, [pathname]);
   const base = `/dashboard/webinars/${webinarId}`;
   return (
-    <nav ref={navigation} aria-label="Navegação do webinar" className={styles.navigation}>
+    <nav ref={navigation} data-webinar-navigation aria-label="Navegação do webinar" className={cn(styles.navigation, sidebarStyles.surface)}>
       {TABS.map((t) => {
+        const Icon = t.icon;
         const href = `${base}${t.suffix}`;
         const active =
           pathname === href ||
@@ -42,8 +53,9 @@ export function WebinarTabs({ webinarId }: Props) {
             key={t.label}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={styles.navLink}
+            className={cn(styles.navLink, active && sidebarStyles.activeItem)}
           >
+            <Icon aria-hidden="true" />
             {t.label}
           </Link>
         );

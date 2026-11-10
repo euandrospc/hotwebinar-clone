@@ -1,6 +1,8 @@
 import type { FunnelStage } from "@/lib/dashboard-stats";
 
 export interface RealtimeLead {
+  id: string;
+  name: string | null;
   userAgent: string | null;
   city: string | null;
   region: string | null;
@@ -29,6 +31,7 @@ export interface WebinarRealtimeSnapshot {
   unlocated: number;
   locations: Array<{
     id: string;
+    name: string | null;
     city: string | null;
     region: string | null;
     country: string | null;
@@ -58,19 +61,20 @@ function rankedCounts(counts: Map<string, number>) {
     .slice(0, 5);
 }
 
-// All panels describe the same online cohort. Coordinates are approximate IP
-// locations, so viewers at the same location share a marker, without exposing PII.
+// All panels describe the same unique online viewers. Keep individual markers
+// even when IP geolocation returns identical coordinates for several people.
 export function buildWebinarRealtimeSnapshot(
   leads: RealtimeLead[],
   now = new Date()
 ): WebinarRealtimeSnapshot {
   const devices: WebinarRealtimeSnapshot["devices"] = { desktop: 0, mobile: 0, tablet: 0, unknown: 0 };
-  const locations = new Map<string, WebinarRealtimeSnapshot["locations"][number]>();
+  const locations: WebinarRealtimeSnapshot["locations"] = [];
+  const uniqueLeads = new Map(leads.map((lead) => [lead.id, lead]));
   const cities = new Map<string, number>();
   const countries = new Map<string, number>();
   let located = 0;
 
-  for (const lead of leads) {
+  for (const lead of uniqueLeads.values()) {
     devices[realtimeDeviceType(lead.userAgent)] += 1;
     const city = clean(lead.city);
     const region = clean(lead.region);
@@ -89,19 +93,16 @@ export function buildWebinarRealtimeSnapshot(
     ) continue;
 
     located += 1;
-    const id = JSON.stringify([lat, lng, city, region, country]);
-    const existing = locations.get(id);
-    if (existing) existing.count += 1;
-    else locations.set(id, { id, city, region, country, lat, lng, count: 1 });
+    locations.push({ id: lead.id, name: clean(lead.name), city, region, country, lat, lng, count: 1 });
   }
 
   return {
     updatedAt: now.toISOString(),
-    online: leads.length,
+    online: uniqueLeads.size,
     devices,
     located,
-    unlocated: leads.length - located,
-    locations: [...locations.values()],
+    unlocated: uniqueLeads.size - located,
+    locations,
     topCities: rankedCounts(cities).map(([label, count]) => ({ label, count })),
     topCountries: rankedCounts(countries).map(([code, count]) => ({ code, count }))
   };

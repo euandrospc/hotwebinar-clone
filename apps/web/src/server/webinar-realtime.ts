@@ -12,7 +12,7 @@ export async function getWebinarRealtimeSnapshot(webinarId: string): Promise<Web
   const leads = online.byWebinar.has(webinarId)
     ? await prisma.lead.findMany({
         where: { webinarId, id: { in: [...online.leadIds] } },
-        select: { userAgent: true, city: true, region: true, country: true, lat: true, lng: true }
+        select: { id: true, name: true, userAgent: true, city: true, region: true, country: true, lat: true, lng: true }
       })
     : [];
   const now = new Date();

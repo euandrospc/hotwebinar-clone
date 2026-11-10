@@ -20,7 +20,7 @@ vi.mock("@/lib/hooks/use-realtime-channel", () => ({
 vi.mock("@/components/webinar/realtime-map", () => ({
   RealtimeMap: ({ locations }: { locations: WebinarRealtimeSnapshot["locations"] }) => (
     <ul aria-label="Marcadores do mapa">
-      {locations.map((location) => <li key={location.id}>{location.city}: {location.count}</li>)}
+      {locations.map((location) => <li key={location.id}>{location.name}: {location.city}</li>)}
     </ul>
   )
 }));
@@ -31,7 +31,10 @@ const initialData: WebinarRealtimeSnapshot = {
   devices: { desktop: 1, mobile: 1, tablet: 0, unknown: 1 },
   located: 2,
   unlocated: 1,
-  locations: [{ id: "sp", city: "São Paulo", region: "SP", country: "BR", lat: -23.55, lng: -46.63, count: 2 }],
+  locations: [
+    { id: "ana", name: "Ana", city: "São Paulo", region: "SP", country: "BR", lat: -23.55, lng: -46.63, count: 1 },
+    { id: "bruno", name: "Bruno", city: "São Paulo", region: "SP", country: "BR", lat: -23.55, lng: -46.63, count: 1 }
+  ],
   topCities: [{ label: "São Paulo, SP, BR", count: 2 }],
   topCountries: [{ code: "BR", count: 2 }]
 };
@@ -43,8 +46,9 @@ const nextData: WebinarRealtimeSnapshot = {
   located: 4,
   unlocated: 1,
   locations: [
-    { ...initialData.locations[0], count: 3 },
-    { id: "lisbon", city: "Lisboa", region: null, country: "PT", lat: 38.72, lng: -9.14, count: 1 }
+    ...initialData.locations,
+    { ...initialData.locations[0], id: "carla", name: "Carla" },
+    { id: "diogo", name: "Diogo", city: "Lisboa", region: null, country: "PT", lat: 38.72, lng: -9.14, count: 1 }
   ],
   topCities: [{ label: "São Paulo, SP, BR", count: 3 }, { label: "Lisboa, PT", count: 1 }],
   topCountries: [{ code: "BR", count: 3 }, { code: "PT", count: 1 }]
@@ -109,7 +113,7 @@ describe("RealtimeDashboard", () => {
   it("refreshes audience, devices and map from one snapshot after 15 seconds", async () => {
     const { container } = mount();
     expectCount("Pessoas ao vivo", 3);
-    expect(within(screen.getByRole("list", { name: "Marcadores do mapa" })).getByText("São Paulo: 2")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Marcadores do mapa" })).getAllByRole("listitem")).toHaveLength(2);
 
     await advance(14_999);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -124,8 +128,9 @@ describe("RealtimeDashboard", () => {
     expect(within(mobileRow).getByText("2", { exact: true })).toBeInTheDocument();
     expect(within(mobileRow).getByText("40%")).toBeInTheDocument();
     const map = screen.getByRole("list", { name: "Marcadores do mapa" });
-    expect(within(map).getByText("São Paulo: 3")).toBeInTheDocument();
-    expect(within(map).getByText("Lisboa: 1")).toBeInTheDocument();
+    expect(within(map).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(map).getByText("Carla: São Paulo")).toBeInTheDocument();
+    expect(within(map).getByText("Diogo: Lisboa")).toBeInTheDocument();
     expect(container.querySelector("time")).toHaveAttribute("datetime", nextData.updatedAt);
   });
 

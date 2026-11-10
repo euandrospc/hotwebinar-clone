@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Globe, MapPin, MonitorPlay, Radio, RefreshCw, Smartphone, Users } from "@/components/icons";
+import { Globe, MapPin, MonitorPlay, Radio, RefreshCw, Smartphone } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
@@ -14,6 +13,7 @@ import { DashboardFunnel } from "@/components/dashboard/dashboard-funnel";
 import { RealtimeMap } from "./realtime-map";
 
 import styles from "./webinar-operations.module.css";
+import cardStyles from "@/components/dashboard/dashboard-card.module.css";
 
 const REFRESH_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -180,51 +180,42 @@ export function RealtimeDashboard({ webinarId, title, initialData }: {
         </div>
       </header>
 
-      <RealtimeCountdown data={data} />
-
       {stale && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">Não foi possível atualizar. Exibindo a última leitura; tentaremos novamente automaticamente.</div>}
 
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
-        {[
-          { label: "Pessoas ao vivo", value: data.online, icon: Radio, hint: "Espectadores conectados agora", primary: true },
-          { label: "No mapa", value: data.located, icon: MapPin, hint: "Com localização aproximada disponível" },
-          { label: "Sem localização", value: data.unlocated, icon: MonitorPlay, hint: "Também incluídos no total ao vivo" }
-        ].map(({ label, value, icon: Icon, hint, primary }) => (
-          <section key={label} aria-label={label} className={cn(styles.surface, primary && styles.heroMetric)}>
-            <div className={styles.metricLabel}><Icon className="h-3.5 w-3.5 text-[#538743] dark:text-[#B5D994]" /><h2>{label}</h2></div>
-            <p className={styles.metricValue}>{fmt.format(value)}</p>
-            <p className={styles.metricHint}>{hint}</p>
-          </section>
-        ))}
+      <div className={styles.realtimeOverview}>
+        <div className={styles.realtimeMetrics}>
+          <div className={styles.realtimeCounts}>
+            {[
+              { label: "Pessoas ao vivo", value: data.online, icon: Radio, hint: "Espectadores conectados agora", primary: true },
+              { label: "No mapa", value: data.located, icon: MapPin, hint: "Com localização aproximada disponível" },
+              { label: "Sem localização", value: data.unlocated, icon: MonitorPlay, hint: "Também incluídos no total ao vivo" }
+            ].map(({ label, value, icon: Icon, hint, primary }) => (
+              <section key={label} aria-label={label} className={cn(styles.realtimeCount, primary ? [cardStyles.card, cardStyles.financial, styles.realtimeLiveCount] : styles.surface)}>
+                <div className={styles.metricLabel}><Icon className="h-3.5 w-3.5 text-[#538743] dark:text-[#B5D994]" /><h2>{label}</h2></div>
+                <p className={styles.metricValue}>{fmt.format(value)}</p>
+                <p className={styles.metricHint}>{hint}</p>
+              </section>
+            ))}
+          </div>
+
+          <div className={styles.realtimeSchedule}><RealtimeCountdown data={data} /></div>
+
+          {data.audience && <div className={styles.realtimeAudience}><AudienceSummary data={data.audience} period="Hoje" /></div>}
+
+          {data.funnel && <div className={styles.realtimeFunnel}>
+            <DashboardFunnel stages={data.funnel} />
+            <p className="mt-2 px-1 text-[10px] leading-relaxed text-muted-foreground">Hoje · fuso horário do webinar · atualizado automaticamente com o painel.</p>
+          </div>}
+        </div>
+
+        <section className={styles.realtimeMapPanel} aria-label="Mapa ao vivo">
+          <div className={styles.realtimeMapViewport}><RealtimeMap locations={data.locations} /></div>
+        </section>
       </div>
 
-      {data.audience && <AudienceSummary data={data.audience} period="Hoje" />}
-
-      {data.funnel && <div className="space-y-2">
-        <DashboardFunnel stages={data.funnel} />
-        <p className="text-xs text-muted-foreground">Hoje · fuso horário do webinar · atualizado automaticamente com o painel.</p>
-      </div>}
-
-      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0 space-y-4">
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_2px_8px_-5px_rgba(31,62,38,0.12)]" aria-label="Mapa ao vivo">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 px-4 py-3">
-              <h2 className="text-[13px] font-semibold">Onde está o público agora</h2>
-              <span className="text-xs text-muted-foreground">{fmt.format(data.located)} no mapa · localização aproximada</span>
-            </div>
-            <RealtimeMap locations={data.locations} />
-          </section>
-          <LocationsRanking data={data} />
-        </div>
-        <div className="min-w-0 space-y-4">
-          <Devices data={data} />
-          <div className={styles.surface}>
-            <h2 className="text-[13px] font-semibold">Acompanhe cada espectador</h2>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Veja quem está online, o tempo assistido e a interação com a oferta.</p>
-            <Button asChild variant="outline" className="mt-3 h-[34px] w-full rounded-lg text-xs"><Link href={`/dashboard/online?webinarId=${webinarId}`}><Users className="h-4 w-4" /> Ver espectadores</Link></Button>
-          </div>
-          <p className="px-1 text-xs leading-relaxed text-muted-foreground">A presença é confirmada pela atividade do player nos últimos 45 segundos. Quem sai deixa de aparecer nas próximas atualizações.</p>
-        </div>
+      <div className={styles.realtimeDetails}>
+        <Devices data={data} />
+        <LocationsRanking data={data} />
       </div>
     </div>
   );

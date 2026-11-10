@@ -5,7 +5,10 @@ import {
   type RealtimeLead
 } from "@/lib/webinar-realtime";
 
+let nextLeadId = 0;
 const lead = (overrides: Partial<RealtimeLead> = {}): RealtimeLead => ({
+  id: `viewer-${++nextLeadId}`,
+  name: "Pessoa de teste",
   userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
   city: "São Paulo",
   region: "SP",
@@ -31,10 +34,10 @@ describe("webinar realtime aggregation", () => {
     expect(realtimeDeviceType(ua)).toBe(expected);
   });
 
-  it("keeps device and location totals consistent and groups shared map locations", () => {
+  it("keeps one marker per person even at the same coordinates and city", () => {
     const result = buildWebinarRealtimeSnapshot([
-      lead(),
-      lead({ userAgent: "iPhone Mobile", country: " br " }),
+      lead({ id: "ana", name: " Ana " }),
+      lead({ id: "joao", name: "João", userAgent: "iPhone Mobile", country: " br " }),
       lead({ userAgent: "iPad Mobile", city: "Rio de Janeiro", region: "RJ", lat: -22.90, lng: -43.17 }),
       lead({ userAgent: null, city: null, region: null, country: null, lat: null, lng: null })
     ], new Date("2026-10-30T18:00:00Z"));
@@ -44,11 +47,39 @@ describe("webinar realtime aggregation", () => {
     expect(result.devices).toEqual({ desktop: 1, mobile: 1, tablet: 1, unknown: 1 });
     expect(result.located).toBe(3);
     expect(result.unlocated).toBe(1);
-    expect(result.locations).toHaveLength(2);
-    expect(result.locations.find((location) => location.city === "São Paulo")?.count).toBe(2);
+    expect(result.locations).toHaveLength(3);
+    expect(result.locations.filter((location) => location.city === "São Paulo")).toEqual([
+      expect.objectContaining({ id: "ana", name: "Ana", lat: -23.55, lng: -46.63, count: 1 }),
+      expect.objectContaining({ id: "joao", name: "João", lat: -23.55, lng: -46.63, count: 1 })
+    ]);
     expect(result.locations.reduce((count, location) => count + location.count, 0)).toBe(result.located);
     expect(result.topCountries).toEqual([{ code: "BR", count: 3 }]);
     expect(result.topCities[0]).toEqual({ label: "São Paulo, SP, BR", count: 2 });
+  });
+
+  it("deduplicates repeated viewer IDs across all panels", () => {
+    const viewer = lead({ id: "reconnected-viewer", name: "Ana", userAgent: "iPhone Mobile" });
+    const result = buildWebinarRealtimeSnapshot([viewer, viewer, lead({ id: "unlocated-viewer", lat: null })]);
+
+    expect(result.online).toBe(2);
+    expect(result.devices).toEqual({ desktop: 1, mobile: 1, tablet: 0, unknown: 0 });
+    expect(result.locations).toEqual([expect.objectContaining({ id: "reconnected-viewer", name: "Ana", count: 1 })]);
+    expect(result.located).toBe(1);
+    expect(result.unlocated).toBe(1);
+    expect(result.topCities).toEqual([{ label: "São Paulo, SP, BR", count: 2 }]);
+    expect(result.topCountries).toEqual([{ code: "BR", count: 2 }]);
+  });
+
+  it("preserves unnamed viewers as individual pins without substituting contact details", () => {
+    const result = buildWebinarRealtimeSnapshot([
+      lead({ id: "unnamed", name: null }),
+      lead({ id: "blank-name", name: "  " })
+    ]);
+
+    expect(result.locations).toEqual([
+      expect.objectContaining({ id: "unnamed", name: null, count: 1 }),
+      expect.objectContaining({ id: "blank-name", name: null, count: 1 })
+    ]);
   });
 
   it("excludes invalid coordinates while keeping known city and country counts", () => {

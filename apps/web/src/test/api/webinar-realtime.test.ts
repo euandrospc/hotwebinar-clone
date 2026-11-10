@@ -76,7 +76,7 @@ describe("GET /api/webinars/[id]/realtime", () => {
     expect((await request("missing-webinar")).status).toBe(404);
   });
 
-  it("returns only this webinar's active players and aggregates without exposing viewer PII", async () => {
+  it("returns individual pins for this webinar's active players without exposing contact details", async () => {
     await addLead("realtime-desktop", {}, 5_000);
     await addLead("realtime-mobile", { userAgent: "iPhone Mobile" }, 10_000);
     await addLead("realtime-tablet", { userAgent: "iPad Mobile", lat: null, lng: null }, 4_000);
@@ -94,10 +94,18 @@ describe("GET /api/webinars/[id]/realtime", () => {
     expect(body.devices).toEqual({ desktop: 1, mobile: 1, tablet: 1, unknown: 0 });
     expect(body.located).toBe(2);
     expect(body.unlocated).toBe(1);
-    expect(body.locations).toHaveLength(1);
-    expect(body.locations[0].count).toBe(2);
+    expect(body.locations).toHaveLength(2);
+    expect(body.locations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "realtime-desktop", name: "Private realtime-desktop", count: 1 }),
+      expect.objectContaining({ id: "realtime-mobile", name: "Private realtime-mobile", count: 1 })
+    ]));
     expect(body.topCountries).toEqual([{ code: "BR", count: 3 }]);
-    expect(JSON.stringify(body)).not.toMatch(/example\.test|Private |realtime-desktop/);
+    expect(JSON.stringify(body)).not.toMatch(/example\.test|realtime-sibling-viewer|realtime-foreign-viewer/);
+    for (const location of body.locations) {
+      expect(location).not.toHaveProperty("email");
+      expect(location).not.toHaveProperty("phone");
+      expect(location).not.toHaveProperty("ip");
+    }
   });
 
   it("drops expired heartbeats on refresh rather than accumulating viewers", async () => {
