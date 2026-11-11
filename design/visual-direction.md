@@ -188,3 +188,27 @@ JP pediu retirar a aba e a página "Mapa" do webinar. A navegação operacional 
 ### Paginação de Leads — 10/11/2026
 
 JP relatou lentidão na aba Leads e pediu paginação. A listagem busca somente a página atual no servidor: 25 registros por padrão, com opções de 50 e 100. Controles compactos no topo e no rodapé mostram o intervalo e permitem avançar, voltar ou selecionar a página; no mobile, priorizar anterior/próxima e a posição atual. Navegar sem recarregar o painel, sinalizar carregamento e preservar busca, período e filtro de oferta. Mudanças de filtro ou quantidade voltam à primeira página. A exportação CSV continua incluindo todo o resultado filtrado, independentemente da página visível.
+
+### Atendimento: indicadores e desempenho por atendente — 11/11/2026
+
+JP pediu refazer o resumo de atendimento do dashboard e incluir métricas individuais. O bloco passa a reunir conversas no período, respostas enviadas, primeira resposta média e conversas sem retorno no recorte, seguidos por evolução diária das mensagens e tabela de desempenho por autor. Preservar a superfície compacta clara/verde da v2, tema escuro, teclado, mobile e movimento reduzido.
+
+- Tabela com busca, filtros Todos/Equipe/IA, ordenação por conversas, respostas e primeira resposta, participação nas respostas e paginação de cinco linhas. Filtros da tabela não alteram os indicadores gerais nem a base da participação.
+- Autoria vem de `LeadChatMessage.authorUserId`, nunca do responsável atual. Mensagens humanas sem autor ficam em “Equipe sem identificação”; IA usa o nome registrado na mensagem. A mesma conversa pode envolver vários autores.
+- Primeira resposta mede a primeira mensagem do público observada até a primeira resposta posterior, ambas no período; a amostra pertence somente ao primeiro respondente. Mostrar ausência de amostra como `—` e quantidade de amostras em tooltip, preservando respostas medidas em zero segundos.
+- “Sem retorno no recorte” significa última mensagem do público dentro do intervalo selecionado. Não apresentar como fila atual, resolução, SLA ou histórico de encerramentos.
+- Atividade diária usa mensagens reais no fuso de Brasília. Participação representa a fração de todas as respostas humanas e de IA, não qualidade. Dados locais de demonstração continuam determinísticos e isolados de produção.
+
+Esta revisão visual permanece em avaliação pelo JP. Publicação continua dependendo de pedido específico.
+
+### Análise de objeções e dúvidas frequentes — 11/11/2026
+
+JP pediu duas tabelas adicionais abaixo do Atendimento: categorias de objeções e dúvidas frequentes, para orientar a quebra de objeções e esclarecer a oferta. As tabelas respeitam webinar e período selecionados, mostram mensagens, conversas distintas e participação, com paginação de cinco temas e detalhes acessíveis por teclado.
+
+- A fonte é exclusivamente `LeadChatMessage.sender = lead`. Mensagens da equipe/IA e o roteiro público não entram na classificação. Perguntar preço não é, por si só, uma objeção: classificar resistência explícita separadamente de solicitações de informação.
+- Uma mensagem pode ter vários temas e aparecer nas duas tabelas. Cada percentual usa as mensagens com aquele tipo de classificação como base; não somar categorias como pessoas únicas. Títulos de dúvidas são resumos normalizados do assunto, não citações literais.
+- O detalhe apresenta exemplos literais do banco, data em Brasília, acesso à conversa real e uma sugestão de abordagem do tema. Não inventar respostas sobre preço, garantia ou condições da oferta. O limite de cinco exemplos não limita a contagem nem o corpus analisado.
+- “Analisar mensagens”/“Atualizar análise” executa lotes sequenciais de todas as mensagens pendentes no recorte. Sem chamadas pagas na abertura da página; permitir pausa após o lote corrente, retomada, progresso parcial e erros claros. Troca de filtros cancela próximas requisições e descarta respostas obsoletas.
+- Classificações persistem por mensagem, versão e modelo. Trocar o período reutiliza o trabalho salvo. Lock por webinar evita processamento simultâneo duplicado; modelos de IA recebem os textos como dados não confiáveis e só retornam códigos validados. A análise não envia respostas ao público.
+- Integração usa a chave de IA do servidor e o modelo já configurado no webinar. Quando indisponível, informar configuração ausente e preservar a leitura do que já foi analisado. Antes de qualquer análise, exibir `—`, sem confundir ausência de análise com zero objeções.
+- A prévia de desenvolvimento tem um cenário determinístico separado, sem gravar mensagens/classificações no banco nem fazer chamadas ao provider. A migration `20261111100000_chat_intelligence` foi aplicada somente no banco local de desenvolvimento; publicação continua exigindo pedido específico.

@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DashboardWatchChart, type DashboardWatchData } from "@/components/dashboard/dashboard-watch-chart";
-import { DashboardSupportOverview } from "@/components/dashboard/dashboard-support-overview";
 
 afterEach(cleanup);
 
@@ -18,7 +17,7 @@ const watch: DashboardWatchData = {
   ]
 };
 
-describe("Dashboard watch and support panels", () => {
+describe("Dashboard watch panel", () => {
   it("distinguishes accumulated average from reach and changes the chart unit", async () => {
     const user = userEvent.setup();
     const { container } = render(<DashboardWatchChart watch={watch} />);
@@ -42,16 +41,4 @@ describe("Dashboard watch and support panels", () => {
     expect(screen.queryByText(/Pitch em/)).not.toBeInTheDocument();
   });
 
-  it("keeps channel overlap and unavailable first replies honest and links to the supported route", () => {
-    render(<DashboardSupportOverview webinarId="test-webinar" support={{ human: { conversations: 5, replies: 12, averageFirstReplySeconds: null }, ai: { conversations: 4, replies: 9, averageFirstReplySeconds: 0 }, uniqueConversations: 7 }} />);
-    const human = within(screen.getByRole("group", { name: "Equipe humana" }));
-    const ai = within(screen.getByRole("group", { name: "Agentes de IA" }));
-    expect(human.getByText("5")).toBeInTheDocument();
-    expect(human.getByText("12")).toBeInTheDocument();
-    expect(human.getByText("—")).toBeInTheDocument();
-    expect(ai.getByText("4")).toBeInTheDocument();
-    expect(ai.getByText("0 s")).toBeInTheDocument();
-    expect(screen.getByText(/7 conversas com mensagens no período/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver conversas" })).toHaveAttribute("href", "/atendimento");
-  });
 });

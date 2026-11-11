@@ -37,9 +37,25 @@ describe("dashboard insights query scope", () => {
     });
     expect(queries.messages.mock.calls[0][0].orderBy).toEqual([{ createdAt: "asc" }, { id: "asc" }]);
     expect(queries.messages.mock.calls[0][0].where.createdAt).toEqual({ gte: start, lte: end });
+    expect(queries.messages.mock.calls[0][0].select).toMatchObject({
+      authorUserId: true, authorUser: { select: { name: true, image: true } }
+    });
     expect(queries.sales.mock.calls[0][0].where.createdAt).toEqual({ gte: new Date("2026-10-25T03:00:00.000Z"), lte: end });
     expect(result.watch).toMatchObject({ viewerCount: 1, averageWatchedSeconds: 1800, pitchAtSeconds: 300 });
     expect(result.geography.totalAccesses).toBe(1);
+  });
+
+  it("passes message authors through without substituting current conversation assignees", async () => {
+    queries.webinars.mockResolvedValue([{ id: "selected", pitchAtSec: null, video: null }]);
+    queries.messages.mockResolvedValue([
+      { id: "incoming", webinarId: "selected", leadId: "conversation", sender: "lead", aiAgentName: null, createdAt: start, authorUserId: null, authorUser: null },
+      { id: "reply", webinarId: "selected", leadId: "conversation", sender: "team", aiAgentName: null, createdAt: new Date(start.getTime() + 15_000), authorUserId: "author", authorUser: { name: "Ana", image: "/ana.png" } }
+    ]);
+    const result = await getDashboardInsights("owner", start, end, "selected");
+    expect(result.support.agents).toEqual([
+      { id: "human:author", name: "Ana", kind: "human", image: "/ana.png", conversations: 1, replies: 1, averageFirstReplySeconds: 15, firstReplySamples: 1 }
+    ]);
+    expect(result.support).toMatchObject({ repliedConversations: 1, awaitingReplyConversations: 0, incomingMessages: 1 });
   });
 
   it("does not broaden foreign or empty selections and defaults to all owned webinars only when omitted", async () => {

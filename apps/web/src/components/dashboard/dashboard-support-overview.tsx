@@ -1,16 +1,21 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Headset, Info, Sparkles } from "@/components/icons";
+import { ArrowDown, ArrowUpRight, ChevronRight, Clock, Headset, Info, MessageCircle, Search, Send, Sparkles } from "@/components/icons";
+import { AreaChart, type TooltipProps } from "@/components/tremor/area-chart";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DashboardInsights } from "@/lib/dashboard-insights";
-import styles from "./dashboard-card.module.css";
+import card from "./dashboard-card.module.css";
+import styles from "./dashboard-support-overview.module.css";
 
 export type DashboardSupportData = DashboardInsights["support"];
-
+type Agent = DashboardSupportData["agents"][number];
+type SortKey = "conversations" | "replies" | "averageFirstReplySeconds";
 const number = new Intl.NumberFormat("pt-BR");
+const percent = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+const PAGE_SIZE = 5;
 
 function replyTime(seconds: number | null) {
   if (seconds === null) return "—";
@@ -20,45 +25,108 @@ function replyTime(seconds: number | null) {
   return `${Math.floor(value / 3600)} h ${Math.floor(value % 3600 / 60)} min`;
 }
 
+function Help({ label, children }: { label: string; children: React.ReactNode }) {
+  return <Tooltip><TooltipTrigger asChild><button type="button" aria-label={label} className={styles.help}><Info aria-hidden="true" className="size-3.5" /></button></TooltipTrigger><TooltipContent className="max-w-80 text-xs leading-relaxed">{children}</TooltipContent></Tooltip>;
+}
+
+function ActivityTooltip({ active, payload }: TooltipProps) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload as DashboardSupportData["activity"][number];
+  return <div className={styles.chartTooltip}>
+    <p className="mb-2 text-muted-foreground">{point.date.split("-").reverse().join("/")} · Brasília</p>
+    {payload.map((item) => <div key={item.category} className="flex justify-between gap-6 py-0.5"><span>{item.category}</span><strong className="font-medium tabular-nums">{number.format(item.value)}</strong></div>)}
+  </div>;
+}
+
 export function DashboardSupportOverview({ support, demo = false }: { support: DashboardSupportData; webinarId?: string; demo?: boolean }) {
   const titleId = useId();
   const reducedMotion = useReducedMotion();
-  const channels = [
-    { key: "human", title: "Equipe humana", Icon: Headset, data: support.human },
-    { key: "ai", title: "Agentes de IA", Icon: Sparkles, data: support.ai }
-  ] as const;
+  const [kind, setKind] = useState<"all" | "human" | "ai">("all");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<{ key: SortKey; ascending: boolean }>({ key: "replies", ascending: false });
+  const [page, setPage] = useState(0);
+  const [chartMode, setChartMode] = useState<"replies" | "incoming">("replies");
+  const totalReplies = support.human.replies + support.ai.replies;
+  const humanShare = totalReplies ? support.human.replies / totalReplies * 100 : 0;
+  const aiShare = totalReplies ? support.ai.replies / totalReplies * 100 : 0;
+  const agents = useMemo(() => support.agents.filter((agent) =>
+    (kind === "all" || (kind === "ai" ? agent.kind === "ai" : agent.kind !== "ai")) &&
+    agent.name.toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR"))
+  ).sort((a, b) => {
+    const av = a[sort.key];
+    const bv = b[sort.key];
+    // Missing response samples always follow measured rows, in either direction.
+    if (av === null || bv === null) return av === bv ? a.name.localeCompare(b.name, "pt-BR") : av === null ? 1 : -1;
+    return (sort.ascending ? av - bv : bv - av) || a.name.localeCompare(b.name, "pt-BR");
+  }), [support.agents, kind, search, sort]);
+  const lastPage = Math.max(0, Math.ceil(agents.length / PAGE_SIZE) - 1);
+  const currentPage = Math.min(page, lastPage);
+  const visibleAgents = agents.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const data = useMemo(() => support.activity.map((point) => ({ ...point, Equipe: point.human, IA: point.ai, Recebidas: point.incoming })), [support.activity]);
+  const hasActivity = support.activity.some((point) => point.incoming + point.human + point.ai > 0);
+  const setSorting = (key: SortKey) => {
+    setSort((previous) => ({ key, ascending: previous.key === key ? !previous.ascending : key === "averageFirstReplySeconds" }));
+    setPage(0);
+  };
+  const sortHeader = (key: SortKey, label: string) => <th scope="col" aria-sort={sort.key === key ? sort.ascending ? "ascending" : "descending" : "none"}>
+    <button type="button" onClick={() => setSorting(key)} aria-label={`Ordenar por ${label.toLocaleLowerCase("pt-BR")}`} className={styles.sortButton}>{label}<ArrowDown aria-hidden="true" className={`size-3 ${sort.key !== key ? "opacity-25" : ""} ${sort.key === key && sort.ascending ? "rotate-180" : ""}`} /></button>
+  </th>;
 
-  return (
-    <section aria-labelledby={titleId} className={`${styles.card} min-w-0`}>
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <h2 id={titleId} className="text-[13px] font-semibold leading-5">Atendimento</h2>
-          <TooltipProvider delayDuration={150}>
-            <Tooltip>
-              <TooltipTrigger asChild><button type="button" aria-label="Como o atendimento é contado" className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[#F1F6EB] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none dark:hover:bg-[#203323]"><Info aria-hidden="true" className="size-3.5" /></button></TooltipTrigger>
-              <TooltipContent className="max-w-72 leading-relaxed">Conversas únicas com resposta de cada canal no período. Uma conversa pode aparecer nos dois canais. A primeira resposta considera pares de pergunta e resposta registrados dentro do período.</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+  return <TooltipProvider delayDuration={150}>
+    <section id="dashboard-support" aria-labelledby={titleId} className={`${card.card} ${styles.root}`}>
+      <header className={styles.header}>
+        <div className="flex items-center gap-2.5">
+          <span className={styles.titleIcon}><Headset aria-hidden="true" className="size-4" /></span>
+          <div><div className="flex items-center gap-1"><h2 id={titleId} className="text-[13px] font-semibold leading-5">Atendimento</h2><Help label="Como o atendimento é contado">Mensagens registradas no webinar e período selecionados. Cada conversa é contada uma vez no total, mas pode ter respostas de vários atendentes e da IA. Autoria é identificada pela mensagem, independentemente do responsável atual.</Help></div><p className="text-[11px] text-muted-foreground">Volume, agilidade e desempenho da equipe</p></div>
         </div>
-        {demo ? <span className="text-[11px] text-muted-foreground">Atendimentos simulados</span> : <Link href="/atendimento" className="group inline-flex items-center gap-1 rounded-md text-[11px] font-medium text-[#07513D] transition-colors hover:text-[#3C763A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none dark:text-[#B7E779] dark:hover:text-[#D0EBB7]">Ver conversas <ArrowUpRight aria-hidden="true" className="size-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" /></Link>}
+        {!demo && <Link href="/atendimento" className={styles.conversationsLink}>Ver conversas <ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>}
       </header>
-      <div className="mt-2.5 grid grid-cols-1 divide-y divide-border/50 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-        {channels.map(({ key, title, Icon, data }) => (
-          <motion.div key={key} initial={false} layout="position" transition={{ duration: reducedMotion ? 0 : 0.2 }} className="py-2.5 first:pt-0 last:pb-0 sm:py-0 sm:first:pr-5 sm:last:pl-5" role="group" aria-label={title}>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex size-5 items-center justify-center rounded-md bg-gradient-to-br from-[#F1F7E8] to-[#E4EFD8] text-[#07513D] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:from-[#23432E] dark:to-[#1A3021] dark:text-[#B7E779] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"><Icon aria-hidden="true" className="size-3" /></span>
-              <h3 className="text-xs font-medium">{title}</h3>
-              {data.replies === 0 && <span className="ml-auto text-[10px] text-muted-foreground">Sem respostas</span>}
-            </div>
-            <dl className="mt-1.5 grid grid-cols-3 gap-2.5">
-              <div><dt className="text-[11px] text-muted-foreground">Conversas</dt><dd className="mt-0.5 text-lg font-semibold leading-6 tracking-tight tabular-nums">{number.format(data.conversations)}</dd></div>
-              <div><dt className="text-[11px] text-muted-foreground">Respostas</dt><dd className="mt-0.5 text-lg font-semibold leading-6 tracking-tight tabular-nums">{number.format(data.replies)}</dd></div>
-              <div><dt className="text-[11px] text-muted-foreground">1ª resposta média</dt><dd className="mt-0.5 text-[13px] font-semibold leading-6 tabular-nums" title={data.averageFirstReplySeconds === null ? "Sem amostra de pergunta e resposta no período" : "Tempo médio da primeira resposta"}>{replyTime(data.averageFirstReplySeconds)}</dd></div>
-            </dl>
-          </motion.div>
-        ))}
+
+      <dl className={styles.metrics}>
+        <div className={styles.metric}><dt><MessageCircle aria-hidden="true" />Conversas no período</dt><dd>{number.format(support.uniqueConversations)}</dd><dd className={styles.metricNote}>{number.format(support.repliedConversations)} com resposta da equipe ou IA</dd></div>
+        <div className={styles.metric}><dt><Send aria-hidden="true" />Respostas enviadas</dt><dd>{number.format(totalReplies)}</dd><dd className={styles.metricNote}>{number.format(support.incomingMessages)} mensagens recebidas</dd></div>
+        <div className={styles.metric}><dt><Clock aria-hidden="true" />1ª resposta média<Help label="Como a primeira resposta é calculada">Tempo entre a primeira mensagem do público observada e a primeira resposta posterior, ambas dentro do período. A amostra é atribuída somente a quem deu essa primeira resposta. Inclui equipe e IA; não representa tempo de resolução.</Help></dt><dd>{replyTime(support.averageFirstReplySeconds)}</dd><dd className={styles.metricNote}>{support.firstReplySamples ? `${number.format(support.firstReplySamples)} primeiras respostas observadas` : "Sem amostras neste período"}</dd></div>
+        <div className={`${styles.metric} ${support.awaitingReplyConversations > 0 ? styles.attention : ""}`}><dt><MessageCircle aria-hidden="true" />Sem retorno no recorte<Help label="Como as conversas sem retorno são contadas">Conversas cuja última mensagem dentro do período é do público. É uma leitura histórica do recorte selecionado, não a fila atual: respostas posteriores e encerramentos não são considerados.</Help></dt><dd>{number.format(support.awaitingReplyConversations)}</dd><dd className={styles.metricNote}>Última mensagem do público no período</dd></div>
+      </dl>
+
+      <div className={styles.body}>
+        <div className={styles.activity}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className={styles.sectionTitle}>Fluxo de mensagens</h3><div role="group" aria-label="Mensagens no gráfico" className={card.segmented}>{([{ key: "replies", label: "Respostas" }, { key: "incoming", label: "Recebidas" }] as const).map((item) => <motion.button key={item.key} type="button" className={card.segment} aria-pressed={chartMode === item.key} onClick={() => setChartMode(item.key)} whileTap={{ scale: reducedMotion ? 1 : 0.97 }}>{item.label}</motion.button>)}</div></div>
+          <p className="mt-1 text-[10px] text-muted-foreground">{chartMode === "replies" ? "Respostas da equipe e da IA por dia" : "Mensagens enviadas pelo público por dia"}</p>
+          {hasActivity ? <AreaChart data={data} index="label" categories={chartMode === "replies" ? ["Equipe", "IA"] : ["Recebidas"]} colors={chartMode === "replies" ? ["emerald", "chartLime"] : ["emerald"]} curveType="linear" className="mt-3 h-36" showLegend={false} allowDecimals={false} minValue={0} yAxisWidth={32} tickGap={24} valueFormatter={(value) => number.format(value)} customTooltip={ActivityTooltip} aria-label={`Fluxo diário de ${chartMode === "replies" ? "respostas da equipe e da IA" : "mensagens recebidas"}. Use as setas para explorar.`} /> : <div className={styles.emptyChart}><MessageCircle aria-hidden="true" className="size-5" /><p>Sem mensagens neste período</p></div>}
+          <div className={styles.channels} aria-label="Distribuição das respostas">
+            {([{ key: "human", name: "Equipe humana", Icon: Headset, share: humanShare }, { key: "ai", name: "Agentes de IA", Icon: Sparkles, share: aiShare }] as const).map(({ key, name, Icon, share }) => <div key={key} role="group" aria-label={name} className={styles.channel}>
+              <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-1.5"><i className={key === "human" ? styles.humanDot : styles.aiDot} /><Icon aria-hidden="true" className="size-3" />{name}</span><strong>{totalReplies ? `${percent.format(share)}%` : "—"}</strong></div>
+              <p>{number.format(support[key].replies)} respostas <span>· {number.format(support[key].conversations)} conversas</span></p>
+            </div>)}
+            <div className={styles.channelBar} aria-hidden="true"><span className={styles.humanBar} style={{ width: `${humanShare}%` }} /><span className={styles.aiBar} style={{ width: `${aiShare}%` }} /></div>
+          </div>
+        </div>
+
+        <div className={styles.performance}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className={styles.sectionTitle}>Desempenho por atendente</h3><div role="group" aria-label="Tipo de atendente" className={card.segmented}>{([{ key: "all", label: "Todos" }, { key: "human", label: "Equipe" }, { key: "ai", label: "IA" }] as const).map((item) => <motion.button key={item.key} type="button" className={card.segment} aria-pressed={kind === item.key} onClick={() => { setKind(item.key); setPage(0); }} whileTap={{ scale: reducedMotion ? 1 : 0.97 }}>{item.label}</motion.button>)}</div></div>
+          <div className={styles.tableToolbar}><p>{number.format(agents.length)} {agents.length === 1 ? "atendente com respostas" : "atendentes com respostas"}</p><label className={styles.search}><Search aria-hidden="true" className="size-3.5 shrink-0" /><input aria-label="Buscar atendente" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Buscar atendente" /></label></div>
+          <div className={styles.tableViewport} role="region" aria-label="Métricas por atendente" tabIndex={0}>
+            <table className={styles.table}>
+              <caption className="sr-only">Respostas atribuídas ao autor da mensagem no período selecionado. Participação sobre todas as respostas.</caption>
+              <thead><tr><th scope="col">Atendente</th>{sortHeader("conversations", "Conversas")}{sortHeader("replies", "Respostas")}{sortHeader("averageFirstReplySeconds", "1ª resposta")}<th scope="col"><span className="inline-flex items-center gap-0.5">Participação<Help label="Como a participação é calculada">Respostas deste atendente divididas por todas as respostas da equipe e IA no período. O filtro da tabela não altera essa base. Representa volume de mensagens, não uma nota de qualidade.</Help></span></th></tr></thead>
+              <tbody>{visibleAgents.map((agent) => <AgentRow key={agent.id} agent={agent} totalReplies={totalReplies} />)}</tbody>
+            </table>
+            {!agents.length && <p className={styles.emptyTable}>{support.agents.length ? "Nenhum atendente encontrado com esses filtros." : "Os atendentes aparecerão aqui assim que enviarem respostas."}</p>}
+          </div>
+          <div className={styles.tableFooter}><p>Uma conversa pode envolver mais de um atendente.</p>{agents.length > PAGE_SIZE && <nav aria-label="Páginas de atendentes" className="flex shrink-0 items-center gap-2"><span>{currentPage + 1} de {lastPage + 1}</span><button type="button" aria-label="Página anterior de atendentes" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}><ChevronRight aria-hidden="true" className="rotate-180" /></button><button type="button" aria-label="Próxima página de atendentes" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}><ChevronRight aria-hidden="true" /></button></nav>}</div>
+        </div>
       </div>
-      <p className="mt-2 text-[10px] leading-4 text-muted-foreground">{support.uniqueConversations > 0 ? `${number.format(support.uniqueConversations)} ${support.uniqueConversations === 1 ? "conversa com mensagens" : "conversas com mensagens"} no período. Uma conversa pode passar pelos dois canais.` : "Nenhuma conversa com mensagens neste período."}</p>
+      <div className="sr-only"><table><caption>Mensagens por dia, no horário de Brasília</caption><thead><tr><th scope="col">Data</th><th scope="col">Recebidas</th><th scope="col">Equipe</th><th scope="col">IA</th></tr></thead><tbody>{support.activity.map((point) => <tr key={point.date}><th scope="row">{point.date}</th><td>{point.incoming}</td><td>{point.human}</td><td>{point.ai}</td></tr>)}</tbody></table></div>
     </section>
-  );
+  </TooltipProvider>;
+}
+
+function AgentRow({ agent, totalReplies }: { agent: Agent; totalReplies: number }) {
+  const share = totalReplies ? agent.replies / totalReplies * 100 : 0;
+  const initials = agent.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("pt-BR");
+  return <tr>
+    <th scope="row"><div className={styles.person}><span aria-hidden="true" className={`${styles.avatar} ${agent.kind === "ai" ? styles.aiAvatar : ""}`}>{agent.kind === "ai" ? <Sparkles className="size-3.5" /> : initials}</span><span className="min-w-0"><span className={styles.personName}>{agent.name}</span><span className={styles.personKind}>{agent.kind === "ai" ? "Agente de IA" : agent.kind === "unattributed" ? "Autoria não registrada" : "Equipe humana"}</span></span></div></th>
+    <td>{number.format(agent.conversations)}</td><td className="font-semibold">{number.format(agent.replies)}</td><td><Tooltip><TooltipTrigger asChild><button type="button" className={styles.sample} aria-label={`${agent.name}: primeira resposta ${replyTime(agent.averageFirstReplySeconds)}, ${agent.firstReplySamples} amostras`}>{replyTime(agent.averageFirstReplySeconds)}</button></TooltipTrigger><TooltipContent>{agent.firstReplySamples ? `${number.format(agent.firstReplySamples)} primeiras respostas atribuídas a este atendente no período.` : "Este atendente não deu a primeira resposta em nenhuma amostra do período."}</TooltipContent></Tooltip></td><td><div className={styles.share}><span>{totalReplies ? `${percent.format(share)}%` : "—"}</span><div aria-hidden="true"><i className={agent.kind === "ai" ? styles.aiBar : styles.humanBar} style={{ width: `${share}%` }} /></div></div></td>
+  </tr>;
 }

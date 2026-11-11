@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { DASHBOARD_TIME_ZONE } from "@/lib/dashboard-overview";
 import { createDashboardDemo, isDashboardDemoEnabled } from "@/lib/dashboard-demo";
+import { createChatIntelligenceDemo } from "@/lib/dashboard-chat-intelligence-demo";
 import { zonedParts, zonedToUtc } from "@/lib/timezones";
 import { getDashboardOverview } from "@/server/dashboard/overview";
 import { getDashboardInsights } from "@/server/dashboard/insights";
@@ -17,6 +18,7 @@ import { DashboardWebinarPicker } from "@/components/dashboard/dashboard-webinar
 import { DashboardWatchChart } from "@/components/dashboard/dashboard-watch-chart";
 import { DashboardAudienceMap } from "@/components/dashboard/dashboard-audience-map";
 import { DashboardSupportOverview } from "@/components/dashboard/dashboard-support-overview";
+import { DashboardChatIntelligence } from "@/components/dashboard/dashboard-chat-intelligence";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { DashboardRealtimePreview } from "@/components/dashboard/dashboard-realtime-preview";
 
@@ -120,6 +122,20 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </div>
 
       <DashboardMotion className="min-w-0" delay={0.12}><DashboardSupportOverview support={insights.support} webinarId={selectedWebinar?.id} demo={Boolean(demo)} /></DashboardMotion>
+      <DashboardMotion className="min-w-0" delay={0.14}>
+        <DashboardChatIntelligence
+          webinarId={selectedWebinar?.id}
+          from={rangeStart.toISOString()}
+          to={rangeEnd.toISOString()}
+          demoReport={demo ? createChatIntelligenceDemo({
+            webinarId: demo.webinar.id,
+            totalMessages: demo.insights.support.incomingMessages,
+            uniqueConversations: demo.insights.support.uniqueConversations,
+            from: rangeStart,
+            to: rangeEnd
+          }) : undefined}
+        />
+      </DashboardMotion>
       <p className="text-[11px] text-muted-foreground">
         {demo && "Cenário fictício para avaliação do layout. "}
         Horário de Brasília · Vendas e faturamento em reais, pela data de registro.

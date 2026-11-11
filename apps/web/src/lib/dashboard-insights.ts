@@ -1,10 +1,5 @@
-export interface DashboardSupportChannel {
-  /** Distinct conversations with a team reply from this channel in the period. */
-  conversations: number;
-  replies: number;
-  /** First observed incoming message to first subsequent team reply, both in the period. */
-  averageFirstReplySeconds: number | null;
-}
+import { buildDashboardSupport, type DashboardSupport, type DashboardSupportMessage } from "@/lib/dashboard-support";
+export type { DashboardSupport, DashboardSupportAgent, DashboardSupportActivity, DashboardSupportChannel } from "@/lib/dashboard-support";
 
 export interface DashboardInsights {
   watch: {
@@ -23,12 +18,7 @@ export interface DashboardInsights {
     brazilUnresolved: number;
     totalAccesses: number;
   };
-  support: {
-    human: DashboardSupportChannel;
-    ai: DashboardSupportChannel;
-    /** Distinct conversations with a lead or team message in the period, including unanswered ones. */
-    uniqueConversations: number;
-  };
+  support: DashboardSupport;
   comparison: {
     previousRevenueCents: number;
     previousSales: number;
@@ -58,14 +48,7 @@ export interface DashboardInsightsViewer {
   maxVideoSec: number | null;
 }
 
-export interface DashboardInsightsMessage {
-  id: string;
-  webinarId: string;
-  leadId: string;
-  sender: string;
-  aiAgentName: string | null;
-  createdAt: Date;
-}
+export type DashboardInsightsMessage = DashboardSupportMessage;
 
 export interface DashboardInsightsSale {
   id: string;
@@ -200,39 +183,8 @@ export function buildDashboardInsights(input: BuildDashboardInsightsInput): Dash
   }
   geography.regions = [...regionCounts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "pt-BR"));
 
-  const channel = () => ({ leads: new Set<string>(), replies: 0, firstReplies: [] as number[] });
-  const channels = { human: channel(), ai: channel() };
-  const conversations = new Set<string>();
-  const waitingSince = new Map<string, number>();
-  const answered = new Set<string>();
-  const seenMessages = new Set<string>();
-  const messages = input.messages.filter((message) => webinars.has(message.webinarId) &&
-    message.createdAt.getTime() >= start && message.createdAt.getTime() <= end &&
-    (message.sender === "lead" || message.sender === "team"))
-    .slice().sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
-  for (const message of messages) {
-    if (seenMessages.has(message.id)) continue;
-    seenMessages.add(message.id);
-    const key = pairKey(message.webinarId, message.leadId);
-    conversations.add(key);
-    if (message.sender === "lead") {
-      if (!waitingSince.has(key)) waitingSince.set(key, message.createdAt.getTime());
-      continue;
-    }
-    const currentChannel = message.aiAgentName ? channels.ai : channels.human;
-    currentChannel.replies++;
-    currentChannel.leads.add(key);
-    const waiting = waitingSince.get(key);
-    if (waiting !== undefined && !answered.has(key)) {
-      currentChannel.firstReplies.push((message.createdAt.getTime() - waiting) / 1000);
-      answered.add(key);
-    }
-  }
-  const summarizeChannel = (value: ReturnType<typeof channel>): DashboardSupportChannel => ({
-    conversations: value.leads.size,
-    replies: value.replies,
-    averageFirstReplySeconds: value.firstReplies.length
-      ? Math.round(value.firstReplies.reduce((total, seconds) => total + seconds, 0) / value.firstReplies.length) : null
+  const support = buildDashboardSupport({
+    webinarIds: [...webinars.keys()], messages: input.messages, rangeStart: input.rangeStart, rangeEnd: input.rangeEnd
   });
 
   let previousRevenueCents = 0;
@@ -256,7 +208,7 @@ export function buildDashboardInsights(input: BuildDashboardInsightsInput): Dash
       totalWatchedSeconds, viewerCount: viewers.size, retention, pitchAtSeconds
     },
     geography,
-    support: { human: summarizeChannel(channels.human), ai: summarizeChannel(channels.ai), uniqueConversations: conversations.size },
+    support,
     comparison: {
       previousRevenueCents, previousSales,
       revenueChangePct: previousRevenueCents ? percentage(currentRevenueCents - previousRevenueCents, previousRevenueCents) : null
