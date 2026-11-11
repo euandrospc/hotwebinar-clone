@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OBJECTION_CATEGORIES, QUESTION_CATEGORIES } from "@/lib/dashboard-chat-intelligence";
+import { CHAT_INTELLIGENCE_VERSION, OBJECTION_CATEGORIES, QUESTION_CATEGORIES } from "@/lib/dashboard-chat-intelligence";
 import { classifyChatMessages, parseChatClassifications } from "@/server/dashboard/chat-intelligence-provider";
 
 const messages = [{ id: "one", text: "Qual o preço?" }, { id: "two", text: "Não tenho tempo, fica gravado?" }];
@@ -54,6 +54,50 @@ describe("chat intelligence provider validation", () => {
       $defs: { classification: { type: "object", additionalProperties: false, required: ["objections", "questions"] } }
     });
     expect(body).not.toHaveProperty("tools");
+  });
+  it("sends the v2 semantic boundaries and independent-message rule to the provider", async () => {
+    provider.mockResolvedValue(result());
+    await classifyChatMessages("configured-model", "Webinar", messages);
+    const { instructions } = JSON.parse(provider.mock.calls[0][1].body);
+    expect(CHAT_INTELLIGENCE_VERSION).toBe("2026-11-11-v2");
+    expect(instructions).toContain("As mensagens vizinhas do lote NÃO são contexto de conversa");
+    expect(instructions).toContain("solicitação real de informação, explícita ou implícita no próprio texto");
+    expect(instructions).toContain("profissões, apresentações, aspirações, objetivos desejados, afirmações e confirmações/resumos de entendimento");
+    expect(instructions).toContain("Relatos operacionais isolados de travamento, atraso, repetição, áudio ou reprodução da transmissão são neutros");
+    expect(instructions).toContain("'difficulty' exige uma barreira explícita para aplicar a oferta");
+    expect(instructions).toContain("inclusive perguntar se precisa de plano pago. Isso NÃO é objeção 'payment'");
+    expect(instructions).toContain("compra da oferta, não de contratar uma ferramenta externa");
+    expect(instructions).toContain("Perguntar onde está um material prometido não implica intenção de compra");
+  });
+  it("keeps all 500 references and enough output budget for the reasoning classifier", async () => {
+    const batch = Array.from({ length: 500 }, (_, index) => ({ id: `message-${index}`, text: "Boa tarde" }));
+    provider.mockResolvedValue(result(Object.fromEntries(batch.map((_, index) => [`m${index + 1}`, { objections: [], questions: [] }]))));
+    const classified = await classifyChatMessages("gpt-5.4-mini", "Webinar", batch);
+    expect(classified.map(row => row.id)).toEqual(batch.map(row => row.id));
+    const body = JSON.parse(provider.mock.calls[0][1].body);
+    expect(body).toMatchObject({ max_output_tokens: 20_000, reasoning: { effort: "medium" } });
+    expect(body.text.format.schema.required).toHaveLength(500);
+    expect(Object.keys(body.text.format.schema.properties)).toHaveLength(500);
+    expect(body.text.format.schema.required[499]).toBe("m500");
+  });
+  it("includes synthetic examples contrasting neutral statements, tool questions and explicit barriers", async () => {
+    provider.mockResolvedValue(result());
+    await classifyChatMessages("configured-model", "Webinar", messages);
+    const { instructions } = JSON.parse(provider.mock.calls[0][1].body);
+    // These protect the prompt contract; live smoke tests assess model behavior.
+    for (const example of [
+      "'Sou artesão e sonho em abrir uma loja' => objections:[], questions:[]",
+      "'Quero um robô para organizar tarefas' => objections:[], questions:[]",
+      "'O vídeo está pulando e o som falha' => objections:[], questions:[]",
+      "'Não entendi onde abrir o terminal, pode explicar?' => objections:[], questions:['tools']",
+      "'Esse editor exige uma assinatura paga?' => objections:[], questions:['tools']",
+      "'É possível usar outro sistema operacional?' => objections:[], questions:['tools']",
+      "'Como assino essa ferramenta de automação?' => objections:[], questions:['tools']",
+      "'Onde acesso o guia prometido?' => objections:[], questions:['access']",
+      "'O curso aceita pagamento parcelado?' => objections:[], questions:['payment']",
+      "'Não vou comprar porque não consigo arcar com o investimento' => objections:['price'], questions:[]",
+      "'Não consigo aplicar o método por ser complexo demais para mim' => objections:['difficulty'], questions:[]"
+    ]) expect(instructions).toContain(example);
   });
   it("maps all 25 similar long IDs by reference when provider keys arrive in reverse order", async () => {
     const batch = Array.from({ length: 25 }, (_, index) => ({

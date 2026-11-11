@@ -8,9 +8,11 @@ import { ChatIntelligenceError, classifyChatMessages } from "./chat-intelligence
 export { ChatIntelligenceError } from "./chat-intelligence-provider";
 
 export interface ChatIntelligenceScope { webinarId: string; from: Date; to: Date }
-const BATCH_SIZE = 25;
-const BATCH_CHARACTERS = 16_000;
-const LEASE_MS = 90_000;
+// Analytics quality and cache validity are independent of the live-chat model.
+const CLASSIFICATION_MODEL = "gpt-5.4-mini";
+const BATCH_SIZE = 500;
+const BATCH_CHARACTERS = 64_000;
+const LEASE_MS = 120_000;
 
 function assertScope(ownerId: string, scope: ChatIntelligenceScope) {
   if (!ownerId || !scope.webinarId || scope.webinarId.length > 128 ||
@@ -22,7 +24,7 @@ async function ownedWebinar(ownerId: string, scope: ChatIntelligenceScope) {
   assertScope(ownerId, scope);
   const webinar = await prisma.webinar.findFirst({
     where: { id: scope.webinarId, ownerId },
-    select: { id: true, title: true, chatAiModel: true, chatInsightLeaseToken: true, chatInsightLeaseUntil: true }
+    select: { id: true, title: true, chatInsightLeaseToken: true, chatInsightLeaseUntil: true }
   });
   if (!webinar) throw new ChatIntelligenceError("not_found", 404);
   return webinar;
@@ -41,7 +43,7 @@ interface ExampleRow { kind: string; category: string; id: string; leadId: strin
 /** Aggregates in PostgreSQL: totals never depend on a display/sample limit. */
 export async function getChatIntelligenceReport(ownerId: string, scope: ChatIntelligenceScope): Promise<ChatIntelligenceReport> {
   const webinar = await ownedWebinar(ownerId, scope);
-  const currentAnalysis = Prisma.sql`a."version" = ${CHAT_INTELLIGENCE_VERSION} AND a."model" = ${webinar.chatAiModel}`;
+  const currentAnalysis = Prisma.sql`a."version" = ${CHAT_INTELLIGENCE_VERSION} AND a."model" = ${CLASSIFICATION_MODEL}`;
   const scopeSql = Prisma.sql`w."ownerId" = ${ownerId} AND m."webinarId" = ${scope.webinarId}
     AND m."sender" = 'lead' AND m."createdAt" >= ${scope.from} AND m."createdAt" <= ${scope.to}`;
   const classified = Prisma.sql`SELECT m."id", m."leadId", m."text", m."createdAt", a."objections", a."questions"
@@ -107,7 +109,7 @@ export async function processChatIntelligenceBatch(ownerId: string, scope: ChatI
     const candidates = await prisma.leadChatMessage.findMany({
       where: { ...messageScope(ownerId, scope), OR: [
         { analysis: { is: null } },
-        { analysis: { is: { OR: [{ version: { not: CHAT_INTELLIGENCE_VERSION } }, { model: { not: webinar.chatAiModel } }] } } }
+        { analysis: { is: { OR: [{ version: { not: CHAT_INTELLIGENCE_VERSION } }, { model: { not: CLASSIFICATION_MODEL } }] } } }
       ] },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: BATCH_SIZE,
       select: { id: true, text: true }
@@ -121,20 +123,20 @@ export async function processChatIntelligenceBatch(ownerId: string, scope: ChatI
       characters += message.text.length;
     }
     if (batch.length) {
-      const classified = await classifyChatMessages(webinar.chatAiModel, webinar.title, batch);
+      const classified = await classifyChatMessages(CLASSIFICATION_MODEL, webinar.title, batch);
       processedMessages = await prisma.$transaction(async (tx) => {
         // The guarded write locks the webinar row until all classifications commit.
         const guard = await tx.webinar.updateMany({
-          where: { id: webinar.id, ownerId, chatAiModel: webinar.chatAiModel, chatInsightLeaseToken: token, chatInsightLeaseUntil: { gt: new Date() } },
+          where: { id: webinar.id, ownerId, chatInsightLeaseToken: token, chatInsightLeaseUntil: { gt: new Date() } },
           data: { chatInsightLeaseUntil: new Date(Date.now() + LEASE_MS) }
         });
         if (!guard.count) throw new ChatIntelligenceError("analysis_changed", 409);
         for (const row of classified) {
-          const data = { version: CHAT_INTELLIGENCE_VERSION, model: webinar.chatAiModel, objections: row.objections, questions: row.questions, analyzedAt: new Date() };
+          const data = { version: CHAT_INTELLIGENCE_VERSION, model: CLASSIFICATION_MODEL, objections: row.objections, questions: row.questions, analyzedAt: new Date() };
           await tx.leadChatMessageAnalysis.upsert({ where: { messageId: row.id }, create: { messageId: row.id, ...data }, update: data });
         }
         return classified.length;
-      });
+      }, { timeout: 20_000 });
     }
   } finally {
     // A stale request can never release a lease acquired by a newer worker.

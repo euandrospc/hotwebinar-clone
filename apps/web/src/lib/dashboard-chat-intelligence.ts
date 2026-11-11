@@ -1,5 +1,5 @@
 /** Stable codes allow classifications to be reused across dashboard date ranges. */
-export const CHAT_INTELLIGENCE_VERSION = "2026-11-11-v1";
+export const CHAT_INTELLIGENCE_VERSION = "2026-11-11-v2";
 
 export const OBJECTION_CATEGORIES = [
   { id: "price", label: "Preço e orçamento", guidance: "Explicitar o valor entregue e esclarecer o investimento e as condições reais da oferta." },
