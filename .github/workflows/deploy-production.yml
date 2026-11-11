@@ -17,6 +17,48 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
+      - name: Configure chat AI when a bootstrap secret is provided
+        env:
+          COOLIFY_DEPLOY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+          BOOTSTRAP_OPENAI_API_KEY: ${{ secrets.BOOTSTRAP_OPENAI_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          key = os.environ.get("BOOTSTRAP_OPENAI_API_KEY", "").strip()
+          if not key:
+              print("No chat AI configuration change requested.")
+              raise SystemExit(0)
+          token = os.environ.get("COOLIFY_DEPLOY_TOKEN", "")
+          if not token:
+              raise SystemExit("Missing Coolify deployment credential.")
+          payload = {"data": [{
+              "key": "OPENAI_API_KEY", "value": key,
+              "is_preview": False, "is_literal": True, "is_multiline": False,
+              "is_runtime": True, "is_buildtime": False
+          }]}
+          request = urllib.request.Request(
+              "http://82.25.64.13:8000/api/v1/applications/c4o88swcok8soow8o4g0o8gc/envs/bulk",
+              data=json.dumps(payload).encode(), method="PATCH",
+              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  saved = json.load(response)
+          except urllib.error.HTTPError as error:
+              # Response bodies may contain credentials. Never print them.
+              raise SystemExit(f"Coolify rejected chat AI configuration (HTTP {error.code}).")
+          except Exception:
+              raise SystemExit("Could not confirm chat AI configuration in Coolify.")
+          configured = next((item for item in saved if isinstance(item, dict) and item.get("key") == "OPENAI_API_KEY"), None) if isinstance(saved, list) else None
+          if not configured or not configured.get("is_runtime") or configured.get("is_preview") or configured.get("is_buildtime"):
+              raise SystemExit("Coolify did not confirm the production runtime configuration.")
+          print("OPENAI_API_KEY configured for production runtime.")
+          PY
+
       - name: Trigger Coolify deployment
         id: deploy
         env:

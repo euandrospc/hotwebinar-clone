@@ -192,12 +192,85 @@ describe("Dashboard chat intelligence", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("does not offer analysis before the provider is configured", async () => {
-    fetchMock.mockImplementation(() => jsonResponse(pending({ providerReady: false })));
+  it("explains the missing provider beside the coverage and rechecks it without starting analysis", async () => {
+    fetchMock.mockImplementationOnce(() => jsonResponse(pending({ providerReady: false })))
+      .mockImplementationOnce(() => jsonResponse(pending()));
+    const user = userEvent.setup();
     render(<DashboardChatIntelligence {...scope} />);
     const button = await screen.findByRole("button", { name: "Analisar mensagens" });
     expect(button).toBeDisabled();
+    const coverage = screen.getByRole("status");
+    expect(within(coverage).getByText("IA não configurada")).toBeInTheDocument();
+    const reason = within(coverage).getByText(/Configure a chave de IA no servidor/);
+    expect(button).toHaveAttribute("aria-describedby", reason.id);
+    expect(button).toHaveAccessibleDescription(reason.textContent!);
+    expect(coverage).toHaveTextContent("0 de 10 mensagens analisadas");
+    expect(screen.queryByText("Aguardando análise")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Recarregar resultados" }));
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(screen.queryByText("IA não configurada")).not.toBeInTheDocument();
+    expect(button).not.toHaveAttribute("aria-describedby");
+    expect(methodCalls("GET")).toHaveLength(2);
     expect(methodCalls("POST")).toHaveLength(0);
+  });
+
+  it("shows refresh progress and confirmation while preserving saved counts and evidence", async () => {
+    const refresh = deferred<Response>();
+    fetchMock.mockImplementationOnce(() => jsonResponse(report({ analyzedMessages: 4, pendingMessages: 6 })))
+      .mockImplementationOnce(() => refresh.promise);
+    const user = userEvent.setup();
+    render(<DashboardChatIntelligence {...scope} />);
+    const button = await screen.findByRole("button", { name: "Recarregar resultados" });
+    expect(button).toHaveTextContent("Recarregar resultados");
+    await user.click(button);
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toHaveTextContent("Recarregando…");
+    expect(screen.getByRole("status")).toHaveTextContent("4 de 10 mensagens analisadas");
+    expect(screen.getByRole("button", { name: "Ver mensagens: Preço e orçamento" })).toBeInTheDocument();
+    await act(async () => refresh.resolve(await jsonResponse(report({ totalMessages: 11, analyzedMessages: 4, pendingMessages: 7 }))));
+    expect(await screen.findByText("Resultados recarregados.")).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute("aria-busy", "false");
+    expect(screen.getByText(/de 11 mensagens analisadas/)).toHaveTextContent("4 de 11 mensagens analisadas");
+    expect(methodCalls("GET")).toHaveLength(2);
+    expect(methodCalls("POST")).toHaveLength(0);
+  });
+
+  it.each([
+    [401, "unauthorized", "Sua sessão expirou"],
+    [403, "invalid_origin", "Abra novamente a plataforma pelo endereço oficial"],
+    [403, "forbidden", "Não foi possível acessar as mensagens deste webinar"],
+    [409, "provider_missing", "A integração de IA não está configurada no servidor"],
+    [429, "provider_rate_limited", "O serviço de IA atingiu o limite de uso"]
+  ])("explains API error %s (%s) without retrying automatically", async (status, error, message) => {
+    fetchMock.mockImplementationOnce(() => jsonResponse(report({ analyzedMessages: 4, pendingMessages: 6 })))
+      .mockImplementationOnce(() => jsonResponse({ error }, status as number));
+    const user = userEvent.setup();
+    render(<DashboardChatIntelligence {...scope} />);
+    await user.click(await screen.findByRole("button", { name: "Atualizar análise" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByRole("button", { name: "Ver mensagens: Preço e orçamento" })).toBeInTheDocument();
+    expect(methodCalls("POST")).toHaveLength(1);
+  });
+
+  it("blocks analysis if the provider becomes unavailable and retries by rechecking configuration", async () => {
+    fetchMock.mockImplementationOnce(() => jsonResponse(report({ analyzedMessages: 4, pendingMessages: 6 })))
+      .mockImplementationOnce(() => jsonResponse({ error: "provider_missing" }, 409))
+      .mockImplementationOnce(() => jsonResponse(report({ analyzedMessages: 4, pendingMessages: 6 })));
+    const user = userEvent.setup();
+    render(<DashboardChatIntelligence {...scope} />);
+    const analyze = await screen.findByRole("button", { name: "Atualizar análise" });
+    await user.click(analyze);
+    await screen.findByRole("alert");
+    expect(analyze).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("IA não configurada");
+    expect(screen.getByRole("status")).toHaveTextContent("4 de 10 mensagens analisadas");
+    await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
+    await waitFor(() => expect(analyze).toBeEnabled());
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(methodCalls("GET")).toHaveLength(2);
+    expect(methodCalls("POST")).toHaveLength(1);
   });
 
   it("allows retrying a failed initial load without starting a paid analysis", async () => {

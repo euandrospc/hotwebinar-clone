@@ -30,9 +30,19 @@ function displayDate(value: string) {
   return Number.isFinite(date.getTime()) ? timestamp.format(date) : "Data indisponível";
 }
 
+class ChatIntelligenceRequestError extends Error {
+  constructor(message: string, public code: string) { super(message); }
+}
+
 async function readResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const code = body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : "";
     if (response.status === 401) throw new Error("Sua sessão expirou. Atualize a página para continuar.");
+    if (response.status === 409 && code === "provider_missing") throw new ChatIntelligenceRequestError("A integração de IA não está configurada no servidor. Configure a chave de IA e recarregue os resultados para continuar.", code);
+    if (response.status === 429) throw new Error("O serviço de IA atingiu o limite de uso. Aguarde alguns instantes e tente novamente. O progresso já salvo foi preservado.");
+    if (response.status === 403 && code === "invalid_origin") throw new Error("Não foi possível validar este acesso. Abra novamente a plataforma pelo endereço oficial e tente analisar as mensagens.");
+    if (response.status === 409 && code === "analysis_changed") throw new Error("A configuração da análise mudou durante o processamento. Recarregue os resultados antes de continuar.");
     if (response.status === 403 || response.status === 404) throw new Error("Não foi possível acessar as mensagens deste webinar.");
     if (response.status === 400) throw new Error("Não foi possível analisar o período selecionado.");
     throw new Error("Não foi possível concluir a análise. O progresso já salvo será preservado. Tente novamente.");
@@ -47,6 +57,7 @@ export function DashboardChatIntelligence(props: Props) {
 
 function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
   const titleId = useId();
+  const providerNoticeId = useId();
   const [report, setReport] = useState<ChatIntelligenceReport | null>(demoReport ?? null);
   const [loading, setLoading] = useState(!demoReport && Boolean(webinarId));
   const [running, setRunning] = useState(false);
@@ -70,14 +81,17 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
     }));
   }
 
-  async function loadReport(scope: RequestScope) {
+  async function loadReport(scope: RequestScope, manual = false) {
     setLoading(true);
     setError(null);
     setFailedOperation(null);
     setNotice(null);
     try {
       const result = await requestReport(scope);
-      if (isActive(scope)) setReport(result);
+      if (isActive(scope)) {
+        setReport(result);
+        if (manual) setNotice("Resultados recarregados.");
+      }
     } catch (cause) {
       if (isActive(scope)) {
         setError(cause instanceof Error ? cause.message : "Não foi possível carregar a análise.");
@@ -169,7 +183,9 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
     } catch (cause) {
       if (isActive(scope)) {
         setError(cause instanceof Error ? cause.message : "Não foi possível concluir a análise.");
-        setFailedOperation("analyze");
+        const providerMissing = cause instanceof ChatIntelligenceRequestError && cause.code === "provider_missing";
+        if (providerMissing) setReport((current) => current ? { ...current, providerReady: false } : current);
+        setFailedOperation(providerMissing ? "load" : "analyze");
       }
     } finally {
       runningRef.current = false;
@@ -182,7 +198,7 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
 
   function retry() {
     if (failedOperation === "analyze") void analyze();
-    else if (scopeRef.current) void loadReport(scopeRef.current);
+    else if (scopeRef.current) void loadReport(scopeRef.current, true);
   }
 
   function pause() {
@@ -196,6 +212,7 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
   const partial = Boolean(currentReport?.pendingMessages);
   const providerMissing = currentReport && !currentReport.providerReady && !demoReport;
   const pending = currentReport?.pendingMessages ?? 0;
+  const initialLoading = loading && !currentReport;
 
   return <TooltipProvider delayDuration={150}>
     <section id="dashboard-chat-intelligence" aria-labelledby={titleId} className={styles.root}>
@@ -208,35 +225,35 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
           </div>
         </div>
         {!demoReport && webinarId && <div className={styles.actions}>
-          {currentReport && <button type="button" className={styles.refresh} aria-label="Recarregar análise" disabled={loading || running} onClick={() => { if (scopeRef.current) void loadReport(scopeRef.current); }}><RefreshCw aria-hidden="true" className="size-3.5" /></button>}
-          {running ? <button type="button" className={styles.pause} onClick={pause} disabled={pauseRequested} aria-label="Pausar análise">{pauseRequested ? "Pausando…" : "Pausar análise"}</button> : <button type="button" className={styles.analyze} onClick={() => void analyze()} disabled={loading || !currentReport?.providerReady || !pending}>
+          {currentReport && <button type="button" className={styles.refresh} aria-label="Recarregar resultados" aria-busy={loading} disabled={loading || running} onClick={() => { if (scopeRef.current) void loadReport(scopeRef.current, true); }}><RefreshCw aria-hidden="true" className={loading ? styles.spinner : "size-3.5"} /><span>{loading ? "Recarregando…" : "Recarregar resultados"}</span></button>}
+          {running ? <button type="button" className={styles.pause} onClick={pause} disabled={pauseRequested} aria-label="Pausar análise">{pauseRequested ? "Pausando…" : "Pausar análise"}</button> : <button type="button" className={styles.analyze} onClick={() => void analyze()} disabled={loading || !currentReport?.providerReady || !pending} aria-describedby={providerMissing ? providerNoticeId : undefined}>
             <Sparkles aria-hidden="true" className="size-3.5" />{currentReport?.analyzedMessages ? "Atualizar análise" : "Analisar mensagens"}
           </button>}
         </div>}
       </header>
 
-      <div className={styles.coverage} role="status" aria-live="polite">
-        {loading ? <span className={styles.statusLine}><LoaderCircle aria-hidden="true" className={styles.spinner} />Carregando a análise das mensagens…</span> : !webinarId && !demoReport ? <span>Selecione um webinar para analisar as mensagens.</span> : currentReport ? <>
+      <div className={`${styles.coverage} ${providerMissing ? styles.coverageBlocked : ""}`} role="status" aria-live="polite">
+        {initialLoading ? <span className={styles.statusLine}><LoaderCircle aria-hidden="true" className={styles.spinner} />Carregando a análise das mensagens…</span> : !webinarId && !demoReport ? <span>Selecione um webinar para analisar as mensagens.</span> : currentReport ? <>
           <div className={styles.statusLine}>
             {running && <LoaderCircle aria-hidden="true" className={styles.spinner} />}
             <span><strong>{number.format(currentReport.analyzedMessages)}</strong> de {number.format(currentReport.totalMessages)} mensagens analisadas</span>
-            {partial && <span className={styles.partial}>{running ? "Analisando" : currentReport.analyzedMessages ? "Análise parcial" : "Aguardando análise"}</span>}
+            {providerMissing ? <span className={styles.partial}>IA não configurada</span> : partial && <span className={styles.partial}>{running ? "Analisando" : currentReport.analyzedMessages ? "Análise parcial" : "Aguardando análise"}</span>}
             {!partial && currentReport.totalMessages > 0 && <span className={styles.complete}>Análise completa</span>}
           </div>
           <div className={styles.coverageMeta}>
             <span>Somente mensagens do público · período selecionado</span>
             {currentReport.lastAnalyzedAt && <time dateTime={currentReport.lastAnalyzedAt}>Atualizada em {displayDate(currentReport.lastAnalyzedAt)}</time>}
           </div>
+          {providerMissing && <p id={providerNoticeId} className={styles.providerNotice}>Configure a chave de IA no servidor e recarregue os resultados para liberar a análise. Os resultados já salvos continuam disponíveis.</p>}
           {partial && <div className={styles.progress} role="progressbar" aria-label="Mensagens analisadas" aria-valuenow={currentReport.analyzedMessages} aria-valuemax={currentReport.totalMessages} aria-valuemin={0}><span style={{ width: `${progress}%` }} /></div>}
         </> : <span>A análise ainda não está disponível.</span>}
       </div>
-      {providerMissing && <p className={styles.notice}>A integração de IA ainda não está configurada neste ambiente. Resultados já salvos continuam disponíveis.</p>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       {error && <div className={styles.error} role="alert"><p>{error}</p><button type="button" disabled={loading || running} onClick={retry}>Tentar novamente</button></div>}
 
       <div className={styles.grid}>
-        <InsightTable kind="objections" report={currentReport} loading={loading} onSelect={(id) => setSelection({ kind: "objections", id })} />
-        <InsightTable kind="questions" report={currentReport} loading={loading} onSelect={(id) => setSelection({ kind: "questions", id })} />
+        <InsightTable kind="objections" report={currentReport} loading={initialLoading} onSelect={(id) => setSelection({ kind: "objections", id })} />
+        <InsightTable kind="questions" report={currentReport} loading={initialLoading} onSelect={(id) => setSelection({ kind: "questions", id })} />
       </div>
       <p className={styles.disclaimer}>Uma mensagem pode conter mais de uma categoria e aparecer nas duas tabelas. A classificação por IA pode ser revisada nas mensagens originais.</p>
 

@@ -9,11 +9,13 @@
 .analyze { background: #14513c; color: #fff; border-color: #14513c; }
 .analyze:hover:not(:disabled) { background: #21664b; }
 .pause, .refresh { background: #fff; color: #28573d; }
-.refresh { width: 32px; padding: 0; }
+.refresh { white-space: nowrap; }
 .pause:hover:not(:disabled), .refresh:hover:not(:disabled) { background: #edf4e8; }
 .actions button:disabled { opacity: 0.45; cursor: default; }
 .actions button:focus-visible, .help:focus-visible, .pagination button:focus-visible, .rowButton:focus-visible, .tableViewport:focus-visible, .error button:focus-visible, .example a:focus-visible { outline: 2px solid #83b94d; outline-offset: 3px; }
 .coverage { margin-bottom: 14px; padding: 11px 14px; border: 1px solid #e4eade; border-radius: 10px; background: #f2f6ed; color: #60705f; font-size: 11px; line-height: 18px; }
+.coverageBlocked { border-color: #eadfc7; background: #fcf8ef; }
+.providerNotice { margin-top: 6px; color: #81581c; }
 .statusLine { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .statusLine strong { color: #23533a; font-weight: 600; font-variant-numeric: tabular-nums; }
 .partial, .complete { padding: 1px 7px; border-radius: 5px; font-size: 10px; line-height: 16px; }
@@ -91,6 +93,8 @@
 :global(.dark) .toolbarIcon, :global(.dark) .panelIcon { border-color: #344b2b; background: #253823; color: #c1e49c; }
 :global(.dark) .objectionIcon { background: #20372b; color: #a7d7bb; }
 :global(.dark) .coverage { border-color: #2f402b; background: #1a291c; color: #b1c4ab; }
+:global(.dark) .coverageBlocked { border-color: #54452e; background: #29251b; }
+:global(.dark) .providerNotice { color: #dfc592; }
 :global(.dark) .statusLine strong, :global(.dark) .panelSummary > strong, :global(.dark) .table .messageCount { color: #c5e99d; }
 :global(.dark) .partial { background: #423920; color: #e3c78b; }
 :global(.dark) .complete { background: #304626; color: #c6e5a3; }
@@ -116,7 +120,7 @@
   .toolbar { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
   .toolbarHeading { align-items: flex-start; }
   .toolbar p { max-width: 265px; }
-  .actions { margin-left: auto; }
+  .actions { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; max-width: 100%; }
   .dialog { padding: 18px; }
 }
 @container (max-width: 480px) {
