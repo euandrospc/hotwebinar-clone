@@ -230,6 +230,8 @@ model Webinar {
   chatAiName             String @default("Assistente")
   chatAiInstructions     String @default("")
   chatAiModel            String @default("gpt-4.1-mini")
+  chatInsightLeaseToken  String?
+  chatInsightLeaseUntil  DateTime?
   offerName              String             @default("")
   offerTitleStyle          String             @default("highlight")
   offerTitle             String             @default("")
@@ -415,12 +417,26 @@ model LeadChatMessage {
   lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   webinar      Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
   authorUser   User?    @relation("TeamChatAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  analysis     LeadChatMessageAnalysis?
 
   @@index([webinarId, createdAt])
   @@index([authorUserId, createdAt])
   @@index([leadId, createdAt])
   @@unique([leadId, clientMessageId])
   @@map("lead_chat_message")
+}
+
+model LeadChatMessageAnalysis {
+  messageId  String   @id
+  version    String
+  model      String
+  objections String[] @default([])
+  questions  String[] @default([])
+  analyzedAt DateTime @default(now())
+  message    LeadChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([version, model])
+  @@map("lead_chat_message_analysis")
 }
 
 model WebhookDelivery {

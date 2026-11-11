@@ -80,6 +80,61 @@ describe("dashboard demonstration", () => {
     expect(week.insights.support.uniqueConversations).toBeLessThan(week.overview.totals.registrations);
   });
 
+  it("shows four attendants and one AI with first-response samples belonging to their actual responder", () => {
+    const { support } = createDashboardDemo(start, end).insights;
+    expect(support.agents.filter((agent) => agent.kind === "human")).toHaveLength(4);
+    expect(support.agents.filter((agent) => agent.kind === "ai")).toHaveLength(1);
+    expect(new Set(support.agents.map((agent) => agent.id)).size).toBe(support.agents.length);
+    expect(support).toMatchObject({ uniqueConversations: 431, repliedConversations: 407, awaitingReplyConversations: 41, incomingMessages: 1382 });
+    expect(support.human.replies).toBe(624);
+    expect(support.ai.replies).toBe(1894);
+    expect(support.agents.every((agent) => agent.image === null && agent.firstReplySamples > 0)).toBe(true);
+  });
+
+  it.each([1, 60_000, 3_600_000, 86_400_000, 7 * 86_400_000, 31 * 86_400_000])("keeps support totals and samples consistent for a %i ms period", (duration) => {
+    const { support } = createDashboardDemo(start, new Date(start.getTime() + duration - 1)).insights;
+    expect(support.repliedConversations).toBeLessThanOrEqual(support.uniqueConversations);
+    expect(support.repliedConversations).toBeGreaterThanOrEqual(Math.max(support.human.conversations, support.ai.conversations));
+    expect(support.repliedConversations).toBeLessThanOrEqual(support.human.conversations + support.ai.conversations);
+    expect(support.awaitingReplyConversations).toBeGreaterThanOrEqual(support.uniqueConversations - support.repliedConversations);
+    expect(support.awaitingReplyConversations).toBeLessThanOrEqual(support.uniqueConversations);
+    expect(support.incomingMessages).toBeGreaterThanOrEqual(support.uniqueConversations);
+    expect(support.firstReplySamples).toBeLessThanOrEqual(support.repliedConversations);
+    expect(support.agents.reduce((sum, agent) => sum + agent.firstReplySamples, 0)).toBe(support.firstReplySamples);
+    const weightedAverage = (agents: typeof support.agents) => {
+      const samples = agents.reduce((sum, agent) => sum + agent.firstReplySamples, 0);
+      return samples ? Math.round(agents.reduce((sum, agent) => sum + (agent.averageFirstReplySeconds ?? 0) * agent.firstReplySamples, 0) / samples) : null;
+    };
+    expect(support.averageFirstReplySeconds).toBe(weightedAverage(support.agents));
+    for (const kind of ["human", "ai"] as const) {
+      const agents = support.agents.filter((agent) => agent.kind === kind);
+      expect(agents.reduce((sum, agent) => sum + agent.replies, 0)).toBe(support[kind].replies);
+      expect(agents.reduce((sum, agent) => sum + agent.conversations, 0)).toBe(support[kind].conversations);
+      expect(support[kind].averageFirstReplySeconds).toBe(weightedAverage(agents));
+      expect(support.activity.reduce((sum, day) => sum + day[kind], 0)).toBe(support[kind].replies);
+    }
+    expect(support.activity.reduce((sum, day) => sum + day.incoming, 0)).toBe(support.incomingMessages);
+    support.agents.forEach((agent) => {
+      expect(agent.replies).toBeGreaterThanOrEqual(agent.conversations);
+      expect(agent.firstReplySamples).toBeLessThanOrEqual(agent.conversations);
+      if (!agent.firstReplySamples) expect(agent.averageFirstReplySeconds).toBeNull();
+    });
+  });
+
+  it("uses Brasília dates for support activity and leaves zero-message averages unknown", () => {
+    const { support } = createDashboardDemo(new Date("2026-12-31T23:00:00-03:00"), new Date("2027-01-02T01:00:00-03:00")).insights;
+    expect(support.activity.map((day) => day.date)).toEqual(["2026-12-31", "2027-01-01", "2027-01-02"]);
+    expect(support.activity.map((day) => day.label)).toEqual(["31/12", "01/01", "02/01"]);
+    const empty = createDashboardDemo(start, start).insights.support;
+    expect(empty).toMatchObject({
+      uniqueConversations: 0, incomingMessages: 0, repliedConversations: 0, awaitingReplyConversations: 0,
+      firstReplySamples: 0, averageFirstReplySeconds: null, agents: [],
+      human: { conversations: 0, replies: 0, averageFirstReplySeconds: null },
+      ai: { conversations: 0, replies: 0, averageFirstReplySeconds: null }
+    });
+    expect(empty.activity).toEqual([{ date: "2026-10-30", label: "30/10", incoming: 0, human: 0, ai: 0 }]);
+  });
+
   it("derives realtime mean and peak from the same 60-minute series as the current count", () => {
     const { realtime, online } = createDashboardDemo(start, end);
     expect(realtime.points).toHaveLength(31);

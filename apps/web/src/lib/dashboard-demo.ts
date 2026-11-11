@@ -89,6 +89,63 @@ function realtimePreview(): DashboardDemo["realtime"] {
   };
 }
 
+function supportPreview(factor: number, days: readonly { date: string; label: string }[]): DashboardInsights["support"] {
+  const scale = (value: number) => Math.round(value * factor);
+  const uniqueConversations = scale(431);
+  const humanConversations = scale(146);
+  const aiConversations = scale(327);
+  const humanReplies = Math.round(humanConversations * 624 / 146);
+  const aiReplies = Math.round(aiConversations * 1894 / 327);
+  // Channels overlap; unanswered conversations remain outside the reply union.
+  const repliedConversations = Math.max(humanConversations, aiConversations,
+    Math.min(uniqueConversations, humanConversations + aiConversations, scale(407)));
+  const incomingMessages = Math.max(uniqueConversations, scale(1382));
+  const weights = [54, 43, 31, 18];
+  const conversations = distribute(humanConversations, weights);
+  const extraReplies = distribute(humanReplies - humanConversations, weights);
+  const names = ["Ana Oliveira", "Bruno Costa", "Camila Santos", "Diego Almeida"];
+  const replySeconds = [56, 84, 112, 139];
+  const agents: DashboardInsights["support"]["agents"] = names.map((name, index) => {
+    const firstReplySamples = Math.floor(conversations[index] * 0.7);
+    return {
+      id: `demo-attendant-${index + 1}`, name, kind: "human" as const, image: null,
+      conversations: conversations[index], replies: conversations[index] + extraReplies[index],
+      firstReplySamples, averageFirstReplySeconds: firstReplySamples ? replySeconds[index] : null
+    };
+  }).filter((agent) => agent.replies > 0);
+  const aiFirstReplySamples = Math.floor(aiConversations * 0.8);
+  if (aiReplies) agents.push({
+    id: "demo-ai-assistant", name: "Assistente Bravy", kind: "ai", image: null,
+    conversations: aiConversations, replies: aiReplies, firstReplySamples: aiFirstReplySamples,
+    averageFirstReplySeconds: aiFirstReplySamples ? 4 : null
+  });
+  const summarizeFirstReplies = (rows: typeof agents) => {
+    const firstReplySamples = rows.reduce((sum, row) => sum + row.firstReplySamples, 0);
+    return {
+      firstReplySamples,
+      averageFirstReplySeconds: firstReplySamples
+        ? Math.round(rows.reduce((sum, row) => sum + (row.averageFirstReplySeconds ?? 0) * row.firstReplySamples, 0) / firstReplySamples)
+        : null
+    };
+  };
+  const humanFirstReplies = summarizeFirstReplies(agents.filter((agent) => agent.kind === "human"));
+  const weekdayWeights = [0.72, 1.08, 1.23, 1.12, 1.31, 0.96, 0.58];
+  const dailyWeights = days.map(({ date }) => weekdayWeights[new Date(`${date}T12:00:00Z`).getUTCDay()]);
+  const incoming = distribute(incomingMessages, dailyWeights);
+  const human = distribute(humanReplies, dailyWeights);
+  const ai = distribute(aiReplies, dailyWeights);
+  return {
+    human: { conversations: humanConversations, replies: humanReplies, averageFirstReplySeconds: humanFirstReplies.averageFirstReplySeconds },
+    ai: { conversations: aiConversations, replies: aiReplies, averageFirstReplySeconds: aiFirstReplySamples ? 4 : null },
+    uniqueConversations, incomingMessages, repliedConversations,
+    // Includes a small set that received a reply and then asked another question.
+    awaitingReplyConversations: uniqueConversations - repliedConversations + Math.min(repliedConversations, scale(17)),
+    ...summarizeFirstReplies(agents),
+    agents,
+    activity: days.map(({ date, label }, index) => ({ date, label, incoming: incoming[index], human: human[index], ai: ai[index] }))
+  };
+}
+
 /**
  * Synthetic aggregates for reviewing the UI, without records, people or writes.
  * A seven-day selection is the reference scenario; other durations scale it.
@@ -167,10 +224,9 @@ export function createDashboardDemo(rangeStart: Date, rangeEnd: Date): Dashboard
     RJ: 118, RN: 9, RS: 76, RO: 6, RR: 2, SC: 79, SP: 415, SE: 6, TO: 3
   };
   const stateCounts = distribute(located, BRAZIL_REGIONS.map((region) => stateWeights[region.code]));
-  const humanConversations = scale(146);
-  const aiConversations = scale(327);
   const averageWatchedSeconds = 42 * 60 + 18;
   const realtime = realtimePreview();
+  const daily = dailyPoints(rangeStart, rangeEnd, accesses, viewers, sales);
 
   return {
     webinar,
@@ -178,7 +234,7 @@ export function createDashboardDemo(rangeStart: Date, rangeEnd: Date): Dashboard
     online: realtime.points.at(-1)!.online,
     realtime,
     overview: {
-      totals, funnel, funnelTransitions, daily: dailyPoints(rangeStart, rangeEnd, accesses, viewers, sales),
+      totals, funnel, funnelTransitions, daily,
       webinars: [{ ...totals, ...webinar, mode: "JIT" }], excludedCurrencySales: 0
     },
     insights: {
@@ -192,17 +248,7 @@ export function createDashboardDemo(rangeStart: Date, rangeEnd: Date): Dashboard
           .sort((a, b) => b.count - a.count || a.code.localeCompare(b.code)),
         unlocated, outsideBrazil, brazilUnresolved, totalAccesses: accesses
       },
-      support: {
-        human: {
-          conversations: humanConversations, replies: Math.round(humanConversations * 624 / 146),
-          averageFirstReplySeconds: humanConversations ? 92 : null
-        },
-        ai: {
-          conversations: aiConversations, replies: Math.round(aiConversations * 1894 / 327),
-          averageFirstReplySeconds: aiConversations ? 4 : null
-        },
-        uniqueConversations: scale(431)
-      },
+      support: supportPreview(factor, daily),
       comparison: {
         previousSales, previousRevenueCents,
         revenueChangePct: previousRevenueCents ? Math.round((revenueCents / previousRevenueCents - 1) * 10_000) / 100 : null

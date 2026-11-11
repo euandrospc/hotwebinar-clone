@@ -27,7 +27,10 @@ export async function getDashboardInsights(ownerId: string, rangeStart: Date, ra
     }),
     prisma.leadChatMessage.findMany({
       where: { webinar: webinarWhere, sender: { in: ["lead", "team"] }, createdAt },
-      select: { id: true, webinarId: true, leadId: true, sender: true, aiAgentName: true, createdAt: true },
+      select: {
+        id: true, webinarId: true, leadId: true, sender: true, aiAgentName: true, createdAt: true,
+        authorUserId: true, authorUser: { select: { name: true, image: true } }
+      },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     }),
     prisma.sale.findMany({

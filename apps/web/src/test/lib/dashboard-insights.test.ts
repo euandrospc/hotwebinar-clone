@@ -108,7 +108,7 @@ describe("dashboard insights aggregation", () => {
       message("e1", "system-only", "system", 1)
     ];
     const result = buildDashboardInsights(input({ messages: [...messages.slice().reverse(), messages[0], messages[2]] }));
-    expect(result.support).toEqual({
+    expect(result.support).toMatchObject({
       ai: { conversations: 1, replies: 1, averageFirstReplySeconds: 10 },
       human: { conversations: 3, replies: 4, averageFirstReplySeconds: 30 },
       uniqueConversations: 4
