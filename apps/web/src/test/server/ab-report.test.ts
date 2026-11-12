@@ -81,6 +81,26 @@ describe("A/B report database boundaries", () => {
     expect(report.inference.state).toBe("OBSERVATIONAL");
     expect(report.integrity.warnings.join(" ")).toContain("cadastro atual");
   });
+  it("loads pending observational outcomes and audience only through the current instant", async () => {
+    const historical = row("OBSERVATIONAL"), observedNow = new Date(start.getTime() + 8 * 3600_000);
+    queries.experiment.mockResolvedValue({ ...historical, conversionWindowHours: 72, dto: { ...historical.dto, conversionWindowHours: 72 } });
+    queries.entries.mockResolvedValue([{ webinarId: "a", leadId: "lead-a", _min: { createdAt: start } }]);
+    queries.leads.mockResolvedValue([{ id: "lead-a", webinarId: "a", email: "a@example.com", userAgent: "iPhone Mobile", utmSource: "meta", utmMedium: null, utmCampaign: null, utmContent: null }]);
+    queries.outcomes.mockResolvedValue([
+      { unitId: "observed:lead-a", kind: "VIDEO_TICK", firstOccurredAt: new Date(start.getTime() + 30_000), maxVideoSec: 180 },
+      { unitId: "observed:lead-a", kind: "OFFER_CLICK", firstOccurredAt: new Date(start.getTime() + 180_000), maxVideoSec: null }
+    ]);
+    queries.sales.mockResolvedValue([{ id: "sale-a", webinarId: "a", leadId: "lead-a", amount: 9700, currency: "BRL", createdAt: new Date(start.getTime() + 240_000) }]);
+    queries.audienceAggregate.mockResolvedValue({ _avg: { online: 14 }, _max: { online: 30 }, _count: 100 });
+    queries.audiencePeak.mockResolvedValue({ observedAt: new Date(start.getTime() + 30_000) });
+    const report = await getAbReport("owner", "experiment", {}, observedNow);
+    expect(JSON.parse(queries.outcomes.mock.calls[0][1])).toEqual([{ unitId: "observed:lead-a", leadId: "lead-a", webinarId: "a", pitchAtSec: 120, from: start.toISOString(), to: observedNow.toISOString() }]);
+    expect(queries.sales.mock.calls[0][0].where.createdAt.lte).toEqual(observedNow);
+    expect(queries.audienceAggregate.mock.calls[0][0].where).toEqual({ webinarId: "a", webinar: { ownerId: "owner" }, OR: [{ observedAt: { gte: start, lte: observedNow } }] });
+    expect(report.variants[0]).toMatchObject({ assigned: 1, mature: 0, pending: 1, evaluated: 1, viewers: 1, pitch: 1, clicks: 1, buyers: 1, revenueCents: 9700 });
+    expect(report.diagnostics!.audience!.window).toBe("OBSERVED_COHORT_WINDOWS");
+    expect(report.diagnostics!.audience!.A).toMatchObject({ average: 14, peak: 30, sampleCount: 100 });
+  });
   it("blocks causal inference when a variant fingerprint changes", async () => {
     queries.webinars.mockResolvedValue([{ ...webinar("a"), fingerprint: "changed" }, webinar("b")]);
     const report = await getAbReport("owner", "experiment", {}, now);

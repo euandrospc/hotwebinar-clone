@@ -31,7 +31,7 @@ O comparativo mantém uma métrica principal para a inferência formal e mostra 
 
 O diagnóstico reúne conversão diária, alcance no vídeo, jornada, audiência, segmentos e configuração A/B. Posição máxima registrada não é tempo assistido contínuo. Tempos até reprodução/pitch/clique/compra usam eventos elegíveis e apresentam sua quantidade de observações; ausência permanece desconhecida. Segmentos por origem, campanha, dispositivo e hora/dia de entrada são exploratórios, com denominadores explícitos e sem vencedores automáticos.
 
-Audiência simultânea é contextual: leituras de `AudienceSample` do webinar inteiro, incluindo tráfego direto, nas janelas das entradas maduras. Não representa exclusivamente o grupo sorteado. Recortes de aquisição/dispositivo não podem decompor esses snapshots e mostram indisponibilidade. Audiência simultânea no pitch exige programação coletiva sincronizada e leitura próxima ao instante do pitch; JIT não tem um instante coletivo único. Isso é diferente de pessoas que chegaram ao pitch, contadas por entrada dentro da coorte.
+Audiência simultânea é contextual: leituras de `AudienceSample` do webinar inteiro, incluindo tráfego direto, nas janelas das entradas maduras em experimentos randomizados e nas janelas já observadas, limitadas ao instante atual, em comparações observacionais. Não representa exclusivamente o grupo sorteado. Recortes de aquisição/dispositivo não podem decompor esses snapshots e mostram indisponibilidade. Audiência simultânea no pitch exige programação coletiva sincronizada e leitura próxima ao instante do pitch; JIT não tem um instante coletivo único. Isso é diferente de pessoas que chegaram ao pitch, contadas por entrada dentro da coorte.
 
 Horários diferentes avaliam a estratégia de programação, incluindo espera. A janela continua começando na entrada do visitante, e deve comportar transmissão e oportunidade de compra. O modo histórico descreve públicos e períodos diferentes, sem demonstrar causalidade.
 
@@ -41,7 +41,9 @@ No experimento, a unidade é um navegador alocado, inclusive quem não preencheu
 
 UTMs e dispositivo da alocação são imutáveis. Para comparações históricas esses atributos vêm do cadastro atual do acesso, pois o sistema antigo não preservava snapshots de entrada. O relatório informa essa diferença.
 
-Cada unidade tem uma janela fixa de 24, 72 ou 168 horas. Os resultados utilizam somente unidades cuja janela inteira já transcorreu. Entradas recentes aparecem como aguardando janela, sem serem classificadas prematuramente como não conversão. Todos os eventos e vendas precisam ser posteriores à entrada, do mesmo webinar/acesso e dentro da janela.
+Cada unidade tem uma janela de 24, 72 ou 168 horas. Experimentos randomizados utilizam somente unidades cuja janela inteira já transcorreu. Comparações observacionais mostram os eventos e as compras já registrados até agora, incluindo entradas cuja janela ainda está aberta; nesses casos a tela identifica os resultados como parciais. A base das taxas observadas inclui todas as entradas filtradas, enquanto as contagens de janela completa e aguardando janela continuam separadas. Todos os eventos e vendas precisam ser posteriores à entrada, do mesmo webinar/acesso e dentro da janela; nenhum resultado futuro é incluído.
+
+A janela de uma comparação observacional pode ser ajustada entre 24, 72 e 168 horas, recalculando somente o relatório. Isso não altera webinars, período de entrada ou dados registrados. Planos de experimentos randomizados continuam protegidos após o início. Comparações observacionais não apresentam p-valor, intervalo confirmatório ou vencedor; diferenças de tempo de observação podem afetar resultados parciais.
 
 Eventos são agregados por unidade e tipo no banco, evitando carregar todos os heartbeats. Reprodução utiliza `VIDEO_TICK`; pitch utiliza `PITCH_REACHED` ou posição de vídeo que alcança o pitch; clique utiliza `OFFER_CLICK`. A configuração é verificada contra o fingerprint congelado ao iniciar. Editar o conteúdo da variante durante o teste invalida a conclusão quando a mudança é detectada.
 
@@ -77,7 +79,7 @@ Referências primárias utilizadas:
 - Alocação e transições usam transações e bloqueios para não admitir participantes depois de uma pausa concorrente. Cookies têm assinatura HMAC, HttpOnly e SameSite; respostas não são armazenadas em cache.
 - A proteção contra previews/prefetch e robôs conhecidos reduz entradas artificiais; não equivale a uma identificação infalível de tráfego humano.
 - Fingerprints verificam a configuração do webinar, mas não auditam substituição externa de mídia na mesma URL, todas as alterações em entidades relacionadas ou edições temporárias revertidas antes da leitura. Operação do teste pressupõe manter conteúdo, oferta e aquisição estáveis durante o horizonte planejado.
-- A migration foi aplicada somente ao banco local de desenvolvimento. Publicação depende de solicitação explícita.
+- As migrations da funcionalidade foram publicadas após solicitação explícita. O ajuste de resultados parciais e da janela observacional não altera o schema.
 
 ## Sessões públicas simultâneas
 

@@ -56,6 +56,23 @@ describe("contextual A/B simultaneous audience", () => {
     const filtered = createAbAudiencePlan({ experiment, units: [units[0], later], now, filters: { to: entry.toISOString() }, schedules: { A: schedule } });
     expect(filtered.A.windows).toEqual([{ from: entry, to: new Date("2026-11-02T18:00:00Z") }]);
   });
+  it("includes pending observational audience and pitch snapshots without reading the future", () => {
+    const observedNow = new Date("2026-11-01T22:30:05Z");
+    const observed = createAbAudiencePlan({ experiment: { ...experiment, mode: "OBSERVATIONAL", conversionWindowHours: 72 },
+      units, now: observedNow, schedules: { A: schedule } });
+    expect(observed.A.windows).toEqual([{ from: entry, to: observedNow }]);
+    const result = buildAbAudienceFromSamples(observed, [
+      { variant: "A", observedAt: new Date("2026-11-01T22:00:00Z"), online: 10 },
+      { variant: "A", observedAt: observedNow, online: 30 },
+      { variant: "A", observedAt: new Date("2026-11-01T22:30:06Z"), online: 999 },
+      { variant: "A", observedAt: new Date(entry.getTime() - 1), online: 999 }
+    ]);
+    expect(result.window).toBe("OBSERVED_COHORT_WINDOWS");
+    expect(result.A).toMatchObject({ average: 20, peak: 30, sampleCount: 2 });
+    expect(result.A.pitch).toMatchObject({ average: 30, sampleCount: 1, occurrenceCount: 1 });
+    const filtered = createAbAudiencePlan({ experiment: { ...experiment, mode: "OBSERVATIONAL" }, units, now: observedNow, filters: { source: "meta" } });
+    expect(buildAbAudienceFromSamples(filtered, []).A.reason).toContain("não permite aplicar filtros");
+  });
   it("enumerates actual recurring local schedules and reports missing occurrences without zero fill", () => {
     const extended = { ...experiment, conversionWindowHours: 72 };
     const recurring = createAbAudiencePlan({ experiment: extended, units, now, schedules: { A: { ...schedule, recurring: true, recurringDays: [0, 1] } } });

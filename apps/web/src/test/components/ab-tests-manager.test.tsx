@@ -37,6 +37,57 @@ const response = (body: unknown, ok = true) => ({ ok, json: async () => body }) 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
 describe("A/B frontend", () => {
+  it("changes only the observed comparison conversion window and reloads its report", async () => {
+    const user = userEvent.setup();
+    let current: AbExperimentDto = { ...experiment, mode: "OBSERVATIONAL", publicPath: null };
+    const fetcher = vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        current = { ...current, conversionWindowHours: 24, updatedAt: "2026-11-12T12:00:00Z" };
+        return response({ experiment: current });
+      }
+      if (path === "/api/ab-tests") return response({ experiments: [current], webinars });
+      return response({ ...report("Observação"), experiment: current, readout: "OBSERVED" });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<AbTestsManager />);
+    await screen.findByRole("table", { name: "Comparativo de resultados A e B" });
+    await user.click(screen.getByRole("button", { name: "Detalhes" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Janela da comparação" }), "24");
+    await user.click(screen.getByRole("button", { name: "Salvar janela" }));
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith("/api/ab-tests/experiment", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "conversion_window", conversionWindowHours: 24 }) })));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Salvar janela" })).toBeDisabled());
+    expect(screen.getByRole("combobox", { name: "Janela da comparação" })).toHaveValue("24");
+    expect(fetcher.mock.calls.filter(([path]) => path.includes("/report"))).toHaveLength(2);
+    expect(fetcher.mock.calls.some(([path]) => path.includes("/webinars/"))).toBe(false);
+  });
+
+  it("keeps a demonstration conversion-window change in memory", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const fetcher = vi.fn().mockRejectedValue(new Error("Unexpected demo request"));
+    vi.stubGlobal("fetch", fetcher);
+    const user = userEvent.setup();
+    const historical = createAbTestsDemo().experiments.find(item => item.mode === "OBSERVATIONAL")!;
+    window.history.replaceState(null, "", `/?test=${historical.id}`);
+    render(<AbTestsManager demo />);
+    await screen.findByRole("table", { name: "Comparativo de resultados A e B" });
+    await user.click(screen.getByRole("button", { name: "Detalhes" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Janela da comparação" }), "24");
+    await user.click(screen.getByRole("button", { name: "Salvar janela" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Salvar janela" })).toBeDisabled());
+    expect(screen.getByRole("combobox", { name: "Janela da comparação" })).toHaveValue("24");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a window edit for randomized experiments", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async (path: string) => response(path === "/api/ab-tests" ? { experiments: [experiment], webinars } : report("Teste"))));
+    render(<AbTestsManager />);
+    await screen.findByRole("table", { name: "Comparativo de resultados A e B" });
+    await user.click(screen.getByRole("button", { name: "Detalhes" }));
+    expect(screen.queryByRole("combobox", { name: "Janela da comparação" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Salvar janela" })).not.toBeInTheDocument();
+  });
+
   it("previews synthetic reports, filters and lifecycle actions without any API writes or reads", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const fetcher = vi.fn().mockRejectedValue(new Error("Unexpected network request in demo"));
@@ -217,7 +268,7 @@ describe("A/B frontend", () => {
     expect(csv).toContain('"\'  +SUM(1,2)"');
     expect(csv).toContain('"Taxa (fração)"');
     expect(csv).toContain('"Aguardando janela"');
-    expect(csv).toContain('"A";"\'  +SUM(1,2)";"1000";"900";"100"');
+    expect(csv).toContain('"A";"\'  +SUM(1,2)";"1000";"900";"900";"100"');
     expect(calendarFilters("2026-11-11", "2026-11-11")).toEqual({ from: "2026-11-11T03:00:00.000Z", to: "2026-11-12T02:59:59.999Z" });
   });
   it("exports the whole diagnostic with its audience scope and preserved configuration", () => {

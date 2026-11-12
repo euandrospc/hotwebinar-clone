@@ -3,24 +3,27 @@ import type { AbDiagnosticDimension, AbLatencyMetric, AbReportDiagnostics, AbSeg
 const entryTimeFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", hourCycle: "h23",
   year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit" });
 
-/** Already selected/mature units with the report's deduplicated outcome state. */
+/** Already selected/evaluated units with the report's deduplicated outcome state. */
 export interface AbDiagnosticUnit {
   variant: AbVariantKey; source: string | null; device: string | null; campaign: string | null;
+  /** Omitted by older fixtures, whose units were always mature. */
+  mature?: boolean;
   converted: boolean; buyer: boolean; revenueCents: number; maxVideoSec: number | null;
   assignedAt: Date;
   firstPlaybackAt: Date | null; firstPitchAt: Date | null; firstClickAt: Date | null; firstPurchaseAt: Date | null;
 }
 
 function emptyMetrics(): AbSegmentMetrics {
-  return { mature: 0, conversions: 0, buyers: 0, revenueCents: 0,
+  return { mature: 0, entries: 0, conversions: 0, buyers: 0, revenueCents: 0,
     conversionRate: null, purchaseRate: null, revenuePerEntryCents: null };
 }
 
 /** No additional population, outcome attribution, or statistical test is introduced. */
-export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[]): AbReportDiagnostics {
+export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[], basis: AbReportDiagnostics["position"]["basis"] = "MATURE_ENTRIES"): AbReportDiagnostics {
   const dimensions: AbDiagnosticDimension[] = ["source", "device", "campaign"];
   const grouped = dimensions.map((dimension) => ({ dimension, rows: new Map<string, AbSegmentRow>() }));
   const mature = { A: 0, B: 0 };
+  const entries = { A: 0, B: 0 };
   const positions: { A: number[]; B: number[] } = { A: [], B: [] };
   const hours = new Map<string, AbSegmentRow>(), weekdays = new Map<string, AbSegmentRow>();
   const delays = { A: { firstPlayback: [] as number[], firstPitch: [] as number[], firstClick: [] as number[], firstPurchase: [] as number[] },
@@ -28,11 +31,12 @@ export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[]): AbReport
   const addSegment = (rows: Map<string, AbSegmentRow>, value: string, unit: AbDiagnosticUnit) => {
     const row = rows.get(value) ?? { value, A: emptyMetrics(), B: emptyMetrics() };
     const metrics = row[unit.variant];
-    metrics.mature++; metrics.conversions += Number(unit.converted); metrics.buyers += Number(unit.buyer); metrics.revenueCents += unit.revenueCents;
+    metrics.entries!++; metrics.mature += Number(unit.mature !== false); metrics.conversions += Number(unit.converted); metrics.buyers += Number(unit.buyer); metrics.revenueCents += unit.revenueCents;
     rows.set(value, row);
   };
   for (const unit of units) {
-    mature[unit.variant]++;
+    entries[unit.variant]++;
+    mature[unit.variant] += Number(unit.mature !== false);
     if (unit.maxVideoSec !== null && Number.isFinite(unit.maxVideoSec) && unit.maxVideoSec >= 0) positions[unit.variant].push(unit.maxVideoSec);
     for (const group of grouped) {
       const value = unit[group.dimension]?.trim() || "__unknown__";
@@ -59,7 +63,7 @@ export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[]): AbReport
   }
   const point = (variant: AbVariantKey, seconds: number) => {
     const count = positions[variant].filter((position) => position >= seconds).length;
-    return { count, rate: mature[variant] > 0 && measured[variant] > 0 ? count / mature[variant] : null };
+    return { count, rate: entries[variant] > 0 && measured[variant] > 0 ? count / entries[variant] : null };
   };
   const summarize = (values: number[]): AbLatencyMetric => {
     const sorted = values.filter((value) => Number.isFinite(value) && value >= 0).sort((a, b) => a - b);
@@ -70,9 +74,11 @@ export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[]): AbReport
   const finishRows = (rows: Map<string, AbSegmentRow>) => [...rows.values()].map((row) => {
     for (const variant of ["A", "B"] as const) {
       const metrics = row[variant];
-      if (!metrics.mature) continue;
-      metrics.conversionRate = metrics.conversions / metrics.mature; metrics.purchaseRate = metrics.buyers / metrics.mature;
-      metrics.revenuePerEntryCents = metrics.revenueCents / metrics.mature;
+      if (metrics.entries) {
+        metrics.conversionRate = metrics.conversions / metrics.entries; metrics.purchaseRate = metrics.buyers / metrics.entries;
+        metrics.revenuePerEntryCents = metrics.revenueCents / metrics.entries;
+      }
+      if (basis === "MATURE_ENTRIES") delete metrics.entries;
     }
     return row;
   });
@@ -83,10 +89,10 @@ export function buildAbDiagnostics(units: readonly AbDiagnosticUnit[]): AbReport
       firstClick: summarize(delays[variant].firstClick), firstPurchase: summarize(delays[variant].firstPurchase) };
   };
   return {
-    position: { basis: "MATURE_ENTRIES", mature, measured,
+    position: { basis, mature, ...(basis === "OBSERVED_ENTRIES" ? { entries } : {}), measured,
       points: checkpoints.map((seconds) => ({ seconds, A: point("A", seconds), B: point("B", seconds) })) },
     segments: grouped.map(({ dimension, rows }) => ({ dimension,
-      rows: finishRows(rows).sort((a, b) => (b.A.mature + b.B.mature) - (a.A.mature + a.B.mature) || a.value.localeCompare(b.value, "pt-BR")) })),
+      rows: finishRows(rows).sort((a, b) => ((b.A.entries ?? b.A.mature) + (b.B.entries ?? b.B.mature)) - ((a.A.entries ?? a.A.mature) + (a.B.entries ?? a.B.mature)) || a.value.localeCompare(b.value, "pt-BR")) })),
     timing: { timeZone: "America/Sao_Paulo", hours: finishRows(hours).sort((a, b) => a.value.localeCompare(b.value)),
       weekdays: finishRows(weekdays).sort((a, b) => a.value.localeCompare(b.value)), A: timing("A"), B: timing("B") }
   };

@@ -268,3 +268,6 @@
   .sectionHeading { gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .funnelRow { transition: none; } }
+
+.windowForm { display: grid; gap: 8px; padding-block: 12px; border-top: 1px solid hsl(var(--border)); }
+.windowForm > button { justify-self: start; }

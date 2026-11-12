@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AbReportPanel } from "@/components/ab-tests/ab-report-panel";
+import { buildAbCsv } from "@/components/ab-tests/ab-utils";
 import { AbDecisionSummary } from "@/components/ab-tests/ab-decision-summary";
 import { AbDiagnosticsPanel } from "@/components/ab-tests/ab-diagnostics-panel";
 import { AbComparisonTable } from "@/components/ab-tests/ab-comparison-table";
@@ -15,6 +17,45 @@ const latency = (medianSeconds: number | null, averageSeconds = medianSeconds): 
 const metrics = (base: number, conversions: number): AbSegmentMetrics => ({ mature: base, conversions, buyers: conversions, revenueCents: conversions * 10000, conversionRate: base ? conversions / base : null, purchaseRate: base ? conversions / base : null, revenuePerEntryCents: base ? conversions * 10000 / base : null });
 
 describe("A/B decision and diagnostics", () => {
+  it("shows observed results before maturity with their real denominator and explicit partial context", async () => {
+    const user = userEvent.setup();
+    const report = createReport();
+    report.experiment = { ...report.experiment, mode: "OBSERVATIONAL", conversionWindowHours: 24 };
+    report.readout = "OBSERVED";
+    report.inference = { ...report.inference, state: "OBSERVATIONAL", title: "Comparação observacional", interval: null, pValue: null };
+    report.variants = report.variants.map((variant, index) => ({ ...variant, assigned: index ? 80 : 100, evaluated: index ? 80 : 100,
+      mature: 0, pending: index ? 80 : 100, identified: index ? 80 : 100, viewers: index ? 56 : 60,
+      buyers: index ? 8 : 10, conversions: index ? 8 : 10, rate: .1, interval: null })) as typeof report.variants;
+    report.diagnostics!.position = { basis: "OBSERVED_ENTRIES", entries: { A: 100, B: 80 }, mature: { A: 0, B: 0 }, measured: { A: 60, B: 56 }, points: [{ seconds: 60, A: { count: 50, rate: .5 }, B: { count: 40, rate: .5 } }] };
+    render(<AbReportPanel report={report} />);
+    expect(screen.getByText("Resultados parciais")).toBeInTheDocument();
+    expect(screen.getByText(/incluindo 180 entradas que ainda não completaram 24h/)).toBeInTheDocument();
+    const resultTable = screen.getByRole("table", { name: "Comparativo de resultados A e B" });
+    expect(within(resultTable).getByRole("row", { name: /Com registro de reprodução/ })).toHaveTextContent("60,0% de 100");
+    expect(within(resultTable).getByRole("row", { name: /Com registro de reprodução/ })).toHaveTextContent("70,0% de 80");
+    expect(within(resultTable).getByRole("row", { name: /^Janela completa/ })).toHaveTextContent("0,0% das entradas");
+    expect(within(resultTable).queryByRole("row", { name: /Intervalo da taxa principal/ })).not.toBeInTheDocument();
+    const commercial = screen.getByRole("table", { name: "Comparação comercial A e B" });
+    expect(within(commercial).getByRole("row", { name: /Compra/ })).toHaveTextContent("10,0%10,0%");
+    await user.click(screen.getByRole("tab", { name: "Vídeo e jornada" }));
+    expect(screen.getByText(/60 com posição registrada \/ 100 na base/)).toBeInTheDocument();
+    const csv = buildAbCsv(report);
+    expect(csv).toContain('"Resultados observados até agora, incluindo janelas ainda abertas"');
+    expect(csv).toContain('"100";"100";"0";"100"');
+  });
+
+  it("uses observed segment entries independently of completed windows", async () => {
+    const user = userEvent.setup();
+    const report = createReport();
+    report.readout = "OBSERVED";
+    report.diagnostics!.segments = [{ dimension: "source", rows: [{ value: "orgânico", A: { ...metrics(0, 2), entries: 20, conversionRate: .1 }, B: { ...metrics(0, 1), entries: 10, conversionRate: .1 } }] }];
+    render(<AbDiagnosticsPanel report={report} />);
+    await user.click(screen.getByRole("tab", { name: "Segmentos" }));
+    const row = screen.getByRole("row", { name: /orgânico/ });
+    expect(row).toHaveTextContent("orgânico201010,0%10,0%");
+    expect(screen.getByText(/base observada até agora/)).toBeInTheDocument();
+  });
+
   it("waits for the planned readout even when no current entries remain pending", () => {
     const report = createReport();
     report.inference.state = "MATURING";

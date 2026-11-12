@@ -8,7 +8,7 @@ export interface AbAudienceSchedule {
 }
 export interface AbAudienceWindow { from: Date; to: Date }
 export interface AbAudienceArmPlan { windows: AbAudienceWindow[]; pitchTargets: Date[]; reason: string | null; pitchReason: string | null }
-export interface AbAudiencePlan { A: AbAudienceArmPlan; B: AbAudienceArmPlan }
+export interface AbAudiencePlan { A: AbAudienceArmPlan; B: AbAudienceArmPlan; window?: AbAudienceComparison["window"] }
 export interface AbAudienceSample { variant: AbVariantKey; observedAt: Date; online: number }
 export interface AbAudienceAggregate { average: number | null; peak: number | null; peakAt: Date | null; sampleCount: number }
 
@@ -53,6 +53,7 @@ export function createAbAudiencePlan(input: {
   schedules?: Partial<Record<AbVariantKey, AbAudienceSchedule>>; configurationChanged?: boolean;
 }): AbAudiencePlan {
   const { experiment, units, now } = input;
+  const observed = experiment.mode === "OBSERVATIONAL";
   const filters = input.filters ?? {};
   const keys = ["source", "medium", "campaign", "content", "device"] as const;
   const scoped = keys.some((key) => Boolean(filters[key]));
@@ -68,20 +69,20 @@ export function createAbAudiencePlan(input: {
     const selected = units.filter((unit) => unit.variant === variant && unit.webinarId === expectedWebinar
       && unit.assignedAt.getTime() >= startedAt && unit.assignedAt.getTime() <= endedAt
       && unit.assignedAt.getTime() >= from && unit.assignedAt.getTime() <= to
-      && unit.assignedAt.getTime() + windowMs <= now.getTime()
+      && (observed || unit.assignedAt.getTime() + windowMs <= now.getTime())
       && keys.every((key) => !filters[key] || (unit[key]?.trim() || "__unknown__") === filters[key]))
       .sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime());
     for (const unit of selected) {
-      const end = new Date(unit.assignedAt.getTime() + windowMs), last = windows.at(-1);
+      const end = new Date(Math.min(unit.assignedAt.getTime() + windowMs, now.getTime())), last = windows.at(-1);
       if (last && unit.assignedAt <= last.to) { if (end > last.to) last.to = end; }
       else windows.push({ from: unit.assignedAt, to: end });
     }
     const reason = scoped ? "O histórico de simultâneos é agregado por webinar e não permite aplicar filtros de origem, campanha ou dispositivo."
-      : !windows.length ? "Ainda não há entradas com janela completa no recorte." : null;
+      : !windows.length ? observed ? "Ainda não há entradas observadas no recorte." : "Ainda não há entradas com janela completa no recorte." : null;
     const pitch = pitchTargets(input.schedules?.[variant], windows, Boolean(input.configurationChanged));
     return { windows, pitchTargets: reason ? [] : pitch.targets, reason, pitchReason: reason ?? pitch.reason };
   };
-  return { A: arm("A"), B: arm("B") };
+  return { A: arm("A"), B: arm("B"), window: observed ? "OBSERVED_COHORT_WINDOWS" : "MATURE_COHORT_WINDOWS" };
 }
 
 export function assembleAbAudience(plan: AbAudiencePlan, aggregates: Partial<Record<AbVariantKey, AbAudienceAggregate>>, samples: readonly AbAudienceSample[]): AbAudienceComparison {
@@ -107,7 +108,7 @@ export function assembleAbAudience(plan: AbAudiencePlan, aggregates: Partial<Rec
           : points.length < data.pitchTargets.length ? `${points.length} de ${data.pitchTargets.length} ocorrências têm leitura próxima ao pitch; as lacunas não foram preenchidas.` : null) }
     };
   };
-  return { scope: "WEBINAR_TOTAL", window: "MATURE_COHORT_WINDOWS", cadenceSeconds: 15, A: arm("A"), B: arm("B") };
+  return { scope: "WEBINAR_TOTAL", window: plan.window ?? "MATURE_COHORT_WINDOWS", cadenceSeconds: 15, A: arm("A"), B: arm("B") };
 }
 
 /** Used by deterministic local fixtures and tests; production aggregates snapshots in SQL. */

@@ -101,9 +101,9 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   const windows = [...units].sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id)).flatMap((unit) => {
     if (!unit.leadId || firstLeadIds.has(unit.leadId)) return [];
     firstLeadIds.add(unit.leadId);
-    if (unit.assignedAt.getTime() + windowMs > now.getTime()) return [];
+    if (experiment.mode === "RANDOMIZED" && unit.assignedAt.getTime() + windowMs > now.getTime()) return [];
     return [{ unitId: unit.id, leadId: unit.leadId, webinarId: unit.webinarId, pitchAtSec: pitchAtSec[unit.variant],
-      from: unit.assignedAt.toISOString(), to: new Date(unit.assignedAt.getTime() + windowMs).toISOString() }];
+      from: unit.assignedAt.toISOString(), to: new Date(Math.min(unit.assignedAt.getTime() + windowMs, now.getTime())).toISOString() }];
   });
   const [events, sales] = await Promise.all([
     windows.length ? prisma.$queryRaw<AbReportEvent[]>`

@@ -27,16 +27,20 @@ export interface AbVariantReport {
   key: AbVariantKey; webinarId: string; label: string;
   /** Randomized browsers, or identified accesses for an observational comparison. */
   assigned: number;
-  /** Units with a complete conversion window; denominator for every outcome below. */
+  /** Actual units with a complete conversion window, independent of readout. */
   mature: number; pending: number; identified: number; viewers: number;
+  /** Outcome denominator: all observed entries, or only mature randomized units. */
+  evaluated?: number;
   pitch: number; clicks: number; buyers: number; sales: number; revenueCents: number;
   conversions: number; rate: number | null; interval: [number, number] | null;
 }
 export type AbInferenceState = "DRAFT" | "OBSERVATIONAL" | "EXPLORATORY" | "COLLECTING" | "MATURING" | "INSUFFICIENT" | "INTEGRITY" | "EARLY_STOP" | "WINNER_A" | "WINNER_B" | "INCONCLUSIVE";
 export type AbDiagnosticDimension = "source" | "device" | "campaign";
-/** Descriptive counts from the same filtered, mature cohort as the report. */
+/** Descriptive counts from the same filtered/evaluated cohort as the report. */
 export interface AbSegmentMetrics {
   mature: number; conversions: number; buyers: number; revenueCents: number;
+  /** Entries evaluated in this segment; may include pending observational entries. */
+  entries?: number;
   conversionRate: number | null; purchaseRate: number | null; revenuePerEntryCents: number | null;
 }
 export interface AbSegmentRow { value: string; A: AbSegmentMetrics; B: AbSegmentMetrics }
@@ -59,14 +63,16 @@ export interface AbAudienceMetrics {
   };
 }
 export interface AbAudienceComparison {
-  scope: "WEBINAR_TOTAL"; window: "MATURE_COHORT_WINDOWS"; cadenceSeconds: 15;
+  scope: "WEBINAR_TOTAL"; window: "MATURE_COHORT_WINDOWS" | "OBSERVED_COHORT_WINDOWS"; cadenceSeconds: 15;
   A: AbAudienceMetrics; B: AbAudienceMetrics;
 }
 export interface AbReportDiagnostics {
   position: {
-    basis: "MATURE_ENTRIES";
+    basis: "MATURE_ENTRIES" | "OBSERVED_ENTRIES";
     mature: { A: number; B: number };
-    /** Mature entrants with a valid VIDEO_TICK maximum recorded inside their window. */
+    /** Entries evaluated for reach; maturity remains separately available above. */
+    entries?: { A: number; B: number };
+    /** Evaluated entrants with a valid VIDEO_TICK maximum recorded inside their window. */
     measured: { A: number; B: number };
     /** Recorded maximum >= seconds; this is not continuous watched time or retention. */
     points: AbPositionReachPoint[];
@@ -82,6 +88,8 @@ export interface AbReportDiagnostics {
 }
 export interface AbReport {
   experiment: AbExperimentDto; generatedAt: string; filters: AbReportFilters;
+  /** Observational readings include outcomes already recorded in pending windows. */
+  readout?: "MATURE" | "OBSERVED";
   variants: [AbVariantReport, AbVariantReport];
   daily: { date: string; A: number | null; B: number | null }[];
   integrity: {
@@ -95,6 +103,11 @@ export interface AbReport {
   filterOptions: { source: string[]; medium: string[]; campaign: string[]; content: string[]; device: string[] };
   /** Optional for compatibility with previously saved responses and consumers. */
   diagnostics?: AbReportDiagnostics;
+}
+
+/** Also supports saved responses created before explicit readout denominators. */
+export function abMetricBase(variant: AbVariantReport): number {
+  return variant.evaluated ?? variant.mature;
 }
 export const AB_METRIC_LABELS: Record<AbMetric, string> = {
   PURCHASE: "Compra", OFFER_CLICK: "Clique na oferta", PITCH_REACHED: "Chegada ao pitch"

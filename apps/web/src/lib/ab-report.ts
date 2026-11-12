@@ -1,5 +1,5 @@
 import type { AbExperimentDto, AbInferenceState, AbReport, AbReportFilters, AbVariantKey, AbVariantReport } from "@/lib/ab-tests";
-import { AB_METRIC_LABELS } from "@/lib/ab-tests";
+import { AB_METRIC_LABELS, abMetricBase } from "@/lib/ab-tests";
 import { compareProportions, sampleRatioMismatchPValue, wilsonInterval } from "@/lib/ab-statistics";
 import { buildAbDiagnostics, type AbDiagnosticUnit } from "@/lib/ab-insights";
 
@@ -41,7 +41,7 @@ function segment(value: string | null) { return value?.trim() || AB_UNKNOWN_FILT
 function emptyVariant(key: AbVariantKey, experiment: AbExperimentDto): AbVariantReport {
   const webinar = key === "A" ? experiment.webinarA : experiment.webinarB;
   return { key, webinarId: webinar.id, label: webinar.title || webinar.name || `Variante ${key}`,
-    assigned: 0, mature: 0, pending: 0, identified: 0, viewers: 0, pitch: 0, clicks: 0,
+    assigned: 0, mature: 0, pending: 0, ...(experiment.mode === "OBSERVATIONAL" ? { evaluated: 0 } : {}), identified: 0, viewers: 0, pitch: 0, clicks: 0,
     buyers: 0, sales: 0, revenueCents: 0, conversions: 0, rate: null, interval: null };
 }
 
@@ -77,6 +77,7 @@ function inferenceDescription(state: AbInferenceState, experiment: AbExperimentD
  */
 export function buildAbReport(input: BuildAbReportInput): AbReport {
   const { experiment } = input;
+  const observed = experiment.mode === "OBSERVATIONAL";
   const now = input.now ?? new Date();
   const filters = input.filters ?? {};
   const windowMs = experiment.conversionWindowHours * 3_600_000;
@@ -215,8 +216,10 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     if (!selectedIds.has(unit.id)) continue;
     const row = variants[unit.variant === "A" ? 0 : 1];
     row.assigned++;
-    if (!matureIds.has(unit.id)) { row.pending++; continue; }
-    row.mature++;
+    const mature = matureIds.has(unit.id);
+    if (mature) row.mature++;
+    else { row.pending++; if (!observed) continue; }
+    if (observed) row.evaluated!++;
     row.identified += Number(Boolean(unit.leadId));
     row.viewers += Number(state.viewer);
     row.pitch += Number(state.pitch);
@@ -226,18 +229,21 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     row.revenueCents += state.revenue;
     const converted = experiment.metric === "PURCHASE" ? state.buyer : experiment.metric === "OFFER_CLICK" ? state.click : state.pitch;
     row.conversions += Number(converted);
-    diagnosticUnits.push({ variant: unit.variant, source: unit.source, device: unit.device, campaign: unit.campaign,
+    diagnosticUnits.push({ variant: unit.variant, source: unit.source, device: unit.device, campaign: unit.campaign, mature,
       converted, buyer: state.buyer, revenueCents: state.revenue, maxVideoSec: state.maxVideoSec, assignedAt: unit.assignedAt,
       firstPlaybackAt: state.firstPlaybackAt, firstPitchAt: state.firstPitchAt, firstClickAt: state.firstClickAt, firstPurchaseAt: state.firstPurchaseAt });
     const day = dailyCounts.get(dateKey(unit.assignedAt));
     if (day) { day[unit.variant].count++; day[unit.variant].conversions += Number(converted); }
   }
   for (const variant of variants) {
-    variant.rate = variant.mature ? variant.conversions / variant.mature : null;
-    variant.interval = wilsonInterval(variant.conversions, variant.mature);
+    const base = abMetricBase(variant);
+    variant.rate = base ? variant.conversions / base : null;
+    variant.interval = observed ? null : wilsonInterval(variant.conversions, variant.mature);
   }
-  const statistics = compareProportions(variants[0].conversions, variants[0].mature, variants[1].conversions, variants[1].mature);
+  const statistics = compareProportions(variants[0].conversions, abMetricBase(variants[0]), variants[1].conversions, abMetricBase(variants[1]));
+  if (observed) { statistics.pValue = null; statistics.interval = null; }
   const warnings: string[] = [];
+  if (observed && variants.some((variant) => variant.pending > 0)) warnings.push(`Resultados parciais: incluem os eventos e compras já registrados nas entradas que ainda não completaram ${experiment.conversionWindowHours}h. As oportunidades de conversão ainda diferem e os números podem aumentar.`);
   if (experiment.mode === "OBSERVATIONAL") warnings.push("Origem, campanha e dispositivo usam o cadastro atual do acesso; esses dados podem ter mudado em uma revisita. Os públicos não foram randomizados.");
   if (input.configurationChanged) warnings.push("A configuração de uma versão mudou após o início, ou seu registro original está ausente. A comparação permanece descritiva; inicie um novo experimento com versões estáveis.");
   if (experiment.metric === "PURCHASE") warnings.push("Compras usam a atribuição registrada na integração. Vendas vinculadas por e-mail ou telefone podem ter sido atribuídas ao webinar mais recente; nenhuma atribuição é refeita neste relatório.");
@@ -262,10 +268,10 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
   else if (statistics.pValue < 0.05 && statistics.interval && statistics.interval[1] < 0) state = "WINNER_A";
   else state = "INCONCLUSIVE";
   return {
-    experiment, generatedAt: now.toISOString(), filters, variants,
+    experiment, generatedAt: now.toISOString(), filters, readout: observed ? "OBSERVED" : "MATURE", variants,
     daily: [...dailyCounts].map(([date, day]) => ({ date, A: day.A.count ? day.A.conversions / day.A.count : null, B: day.B.count ? day.B.conversions / day.B.count : null })),
     integrity: { overlapPeople, duplicateIdentities, unattributedSales, excludedCurrencySales, srmPValue, warnings },
     inference: { state, ...inferenceDescription(state, experiment), ...statistics }, filterOptions,
-    diagnostics: buildAbDiagnostics(diagnosticUnits)
+    diagnostics: buildAbDiagnostics(diagnosticUnits, observed ? "OBSERVED_ENTRIES" : "MATURE_ENTRIES")
   };
 }

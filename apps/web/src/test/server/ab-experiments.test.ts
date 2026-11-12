@@ -56,6 +56,48 @@ describe("experiment management", () => {
     const result = await createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", from: "2026-11-01T03:00:00Z", to: "2026-11-08T03:00:00Z" });
     expect(result.status).toBe("COMPLETED"); expect(result.publicPath).toBeNull(); expect(result.startedAt).toBe("2026-11-01T03:00:00.000Z");
   });
+  it.each([24, 72, 168])("changes only the conversion window of an observational comparison to %sh", async (conversionWindowHours) => {
+    const original = record({ mode: "OBSERVATIONAL", status: "COMPLETED", startedAt: new Date("2026-11-01T03:00:00Z"),
+      endsAt: new Date("2026-11-08T03:00:00Z"), completedAt: now });
+    mocks.find.mockResolvedValue(original);
+    mocks.update.mockImplementation(async ({ data }) => ({ ...original, ...data }));
+
+    const result = await updateExperiment("owner", "exp", { action: "conversion_window", conversionWindowHours });
+
+    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "exp" }, data: { conversionWindowHours } }));
+    expect(result).toMatchObject({ conversionWindowHours, mode: "OBSERVATIONAL", status: "COMPLETED", metric: "PURCHASE",
+      webinarAId: "a", webinarBId: "b", startedAt: "2026-11-01T03:00:00.000Z", endsAt: "2026-11-08T03:00:00.000Z",
+      completedAt: now.toISOString(), hypothesis: plan.hypothesis });
+    expect(mocks.lock.mock.calls[1].slice(1)).toEqual(["exp", "owner"]);
+    expect(mocks.find).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "exp", ownerId: "owner" } }));
+    expect(mocks.webinars).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it.each(["DRAFT", "RUNNING", "PAUSED", "COMPLETED"])("rejects the observational window action for a %s randomized experiment", async (status) => {
+    mocks.find.mockResolvedValue(record({ status }));
+    await expect(updateExperiment("owner", "exp", { action: "conversion_window", conversionWindowHours: 24 }))
+      .rejects.toMatchObject({ code: "plan_locked", status: 409 });
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("rejects invalid window lengths and unrelated fields before opening a mutation transaction", async () => {
+    for (const input of [
+      { action: "conversion_window" }, { action: "conversion_window", conversionWindowHours: "24" },
+      ...[0, 12, 48, 169, NaN].map(conversionWindowHours => ({ action: "conversion_window", conversionWindowHours })),
+      { action: "conversion_window", conversionWindowHours: 24, ownerId: "victim" },
+      { action: "conversion_window", conversionWindowHours: 24, status: "RUNNING" },
+      { action: "conversion_window", conversionWindowHours: 24, webinarAId: "foreign" }
+    ]) await expect(updateExperiment("owner", "exp", input)).rejects.toMatchObject({ code: "invalid_input", status: 400 });
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("does not change an absent or foreign comparison's window", async () => {
+    mocks.lock.mockResolvedValueOnce([{ id: "owner" }]).mockResolvedValueOnce([]);
+    await expect(updateExperiment("owner", "foreign", { action: "conversion_window", conversionWindowHours: 24 }))
+      .rejects.toMatchObject({ code: "not_found", status: 404 });
+    expect(mocks.lock.mock.calls[1].slice(1)).toEqual(["foreign", "owner"]);
+    expect(mocks.find).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
   it("starts only after ownership/readiness validation and stores immutable configuration hashes", async () => {
     mocks.find.mockResolvedValueOnce(record()).mockResolvedValueOnce(null);
     const result = await updateExperiment("owner", "exp", { action: "start" });

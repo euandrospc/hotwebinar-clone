@@ -2,7 +2,7 @@
 
 import { Info, ShieldCheck, TriangleAlert } from "@/components/icons";
 import { AdminSurface } from "@/components/admin/admin-page";
-import { AB_METRIC_LABELS, type AbInferenceState, type AbReport } from "@/lib/ab-tests";
+import { AB_METRIC_LABELS, abMetricBase, type AbInferenceState, type AbReport } from "@/lib/ab-tests";
 import { count, dateLabel, money, percent, percentagePoints } from "./ab-utils";
 import styles from "./ab-decision-summary.module.css";
 
@@ -15,6 +15,7 @@ function nextStep(report: AbReport): { title: string; description: string } {
   const missingA = Math.max(0, report.experiment.sampleSizePerVariant - report.variants[0].mature);
   const missingB = Math.max(0, report.experiment.sampleSizePerVariant - report.variants[1].mature);
   const pending = report.variants[0].pending + report.variants[1].pending;
+  if (state === "OBSERVATIONAL" && report.readout === "OBSERVED" && pending > 0) return { title: "Acompanhe os resultados já registrados", description: `${count(pending)} entradas ainda não completaram ${report.experiment.conversionWindowHours}h. Compare os dados parciais, considerando o tempo de observação diferente e a origem dos públicos; isso não declara um horário vencedor.` };
   const finalReadoutAt = report.experiment.endsAt ? new Date(new Date(report.experiment.endsAt).getTime() + report.experiment.conversionWindowHours * 3_600_000).toISOString() : null;
   const plan: Record<AbInferenceState, { title: string; description: string }> = {
     DRAFT: { title: "Revise a mudança antes de iniciar", description: "Confirme o que muda de A para B, a métrica principal e o funcionamento dos eventos e da integração de vendas." },
@@ -34,10 +35,12 @@ function nextStep(report: AbReport): { title: string; description: string } {
 
 export function AbDecisionSummary({ report }: { report: AbReport }) {
   const [a, b] = report.variants;
-  const purchaseA = a.mature ? a.buyers / a.mature : null;
-  const purchaseB = b.mature ? b.buyers / b.mature : null;
-  const revenueA = a.mature ? a.revenueCents / a.mature : null;
-  const revenueB = b.mature ? b.revenueCents / b.mature : null;
+  const baseA = abMetricBase(a), baseB = abMetricBase(b);
+  const observed = report.readout === "OBSERVED";
+  const purchaseA = baseA ? a.buyers / baseA : null;
+  const purchaseB = baseB ? b.buyers / baseB : null;
+  const revenueA = baseA ? a.revenueCents / baseA : null;
+  const revenueB = baseB ? b.revenueCents / baseB : null;
   const purchaseDelta = difference(purchaseA, purchaseB);
   const revenueDelta = difference(revenueA, revenueB);
   const primaryDelta = report.inference.delta;
@@ -54,7 +57,7 @@ export function AbDecisionSummary({ report }: { report: AbReport }) {
     {randomized && <div className={styles.sampleInline}>{[a, b].map(variant => <div key={variant.key}><p><span>{variant.key} · amostra</span><strong>{count(variant.mature)} <small>/ {count(report.experiment.sampleSizePerVariant)}</small></strong></p><progress aria-label={`Progresso da amostra ${variant.key}`} value={Math.min(variant.mature, report.experiment.sampleSizePerVariant)} max={report.experiment.sampleSizePerVariant || 1} /></div>)}</div>}
     <div className={styles.commercialHeader}><h4>Leitura comercial</h4><span>Descritiva</span></div>
     <div className={styles.tableWrap}><table aria-label="Comparação comercial A e B"><thead><tr><th>Indicador</th><th>A</th><th>B</th><th>B − A</th></tr></thead><tbody><tr><th scope="row">Compra</th><td>{percent(purchaseA)}</td><td>{percent(purchaseB)}</td><td>{percentagePoints(purchaseDelta)}</td></tr><tr><th scope="row">Receita / entrada</th><td>{revenueA === null ? "—" : money(revenueA)}</td><td>{revenueB === null ? "—" : money(revenueB)}</td><td>{moneyDifference(revenueDelta)}</td></tr></tbody></table></div>
-    <p className={styles.baseNote}>Base com janela completa: A {count(a.mature)} · B {count(b.mature)}. Compras conforme atribuição registrada; receita em BRL sem dedução de estornos.</p>
+    <p className={styles.baseNote}>{observed ? "Base observada até agora" : "Base com janela completa"}: A {count(baseA)} · B {count(baseB)}. Compras conforme atribuição registrada; receita em BRL sem dedução de estornos.</p>
     {(purchaseDiverges || revenueDiverges) && <div className={styles.divergence} role="note"><TriangleAlert aria-hidden="true" /><p>A taxa de {AB_METRIC_LABELS[report.experiment.metric].toLocaleLowerCase("pt-BR")} é maior em {favored}, mas {purchaseDiverges && revenueDiverges ? "a compra e a receita por entrada são menores" : purchaseDiverges ? "a compra é menor" : "a receita por entrada é menor"} nessa versão. Investigue essa divergência antes de adotar a mudança.</p></div>}
     <details className={styles.evidence}>
       <summary>{randomized ? "Ver amostra e critérios estatísticos" : "Ver limites desta comparação"}</summary>

@@ -33,13 +33,16 @@ const actionLabels: Record<TransitionAction, string> = { start: "Iniciar teste",
 const filterLabels = { source: "Origem · UTM source", medium: "Mídia · UTM medium", campaign: "Campanha · UTM campaign", content: "Criativo · UTM content", device: "Dispositivo" };
 const deviceLabels: Record<string, string> = { desktop: "Desktop", mobile: "Celular", tablet: "Tablet", unknown: "Não informado", __unknown__: "Não informado" };
 
-function ExperimentContext({ experiment, busy, onEdit, onAction, demo, picker }: {
+function ExperimentContext({ experiment, busy, onEdit, onAction, onWindowChange, demo, picker }: {
   experiment: AbExperimentDto; busy: boolean; onEdit: () => void;
-  onAction: (action: TransitionAction) => void; demo: boolean; picker: ReactNode;
+  onAction: (action: TransitionAction) => void; onWindowChange: (hours: number) => Promise<void>; demo: boolean; picker: ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
   const closed = pastCollection(experiment);
+  const [windowHours, setWindowHours] = useState(String(experiment.conversionWindowHours));
+  const [windowError, setWindowError] = useState<string | null>(null);
+  useEffect(() => { setWindowHours(String(experiment.conversionWindowHours)); setWindowError(null); }, [experiment.id, experiment.conversionWindowHours]);
 
   useEffect(() => { setCopied(false); setCopyError(null); }, [experiment.id]);
 
@@ -68,6 +71,11 @@ function ExperimentContext({ experiment, busy, onEdit, onAction, demo, picker }:
               <div><dt>Janela de conversão</dt><dd>{experiment.conversionWindowHours} horas</dd></div>
               <div><dt>Criado em</dt><dd>{dateLabel(experiment.createdAt)}</dd></div>
             </dl>
+            {experiment.mode === "OBSERVATIONAL" && <form className={styles.windowForm} onSubmit={async event => {
+              event.preventDefault(); setWindowError(null);
+              try { await onWindowChange(Number(windowHours)); }
+              catch (cause) { setWindowError(cause instanceof Error ? cause.message : "Não foi possível alterar a janela."); }
+            }}><label className={styles.field}><span>Prazo para contar conversões</span><select aria-label="Janela da comparação" value={windowHours} disabled={busy} onChange={event => setWindowHours(event.target.value)}><option value="24">24 horas após a entrada</option><option value="72">72 horas após a entrada</option><option value="168">7 dias após a entrada</option></select><small>Recalcula os resultados dos dois webinars com o mesmo prazo.</small></label><Button type="submit" variant="outline" className={styles.button} disabled={busy || Number(windowHours) === experiment.conversionWindowHours}>{busy ? "Salvando…" : "Salvar janela"}</Button>{windowError && <p role="alert" className={styles.error}>{windowError}</p>}</form>}
             {experiment.publicPath && <div className={styles.publicLink}><span>Link de distribuição</span><code>{typeof window !== "undefined" ? new URL(experiment.publicPath, window.location.origin).href : experiment.publicPath}</code><Button variant="outline" className={styles.button} onClick={copyLink}><Copy aria-hidden="true" />{copied ? "Link copiado" : "Copiar link"}</Button></div>}
             {experiment.status === "PAUSED" && !closed && <p className={styles.smallNote}>Novos visitantes não entram durante a pausa. O prazo original continua correndo. Uma pausa antes do fim torna a leitura exploratória, mesmo após retomar.</p>}
             {closed && <p className={styles.smallNote}>A coleta já atingiu o prazo. As conversões continuam sendo observadas até completar a janela de cada visitante.</p>}
@@ -217,6 +225,19 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
     selectExperiment(result.experiment.id); setForm(null);
   }
 
+  async function changeConversionWindow(hours: number) {
+    if (!selected || selected.mode !== "OBSERVATIONAL" || busy) return;
+    if (![24, 72, 168].includes(hours)) throw new Error("Escolha uma janela válida.");
+    setBusy(true);
+    try {
+      const changed = preview
+        ? { ...selected, conversionWindowHours: hours, updatedAt: new Date().toISOString() }
+        : (await request<{ experiment: AbExperimentDto }>(`/api/ab-tests/${selected.id}`, { method: "PATCH", body: JSON.stringify({ action: "conversion_window", conversionWindowHours: hours }) })).experiment;
+      if (preview) preview.experiments = preview.experiments.map(item => item.id === changed.id ? changed : item);
+      setExperiments(current => current.map(item => item.id === changed.id ? changed : item));
+    } finally { setBusy(false); }
+  }
+
   async function applyAction() {
     if (!confirmation || busy) return;
     setBusy(true); setMutationError(null);
@@ -257,7 +278,7 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
     <AdminPageHeader title="Teste A/B" actions={<Button className={styles.button} disabled={loading || webinars.length < 2} onClick={() => setForm("new")}><Plus aria-hidden="true" />Novo teste</Button>} />
     {loading ? <AdminSurface><div className={styles.loading} role="status">Carregando seus testes…</div></AdminSurface> : error ? <AdminSurface><div className={styles.loadError} role="alert"><strong>Não foi possível carregar os testes</strong><p>{error}</p><Button variant="outline" onClick={() => setListRevision(value => value + 1)}>Tentar novamente</Button></div></AdminSurface> : experiments.length === 0 ? <AdminSurface><AdminEmptyState icon={<Target />} title="Uma hipótese. Duas versões. Uma decisão melhor." description={webinars.length < 2 ? "Crie pelo menos dois webinars para comparar versões, explorar o histórico ou dividir o tráfego em um experimento." : "Comece comparando seus webinars atuais ou crie um experimento com distribuição de tráfego, amostra planejada e acompanhamento da conversão."} action={webinars.length < 2 ? <Button asChild><Link href="/dashboard/webinars">Ir para Webinars</Link></Button> : <Button onClick={() => setForm("new")}><Plus className="h-4 w-4" />Criar primeiro teste</Button>} /><div className={styles.emptyGuide}><div><b>01</b><strong>Defina a mudança</strong><p>Escolha o controle, a variante e o resultado que quer melhorar.</p></div><div><b>02</b><strong>Compare com contexto</strong><p>Examine audiência, origem, criativo e etapas do webinar.</p></div><div><b>03</b><strong>Decida com evidências</strong><p>Acompanhe amostra, janela de conversão e qualidade dos dados.</p></div></div></AdminSurface> : <>
       {selected && <section className={styles.detail} aria-label={`Teste selecionado: ${selected.name}`}>
-        <ExperimentContext experiment={selected} demo={Boolean(preview)} busy={busy} onEdit={() => setForm(selected)} onAction={action => { setMutationError(null); setConfirmation({ experiment: selected, action }); }} picker={<AbTestPicker experiments={experiments} selectedId={selected.id} onSelect={selectExperiment} />} />
+        <ExperimentContext experiment={selected} demo={Boolean(preview)} busy={busy} onWindowChange={changeConversionWindow} onEdit={() => setForm(selected)} onAction={action => { setMutationError(null); setConfirmation({ experiment: selected, action }); }} picker={<AbTestPicker experiments={experiments} selectedId={selected.id} onSelect={selectExperiment} />} />
         <motion.div key={selected.id} initial={reduceMotion ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : .2 }}><ExperimentDetail experiment={selected} demo={Boolean(preview)} /></motion.div>
       </section>}
     </>}

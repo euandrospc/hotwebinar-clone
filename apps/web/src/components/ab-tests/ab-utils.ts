@@ -1,4 +1,4 @@
-import { AB_METRIC_LABELS, AB_TEST_VARIABLE_LABELS, type AbReport, type AbReportFilters } from "@/lib/ab-tests";
+import { AB_METRIC_LABELS, AB_TEST_VARIABLE_LABELS, abMetricBase, type AbReport, type AbReportFilters } from "@/lib/ab-tests";
 
 export const count = (value: number) => value.toLocaleString("pt-BR");
 export const percent = (value: number | null, digits = 1) => value === null ? "—" : `${(value * 100).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -33,11 +33,12 @@ export function buildAbCsv(report: AbReport): string {
     ["Condição A", report.experiment.variantADescription ?? ""], ["Condição B", report.experiment.variantBDescription ?? ""],
     ["Janela de conversão (horas)", report.experiment.conversionWindowHours],
     ["Leitura", report.inference.title],
+    ["Base dos resultados", report.readout === "OBSERVED" ? "Resultados observados até agora, incluindo janelas ainda abertas" : "Somente entradas com janela completa"],
     ["Detalhe", report.inference.detail],
     ...Object.entries(report.filters).map(([key, value]) => [`Filtro ${key}`, value ?? ""]),
     [],
-    ["Variante", "Webinar", "Entradas", "Janela completa", "Aguardando janela", "Identificados", "Reprodução", "Pitch", "Clique na oferta", "Compradores", "Pedidos BRL", "Receita BRL", "Conversões da métrica", "Taxa (fração)", "IC95 inferior", "IC95 superior"],
-    ...report.variants.map(v => [v.key, v.label, v.assigned, v.mature, v.pending, v.identified, v.viewers, v.pitch, v.clicks, v.buyers, v.sales, v.revenueCents / 100, v.conversions, v.rate, v.interval?.[0] ?? null, v.interval?.[1] ?? null]),
+    ["Variante", "Webinar", "Entradas", "Base das métricas", "Janela completa", "Aguardando janela", "Identificados", "Reprodução", "Pitch", "Clique na oferta", "Compradores", "Pedidos BRL", "Receita BRL", "Conversões da métrica", "Taxa (fração)", "IC95 inferior", "IC95 superior"],
+    ...report.variants.map(v => [v.key, v.label, v.assigned, abMetricBase(v), v.mature, v.pending, v.identified, v.viewers, v.pitch, v.clicks, v.buyers, v.sales, v.revenueCents / 100, v.conversions, v.rate, v.interval?.[0] ?? null, v.interval?.[1] ?? null]),
     [], ["Diferença B − A (fração)", report.inference.delta], ["Variação relativa (fração)", report.inference.relativeLift],
     ["p-valor", report.inference.pValue], ["p-valor SRM", report.integrity.srmPValue],
     ...report.integrity.warnings.map(warning => ["Integridade", warning]),
@@ -51,10 +52,10 @@ export function buildAbCsv(report: AbReport): string {
     for (const point of diagnostics.position.points) rows.push([point.seconds, point.A.rate === null ? null : point.A.count, point.A.rate, point.B.rate === null ? null : point.B.count, point.B.rate]);
     const groups = [...diagnostics.segments, ...(diagnostics.timing ? [{ dimension: "hour", rows: diagnostics.timing.hours }, { dimension: "weekday", rows: diagnostics.timing.weekdays }] : [])];
     for (const group of groups) {
-      rows.push([], [`Segmentos exploratórios: ${group.dimension}`, "Horários de entrada em Brasília"], ["Segmento", "Variante", "Base madura", "Conversões principais", "Taxa principal (fração)", "Compradores", "Taxa de compra (fração)", "Receita BRL", "Receita por entrada BRL"]);
+      rows.push([], [`Segmentos exploratórios: ${group.dimension}`, "Horários de entrada em Brasília"], ["Segmento", "Variante", "Base das métricas", "Janela completa", "Conversões principais", "Taxa principal (fração)", "Compradores", "Taxa de compra (fração)", "Receita BRL", "Receita por entrada BRL"]);
       for (const segment of group.rows) for (const key of ["A", "B"] as const) {
         const value = segment[key];
-        rows.push([segment.value === "__unknown__" ? "Não informado" : segment.value, key, value.mature, value.conversions, value.conversionRate, value.buyers, value.purchaseRate, value.revenueCents / 100, value.revenuePerEntryCents === null ? null : value.revenuePerEntryCents / 100]);
+        rows.push([segment.value === "__unknown__" ? "Não informado" : segment.value, key, value.entries ?? value.mature, value.mature, value.conversions, value.conversionRate, value.buyers, value.purchaseRate, value.revenueCents / 100, value.revenuePerEntryCents === null ? null : value.revenuePerEntryCents / 100]);
       }
     }
     if (diagnostics.timing) {

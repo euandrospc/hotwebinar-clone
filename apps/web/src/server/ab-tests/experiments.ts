@@ -86,7 +86,11 @@ export const createExperimentSchema = z.object({
 }).strict();
 const editSchema = z.object({ action: z.literal("edit"), ...planShape }).strict();
 const transitionSchema = z.object({ action: z.enum(["start", "pause", "resume", "complete"]) }).strict();
-const updateSchema = z.union([editSchema, transitionSchema]);
+const conversionWindowSchema = z.object({
+  action: z.literal("conversion_window"),
+  conversionWindowHours: z.union([z.literal(24), z.literal(72), z.literal(168)])
+}).strict();
+const updateSchema = z.union([editSchema, transitionSchema, conversionWindowSchema]);
 type Plan = z.infer<typeof editSchema>;
 
 function parsed<Schema extends z.ZodTypeAny>(schema: Schema, input: unknown): z.output<Schema> {
@@ -203,7 +207,10 @@ export async function updateExperiment(ownerId: string, id: string, input: unkno
     await lockOwner(tx, ownerId);
     const row = await lockOwned(tx, ownerId, id), now = new Date();
     let data: Prisma.AbExperimentUpdateInput;
-    if (value.action === "edit") {
+    if (value.action === "conversion_window") {
+      if (row.mode !== "OBSERVATIONAL") throw new AbTestError("plan_locked", 409, "A janela de um experimento randomizado faz parte do planejamento. Esta ação é exclusiva de comparações observacionais.");
+      data = { conversionWindowHours: value.conversionWindowHours };
+    } else if (value.action === "edit") {
       if (row.status !== "DRAFT" || row._count.assignments) throw new AbTestError("plan_locked", 409, "O plano fica fixo depois que a coleta começa. Crie outro teste para alterar a hipótese.");
       const plan = planData(value);
       await ownedWebinars(tx, ownerId, plan.webinarAId, plan.webinarBId);

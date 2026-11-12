@@ -47,6 +47,41 @@ describe("A/B cohorts and interpretation", () => {
     const data = report({ now: new Date(start.getTime() + 3600_000), units: [unit("person")], sales: [sale("s1", "person")] });
     expect(data.variants[0]).toMatchObject({ assigned: 1, mature: 0, pending: 1, buyers: 0, sales: 0, identified: 0, rate: null });
     expect(data.daily[0].A).toBeNull();
+    expect(data.readout).toBe("MATURE");
+    expect(data.variants[0].evaluated).toBeUndefined();
+  });
+  it("shows yesterday's observational outcomes while keeping 72-hour windows pending", () => {
+    const enteredA = new Date("2026-11-11T18:00:00Z"), enteredB = new Date("2026-11-11T23:00:00Z");
+    const observedNow = new Date("2026-11-12T03:30:00Z");
+    const at = (date: Date, seconds: number) => new Date(date.getTime() + seconds * 1000);
+    const data = report({ now: observedNow,
+      experiment: experiment({ mode: "OBSERVATIONAL", status: "COMPLETED", conversionWindowHours: 72,
+        startedAt: "2026-11-11T03:00:00Z", endsAt: "2026-11-13T02:59:59.999Z", completedAt: observedNow.toISOString() }),
+      units: [unit("a", "A", { assignedAt: enteredA }), unit("a-no-play", "A", { assignedAt: enteredA }), unit("b", "B", { assignedAt: enteredB })],
+      events: [event("a", "VIDEO_TICK", { firstOccurredAt: at(enteredA, 10), maxVideoSec: 300, firstPitchAt: at(enteredA, 120) }),
+        event("a", "OFFER_CLICK", { firstOccurredAt: at(enteredA, 180) }),
+        event("b", "VIDEO_TICK", { firstOccurredAt: at(enteredB, 10), maxVideoSec: 60 }),
+        event("b", "OFFER_CLICK", { firstOccurredAt: at(observedNow, 1) })],
+      sales: [sale("a-sale", "a", { createdAt: at(enteredA, 240) }), sale("b-sale", "b", { webinarId: "wb", createdAt: at(enteredB, 240) }),
+        sale("future-sale", "a-no-play", { createdAt: at(observedNow, 1) })] });
+    expect(data.readout).toBe("OBSERVED");
+    expect(data.variants[0]).toMatchObject({ assigned: 2, evaluated: 2, mature: 0, pending: 2, identified: 2, viewers: 1, pitch: 1,
+      clicks: 1, buyers: 1, sales: 1, revenueCents: 9700, rate: .5, interval: null });
+    expect(data.variants[1]).toMatchObject({ assigned: 1, evaluated: 1, mature: 0, pending: 1, viewers: 1, clicks: 0, buyers: 1, rate: 1 });
+    expect(data.inference).toMatchObject({ state: "OBSERVATIONAL", delta: .5, relativeLift: 1, pValue: null, interval: null });
+    expect(data.integrity.srmPValue).toBeNull();
+    expect(data.integrity.warnings.join(" ")).toContain("Resultados parciais");
+    expect(data.daily[0]).toEqual({ date: "2026-11-11", A: .5, B: 1 });
+    expect(data.diagnostics!.position).toMatchObject({ basis: "OBSERVED_ENTRIES", entries: { A: 2, B: 1 }, mature: { A: 0, B: 0 }, measured: { A: 1, B: 1 } });
+    expect(data.diagnostics!.position.points[0].A.rate).toBe(.5);
+    expect(data.diagnostics!.segments[0].rows[0].A).toMatchObject({ entries: 2, mature: 0, conversions: 1, conversionRate: .5, purchaseRate: .5, revenuePerEntryCents: 4850 });
+  });
+  it("preserves observational attribution boundaries before entry and after the configured window", () => {
+    const data = report({ experiment: experiment({ mode: "OBSERVATIONAL" }), units: [unit("a")],
+      sales: [sale("before", "a", { createdAt: new Date(start.getTime() - 1) }), sale("late", "a", { createdAt: new Date(start.getTime() + 86400_001) }), sale("valid", "a")],
+      events: [event("a", "VIDEO_TICK", { firstOccurredAt: new Date(start.getTime() + 86400_001), maxVideoSec: 999 }), event("a", "OFFER_CLICK")] });
+    expect(data.variants[0]).toMatchObject({ mature: 1, pending: 0, evaluated: 1, viewers: 0, pitch: 0, clicks: 1, buyers: 1, sales: 1 });
+    expect(data.diagnostics!.position.measured.A).toBe(0);
   });
   it("requires exact webinar attribution and excludes purchases before/after the unit window", () => {
     const data = report({ units: [unit("person")], sales: [sale("before", "person", { createdAt: new Date(start.getTime() - 1) }),
