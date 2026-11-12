@@ -5,6 +5,7 @@ import {
   type ChatInsightCategory, type ChatIntelligenceReport, type ChatIntelligenceBatchResult
 } from "@/lib/dashboard-chat-intelligence";
 import { ChatIntelligenceError, classifyChatMessages } from "./chat-intelligence-provider";
+import { ownerScope, type AccessUser } from "@/lib/webinar-access";
 export { ChatIntelligenceError } from "./chat-intelligence-provider";
 
 export interface ChatIntelligenceScope { webinarId: string; from: Date; to: Date }
@@ -14,17 +15,18 @@ const BATCH_SIZE = 500;
 const BATCH_CHARACTERS = 64_000;
 const LEASE_MS = 120_000;
 
-function assertScope(ownerId: string, scope: ChatIntelligenceScope) {
-  if (!ownerId || !scope.webinarId || scope.webinarId.length > 128 ||
+function assertScope(viewer: AccessUser, scope: ChatIntelligenceScope) {
+  if (!viewer?.id || !scope.webinarId || scope.webinarId.length > 128 ||
       !Number.isFinite(scope.from.getTime()) || !Number.isFinite(scope.to.getTime()) || scope.from > scope.to) {
     throw new ChatIntelligenceError("invalid_input", 400);
   }
 }
-async function ownedWebinar(ownerId: string, scope: ChatIntelligenceScope) {
-  assertScope(ownerId, scope);
+// Creators read their own webinars; admins read any. Later queries use the webinar's real owner.
+async function ownedWebinar(viewer: AccessUser, scope: ChatIntelligenceScope) {
+  assertScope(viewer, scope);
   const webinar = await prisma.webinar.findFirst({
-    where: { id: scope.webinarId, ownerId },
-    select: { id: true, title: true, chatInsightLeaseToken: true, chatInsightLeaseUntil: true }
+    where: { id: scope.webinarId, ...ownerScope(viewer) },
+    select: { id: true, ownerId: true, title: true, chatInsightLeaseToken: true, chatInsightLeaseUntil: true }
   });
   if (!webinar) throw new ChatIntelligenceError("not_found", 404);
   return webinar;
@@ -41,8 +43,9 @@ interface CategoryRow { kind: string; category: string; messageCount: number; co
 interface ExampleRow { kind: string; category: string; id: string; leadId: string; text: string; createdAt: Date }
 
 /** Aggregates in PostgreSQL: totals never depend on a display/sample limit. */
-export async function getChatIntelligenceReport(ownerId: string, scope: ChatIntelligenceScope): Promise<ChatIntelligenceReport> {
-  const webinar = await ownedWebinar(ownerId, scope);
+export async function getChatIntelligenceReport(viewer: AccessUser, scope: ChatIntelligenceScope): Promise<ChatIntelligenceReport> {
+  const webinar = await ownedWebinar(viewer, scope);
+  const ownerId = webinar.ownerId;
   const currentAnalysis = Prisma.sql`a."version" = ${CHAT_INTELLIGENCE_VERSION} AND a."model" = ${CLASSIFICATION_MODEL}`;
   const scopeSql = Prisma.sql`w."ownerId" = ${ownerId} AND m."webinarId" = ${scope.webinarId}
     AND m."sender" = 'lead' AND m."createdAt" >= ${scope.from} AND m."createdAt" <= ${scope.to}`;
@@ -94,8 +97,9 @@ export async function getChatIntelligenceReport(ownerId: string, scope: ChatInte
   };
 }
 
-export async function processChatIntelligenceBatch(ownerId: string, scope: ChatIntelligenceScope): Promise<ChatIntelligenceBatchResult> {
-  const webinar = await ownedWebinar(ownerId, scope);
+export async function processChatIntelligenceBatch(viewer: AccessUser, scope: ChatIntelligenceScope): Promise<ChatIntelligenceBatchResult> {
+  const webinar = await ownedWebinar(viewer, scope);
+  const ownerId = webinar.ownerId;
   if (!process.env.OPENAI_API_KEY) throw new ChatIntelligenceError("provider_missing", 409);
   const token = randomUUID();
   const now = new Date();
@@ -103,7 +107,7 @@ export async function processChatIntelligenceBatch(ownerId: string, scope: ChatI
     where: { id: webinar.id, ownerId, OR: [{ chatInsightLeaseUntil: null }, { chatInsightLeaseUntil: { lte: now } }] },
     data: { chatInsightLeaseToken: token, chatInsightLeaseUntil: new Date(now.getTime() + LEASE_MS) }
   });
-  if (!claimed.count) return { processedMessages: 0, busy: true, report: await getChatIntelligenceReport(ownerId, scope) };
+  if (!claimed.count) return { processedMessages: 0, busy: true, report: await getChatIntelligenceReport(viewer, scope) };
   let processedMessages = 0;
   try {
     const candidates = await prisma.leadChatMessage.findMany({
@@ -142,5 +146,5 @@ export async function processChatIntelligenceBatch(ownerId: string, scope: ChatI
     // A stale request can never release a lease acquired by a newer worker.
     await prisma.webinar.updateMany({ where: { id: webinar.id, ownerId, chatInsightLeaseToken: token }, data: { chatInsightLeaseToken: null, chatInsightLeaseUntil: null } });
   }
-  return { processedMessages, busy: false, report: await getChatIntelligenceReport(ownerId, scope) };
+  return { processedMessages, busy: false, report: await getChatIntelligenceReport(viewer, scope) };
 }

@@ -51,7 +51,7 @@ describe("dashboard insights query scope", () => {
       { id: "incoming", webinarId: "selected", leadId: "conversation", sender: "lead", aiAgentName: null, createdAt: start, authorUserId: null, authorUser: null },
       { id: "reply", webinarId: "selected", leadId: "conversation", sender: "team", aiAgentName: null, createdAt: new Date(start.getTime() + 15_000), authorUserId: "author", authorUser: { name: "Ana", image: "/ana.png" } }
     ]);
-    const result = await getDashboardInsights("owner", start, end, "selected");
+    const result = await getDashboardInsights({ id: "owner" }, start, end, "selected");
     expect(result.support.agents).toEqual([
       { id: "human:author", name: "Ana", kind: "human", image: "/ana.png", conversations: 1, replies: 1, averageFirstReplySeconds: 15, firstReplySamples: 1 }
     ]);

@@ -48,7 +48,7 @@ describe("dashboard chat intelligence API", () => {
   it("passes only the session owner and exact ISO range to the backend", async () => {
     const response = await get();
     expect(response.status).toBe(200); expect(await response.json()).toEqual({ totalMessages: 10, analyzedMessages: 6 });
-    expect(queries.report).toHaveBeenCalledWith("owner", { webinarId: "selected", from: new Date(scope.from), to: new Date(scope.to) });
+    expect(queries.report).toHaveBeenCalledWith({ id: "owner", role: "admin" }, { webinarId: "selected", from: new Date(scope.from), to: new Date(scope.to) });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect((await post({ ...scope, ownerId: "victim" })).status).toBe(400);
     expect(queries.process).not.toHaveBeenCalled();

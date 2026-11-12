@@ -38,7 +38,7 @@ async function handle(request: Request, process: boolean) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400, headers: responseHeaders });
   const scope = { webinarId: parsed.data.webinarId, from: new Date(parsed.data.from), to: new Date(parsed.data.to) };
   try {
-    const data = process ? await processChatIntelligenceBatch(session.user.id, scope) : await getChatIntelligenceReport(session.user.id, scope);
+    const data = process ? await processChatIntelligenceBatch(session.user, scope) : await getChatIntelligenceReport(session.user, scope);
     return NextResponse.json(data, { headers: responseHeaders });
   } catch (error) {
     const known = error instanceof ChatIntelligenceError;
