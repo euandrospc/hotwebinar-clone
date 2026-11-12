@@ -5,6 +5,18 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Volume2, VolumeX } from "@/components/icons";
 
+// How far ahead of the live clock playback may run before it is pulled back.
+const MAX_AHEAD_SEC = 3;
+
+/**
+ * Where the video should be if the viewer tried to run ahead of the live: null when
+ * the position is fine. Behind is allowed (buffering); ahead (seek, 2x, extensions) is not.
+ */
+export function aheadOfLiveCorrection(currentSec: number, liveSec: number, durationSec: number): number | null {
+  const live = Math.min(liveSec, Number.isFinite(durationSec) ? durationSec : liveSec);
+  return currentSec > live + MAX_AHEAD_SEC ? live : null;
+}
+
 interface HlsPlayerProps {
   src: string;
   startOffsetSec: number;
@@ -45,7 +57,28 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
       void video.play().catch(() => { /* autoplay blocked */ });
     };
     video.addEventListener("loadedmetadata", onLoaded, { once: true });
+
+    // It must look live: no speed changes and no running ahead, whatever the source
+    // (browser extensions, devtools, OS media controls). Live position = the server's
+    // offset at render + time on this page, so the device clock doesn't matter.
+    video.disableRemotePlayback = true;
+    const mountedAt = performance.now();
+    const enforceLive = () => {
+      if (video.playbackRate !== 1) video.playbackRate = 1;
+      if (video.defaultPlaybackRate !== 1) video.defaultPlaybackRate = 1;
+      const liveSec = startOffsetSec + (performance.now() - mountedAt) / 1000;
+      const target = aheadOfLiveCorrection(video.currentTime, liveSec, video.duration);
+      if (target != null) {
+        try { video.currentTime = target; } catch { /* noop */ }
+      }
+    };
+    video.addEventListener("ratechange", enforceLive);
+    video.addEventListener("seeking", enforceLive);
+    const liveTimer = setInterval(enforceLive, 2000);
     return () => {
+      clearInterval(liveTimer);
+      video.removeEventListener("ratechange", enforceLive);
+      video.removeEventListener("seeking", enforceLive);
       video.removeEventListener("loadedmetadata", onLoaded);
       if (hls) { hls.destroy(); hlsRef.current = null; }
     };
@@ -90,7 +123,7 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
         onEnded={() => onEnded?.()}
         className="h-full w-full object-contain"
         controls={false}
-        controlsList="nodownload"
+        controlsList="nodownload noplaybackrate noremoteplayback"
         disablePictureInPicture
       />
 
