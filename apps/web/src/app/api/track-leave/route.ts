@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { enqueueWebhook } from "@/lib/webhook";
 import { removeLegacyPresence } from "@/server/realtime/presence";
 
@@ -10,15 +10,13 @@ const inputSchema = z.object({ videoSec: z.number().int().min(0).optional() });
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return new NextResponse(null, { status: 204 });
+  const lead = await resolveLeadRequest(request, cookieStore);
+  if (!lead) return new NextResponse(null, { status: 204 });
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
   const videoSec = parsed.success ? parsed.data.videoSec : undefined;
 
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
-  if (!lead) return new NextResponse(null, { status: 204 });
   await removeLegacyPresence(lead.id);
 
   await prisma.event.create({

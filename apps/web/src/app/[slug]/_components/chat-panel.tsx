@@ -10,6 +10,7 @@ import { useSimulatedAudience, fmtAudience, type AudienceParams } from "./audien
 import { MessageText } from "@/components/chat/message-text";
 import { SalesNotifier } from "./sales-notifier";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
+import { leadScopedUrl } from "@/lib/lead-request-scope";
 
 const TIME_FMT = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 function formatClock(baseMs: number, sec: number): string {
@@ -42,6 +43,7 @@ interface ChatPanelProps {
   currentTimeSec: number;
   leadName: string;
   leadId: string;
+  webinarId: string;
   teamChatName: string;
   baseTimestampMs: number;
   salesNotifications: PublicSaleNotification[];
@@ -57,7 +59,7 @@ function personalize(text: string, leadName: string): string {
   return text.replace(/\{lead\.name\}/g, leadName);
 }
 
-export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, leadId, teamChatName, baseTimestampMs, salesNotifications }: ChatPanelProps) {
+export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadName, leadId, webinarId, teamChatName, baseTimestampMs, salesNotifications }: ChatPanelProps) {
   const [leadMsgs, setLeadMsgs] = useState<PlayerLeadMsg[]>(() =>
     leadChat.map((x) => (x.videoSec == null ? { ...x, videoSec: currentTimeSec } : x))
   );
@@ -91,16 +93,16 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
     syncController.current = controller;
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch("/api/lead-chat", { cache: "no-store", signal: controller.signal });
+      const response = await fetch(leadScopedUrl("/api/lead-chat", { webinarId, leadId }), { cache: "no-store", signal: controller.signal });
       if (!response.ok) return;
       const body = (await response.json()) as { messages: PlayerLeadMsg[] };
       if (aliveRef.current && !controller.signal.aborted) receive(body.messages);
     } catch { /* The channel status and fallback handle temporary disconnections. */ }
     finally { clearTimeout(timeout); }
-  }, [receive]);
+  }, [receive, webinarId, leadId]);
 
   const { status } = useRealtimeChannel(
-    { kind: "lead", clientKey: leadId },
+    { kind: "lead", leadId, webinarId },
     (event) => { if (event.type === "chat" && event.leadId === leadId) receive([event.message]); },
     () => { void resync(); }
   );
@@ -161,7 +163,7 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
     sendController.current = controller;
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
-      const res = await fetch("/api/lead-chat", {
+      const res = await fetch(leadScopedUrl("/api/lead-chat", { webinarId, leadId }), {
         method: "POST",
         headers: { "content-type": "application/json" },
         signal: controller.signal,
@@ -250,7 +252,7 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
                     <span className="truncate text-xs font-semibold text-red-500 md:text-sm">{teamLabel}</span>
                     <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">{ts}</span>
                   </div>
-                  <div className="mt-0.5 text-sm leading-snug"><MessageText text={m.text} /></div>
+                  <div className="mt-0.5 text-sm leading-snug"><MessageText text={m.text} leadScope={{ webinarId, leadId }} /></div>
                 </div>
               </div>
             );
@@ -279,7 +281,7 @@ export function ChatPanel({ audience, ownerChat, leadChat, currentTimeSec, leadN
                   </span>
                   <span className="text-[10px] tabular-nums text-muted-foreground opacity-60 group-hover:opacity-100">{ts}</span>
                 </div>
-                <div className="text-sm leading-snug"><MessageText text={m.kind === "owner" ? personalize(m.text, leadName) : m.text} /></div>
+                <div className="text-sm leading-snug"><MessageText text={m.kind === "owner" ? personalize(m.text, leadName) : m.text} leadScope={{ webinarId, leadId }} /></div>
               </div>
             </div>
           );

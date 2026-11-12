@@ -1,6 +1,6 @@
 /** Shared wire types. Keep this module free of server dependencies. */
 export type RealtimeScope =
-  | { kind: "lead"; clientKey?: string }
+  | { kind: "lead"; webinarId: string; leadId: string }
   | { kind: "staff" }
   | { kind: "webinar"; webinarId: string }
   | { kind: "dashboard" };

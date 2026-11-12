@@ -31,7 +31,7 @@ vi.mock("socket.io-client", () => ({ io: transport.io }));
 const onEvent = vi.fn();
 const onResync = vi.fn();
 function Consumer({ name = "first", callback = onEvent, clientKey }: { name?: string; callback?: (event: RealtimeEvent) => void; clientKey?: string }) {
-  const { status, emitPresence } = useRealtimeChannel({ kind: "lead", clientKey }, callback, onResync);
+  const { status, emitPresence } = useRealtimeChannel({ kind: "lead", webinarId: "w1", leadId: clientKey ?? "lead-default" }, callback, onResync);
   return <button onClick={() => emitPresence(true)}>{name}: {status}</button>;
 }
 
@@ -43,6 +43,7 @@ describe("shared realtime channel", () => {
     const component = render(<Consumer clientKey="lead-a" />);
     component.rerender(<Consumer clientKey="lead-b" />);
     expect(transport.io).toHaveBeenCalledTimes(2);
+    expect(transport.io).toHaveBeenLastCalledWith(expect.objectContaining({ auth: { scope: { kind: "lead", webinarId: "w1", leadId: "lead-b" } } }));
     act(() => transport.sockets[0].handlers.get("realtime:event")!({ type: "presence", webinarId: "old" }));
     expect(onEvent).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(100));

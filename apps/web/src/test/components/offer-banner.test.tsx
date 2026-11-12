@@ -28,26 +28,26 @@ beforeEach(() => {
 
 describe("OfferBanner", () => {
   it("does not render before showAtSec", () => {
-    render(<OfferBanner offer={baseOffer} lead={baseLead} currentTimeSec={50} />);
+    render(<OfferBanner webinarId="webinar" offer={baseOffer} lead={baseLead} currentTimeSec={50} />);
     expect(screen.queryByRole("button", { name: /QUERO/ })).toBeNull();
   });
   it("does not render after hideAtSec", () => {
-    render(<OfferBanner offer={baseOffer} lead={baseLead} currentTimeSec={300} />);
+    render(<OfferBanner webinarId="webinar" offer={baseOffer} lead={baseLead} currentTimeSec={300} />);
     expect(screen.queryByRole("button", { name: /QUERO/ })).toBeNull();
   });
   it("renders inside window with correct color", () => {
-    render(<OfferBanner offer={baseOffer} lead={baseLead} currentTimeSec={150} />);
+    render(<OfferBanner webinarId="webinar" offer={baseOffer} lead={baseLead} currentTimeSec={150} />);
     const btn = screen.getByRole("button", { name: /QUERO/ });
     expect(btn).toHaveStyle({ backgroundColor: "#dc2626" });
   });
   it("never renders when offer.disabled", () => {
-    render(<OfferBanner offer={{ ...baseOffer, disabled: true }} lead={baseLead} currentTimeSec={150} />);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, disabled: true }} lead={baseLead} currentTimeSec={150} />);
     expect(screen.queryByRole("button", { name: /QUERO/ })).toBeNull();
   });
   it("opens link with UTMs appended when passUtms=true", () => {
     const open = vi.fn();
     vi.stubGlobal("open", open);
-    render(<OfferBanner offer={{ ...baseOffer, passUtms: true }} lead={baseLead} currentTimeSec={150} />);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, passUtms: true }} lead={baseLead} currentTimeSec={150} />);
     fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
     expect(open).toHaveBeenCalledWith(
       expect.stringContaining("utm_source=fb"),
@@ -58,12 +58,29 @@ describe("OfferBanner", () => {
   it("opens with target=_self when sameWindow=true", () => {
     const open = vi.fn();
     vi.stubGlobal("open", open);
-    render(<OfferBanner offer={{ ...baseOffer, sameWindow: true }} lead={baseLead} currentTimeSec={150} />);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, sameWindow: true }} lead={baseLead} currentTimeSec={150} />);
     fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
     expect(open).toHaveBeenCalledWith(expect.any(String), "_self", "noopener,noreferrer");
+    expect(fetch).toHaveBeenCalledWith("/api/offer-click?webinarId=webinar&leadId=l1", { method: "POST", keepalive: true });
+  });
+  it("attributes a verified A/B checkout after forwarding campaign UTMs", () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, link: "https://pay.kirvano.com/x", passUtms: true, abLeadAttribution: true }} lead={{ ...baseLead, utmContent: "creative" }} currentTimeSec={150} />);
+    fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
+    const url = new URL(open.mock.calls[0][0]);
+    expect(url.searchParams.get("utm_content")).toBe("creative|hw_ab_lead=l1");
+    expect(url.searchParams.get("utm_source")).toBe("fb");
+  });
+  it("preserves ordinary webinar checkout links", () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, link: "https://pay.kirvano.com/x?utm_content=creative" }} lead={baseLead} currentTimeSec={150} />);
+    fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
+    expect(open.mock.calls[0][0]).toBe("https://pay.kirvano.com/x?utm_content=creative");
   });
   it("shows raffle badge when raffle enabled", () => {
-    render(<OfferBanner offer={{ ...baseOffer, raffleEnabled: true }} lead={baseLead} currentTimeSec={150} />);
+    render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, raffleEnabled: true }} lead={baseLead} currentTimeSec={150} />);
     expect(screen.getByText(/Sorteio/i)).toBeInTheDocument();
   });
 });

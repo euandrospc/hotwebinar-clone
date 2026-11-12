@@ -45,7 +45,7 @@ describe("POST /api/track-leave", () => {
     cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
 
     const { POST } = await import("@/app/api/track-leave/route");
-    const req = new Request("http://localhost/api/track-leave", {
+    const req = new Request(`http://localhost/api/track-leave?webinarId=${w.id}&leadId=${lead.id}`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ videoSec: 1234 })
     });
@@ -58,7 +58,7 @@ describe("POST /api/track-leave", () => {
     expect(events).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(1);
 
-    const req2 = new Request("http://localhost/api/track-leave", {
+    const req2 = new Request(`http://localhost/api/track-leave?webinarId=${w.id}&leadId=${lead.id}`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ videoSec: 1234 })
     });

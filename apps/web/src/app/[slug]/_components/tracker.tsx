@@ -1,16 +1,18 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
+import { leadScopedUrl } from "@/lib/lead-request-scope";
 
 interface TrackerProps {
   currentTimeRef: React.MutableRefObject<number>;
   leadId: string;
+  webinarId: string;
 }
 
-export function Tracker({ currentTimeRef, leadId }: TrackerProps) {
+export function Tracker({ currentTimeRef, leadId, webinarId }: TrackerProps) {
   const lastSentSec = useRef<number>(currentTimeRef.current);
   const presence = useRef({ videoSec: currentTimeRef.current, lastProgressAt: 0, lastSentAt: 0, active: false });
-  const { status, emitPresence } = useRealtimeChannel({ kind: "lead", clientKey: leadId }, () => {}, () => {
+  const { status, emitPresence } = useRealtimeChannel({ kind: "lead", leadId, webinarId }, () => {}, () => {
     presence.current.lastSentAt = 0;
   });
   const realtimeStatus = useRef(status);
@@ -47,7 +49,7 @@ export function Tracker({ currentTimeRef, leadId }: TrackerProps) {
       const delta = Math.min(60, Math.max(0, Math.round(now - lastSentSec.current)));
       if (delta <= 0) return;
       try {
-        const res = await fetch("/api/track", {
+        const res = await fetch(leadScopedUrl("/api/track", { webinarId, leadId }), {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ videoSec: Math.round(now), watchedSecDelta: delta, presenceTransport: realtimeStatus.current === "connected" ? "websocket" : "http" })
@@ -61,7 +63,7 @@ export function Tracker({ currentTimeRef, leadId }: TrackerProps) {
       emitPresence(false);
       const data = JSON.stringify({ videoSec: Math.round(currentTimeRef.current) });
       try {
-        navigator.sendBeacon("/api/track-leave", new Blob([data], { type: "application/json" }));
+        navigator.sendBeacon(leadScopedUrl("/api/track-leave", { webinarId, leadId }), new Blob([data], { type: "application/json" }));
       } catch { /* swallow */ }
     };
     window.addEventListener("beforeunload", onLeave);
@@ -73,7 +75,7 @@ export function Tracker({ currentTimeRef, leadId }: TrackerProps) {
       window.removeEventListener("beforeunload", onLeave);
       window.removeEventListener("pagehide", onLeave);
     };
-  }, [currentTimeRef, emitPresence]);
+  }, [currentTimeRef, emitPresence, webinarId, leadId]);
 
   return null;
 }

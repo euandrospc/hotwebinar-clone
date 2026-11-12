@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { prisma } from "db";
 import { signLeadCookie } from "@/lib/lead-session";
 
+let currentWebinarId = "";
+const request = () => new Request(`http://localhost/api/offer-click?webinarId=${currentWebinarId}`, { method: "POST" });
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: cookieGetMock }) }));
 const queueAddMock = vi.fn(async () => ({ id: "j" }));
@@ -41,6 +43,7 @@ async function setup(extras: any = {}) {
   const lead = await prisma.lead.create({
     data: { webinarId: w.id, name: "L", email: "l@e.com" }
   });
+  currentWebinarId = w.id;
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead };
 }
@@ -49,8 +52,8 @@ describe("POST /api/offer-view", () => {
   it("creates OFFER_VIEW once per (webinar, lead), idempotent on second call", async () => {
     await setup();
     const { POST } = await import("@/app/api/offer-view/route");
-    const r1 = await POST(); expect(r1.status).toBe(200);
-    const r2 = await POST(); expect(r2.status).toBe(200);
+    const r1 = await POST(request()); expect(r1.status).toBe(200);
+    const r2 = await POST(request()); expect(r2.status).toBe(200);
     const events = await prisma.event.findMany({ where: { kind: "OFFER_VIEW" } });
     expect(events).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(1);
@@ -61,7 +64,7 @@ describe("POST /api/offer-click", () => {
   it("creates OFFER_CLICK + increments ctaClicks + fires webhook", async () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/offer-click/route");
-    const res = await POST();
+    const res = await POST(request());
     expect(res.status).toBe(200);
     const after = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(after?.ctaClicks).toBe(1);
@@ -72,7 +75,7 @@ describe("POST /api/offer-click", () => {
   it("also emits RAFFLE_ENTRY when offerRaffleEnabled", async () => {
     await setup({ offerRaffleEnabled: true });
     const { POST } = await import("@/app/api/offer-click/route?" + Date.now());
-    await POST();
+    await POST(request());
     const raffle = await prisma.event.findMany({ where: { kind: "RAFFLE_ENTRY" } });
     expect(raffle).toHaveLength(1);
     expect(queueAddMock).toHaveBeenCalledTimes(2); // offer_click + raffle_entry

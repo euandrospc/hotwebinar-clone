@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { enqueueWebhook } from "@/lib/webhook";
 import { touchLegacyPresence } from "@/server/realtime/presence";
 import { getClientIp, hasValidGeo } from "@/lib/geoip";
@@ -19,15 +19,12 @@ const THROTTLE_MS = 25_000;
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const lead = await resolveLeadRequest(request, cookieStore);
+  if (!lead) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = (await request.json().catch(() => null)) as unknown;
   const parsed = inputSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
-
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
-  if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const now = new Date();
   if (now.getTime() - lead.lastSeenAt.getTime() < THROTTLE_MS) {

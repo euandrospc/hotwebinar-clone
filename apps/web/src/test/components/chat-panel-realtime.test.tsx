@@ -16,7 +16,7 @@ vi.mock("@/lib/hooks/use-realtime-channel", () => ({
 const currentTimeRef = { current: 30 };
 const props = {
   audience: { mode: "NONE" as const, min: 0, max: 0, durationSec: 3600, seed: "test", currentTimeRef },
-  ownerChat: [], leadChat: [], currentTimeSec: 30, leadName: "Ana", leadId: "lead", teamChatName: "Suporte",
+  ownerChat: [], leadChat: [], currentTimeSec: 30, leadName: "Ana", leadId: "lead", webinarId: "webinar", teamChatName: "Suporte",
   baseTimestampMs: Date.parse("2026-10-30T20:00:00Z"), salesNotifications: []
 };
 function message(id: string, text: string, clientMessageId?: string) {
@@ -72,7 +72,7 @@ describe("instant public chat", () => {
     const view = render(<ChatPanel {...props} />);
     act(() => channel.onResync());
     await screen.findByText("Resposta enquanto caiu");
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/lead-chat");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/lead-chat?webinarId=webinar&leadId=lead");
     const signal = vi.mocked(fetch).mock.calls[0][1]!.signal as AbortSignal;
     view.unmount();
     expect(signal.aborted).toBe(true);

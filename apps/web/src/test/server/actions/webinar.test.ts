@@ -21,6 +21,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 beforeEach(async () => {
+  expect(new URL(process.env.DATABASE_URL!).pathname).toBe("/hotwebinar_test");
   await prisma.event.deleteMany({});
   await prisma.lead.deleteMany({});
   await prisma.chatMessage.deleteMany({});
@@ -219,6 +220,21 @@ describe("publishWebinar", () => {
 });
 
 describe("deleteWebinar", () => {
+  it("preserves webinars referenced by an experiment and explains the restriction", async () => {
+    const { createDraftWebinar, deleteWebinar } = await import("@/server/actions/webinar");
+    const a = await createDraftWebinar(), b = await createDraftWebinar();
+    const experiment = await prisma.abExperiment.create({ data: {
+      ownerId: TEST_USER.id, name: "Protected history", mode: "RANDOMIZED",
+      webinarAId: a.id, webinarBId: b.id, sampleSizePerVariant: 8158
+    } });
+    try {
+      const result = await deleteWebinar(a.id);
+      expect(result).toEqual({ error: { message: expect.stringContaining("teste A/B") } });
+      expect(await prisma.webinar.findUnique({ where: { id: a.id } })).not.toBeNull();
+    } finally {
+      await prisma.abExperiment.delete({ where: { id: experiment.id } });
+    }
+  });
   it("cascades chat messages", async () => {
     const { createDraftWebinar, updateWebinarStep6, deleteWebinar } = await import(
       "@/server/actions/webinar"

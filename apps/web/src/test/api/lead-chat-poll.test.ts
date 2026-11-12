@@ -32,7 +32,7 @@ describe("GET /api/lead-chat", () => {
     const a = await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "oi", sender: "lead" } });
     const b = await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "resposta", sender: "team", authorUserId: USER.id } });
     const { GET } = await import("@/app/api/lead-chat/route?" + Date.now());
-    const res = await GET(new Request(`http://x/api/lead-chat?after=${a.id}`));
+    const res = await GET(new Request(`http://x/api/lead-chat?webinarId=${webinarId}&after=${a.id}`));
     const json = await res.json();
     expect(json.messages.map((m: { id: string }) => m.id)).toEqual([a.id, b.id]);
     expect(json.messages.find((m: { id: string }) => m.id === b.id)).toMatchObject({ sender: "team", teamName: USER.name });
@@ -46,7 +46,7 @@ describe("GET /api/lead-chat", () => {
       { id: "same-c", leadId, webinarId, text: "C", createdAt }
     ] });
     const { GET } = await import("@/app/api/lead-chat/route");
-    const body = await (await GET(new Request("http://x/api/lead-chat?after=same-b"))).json();
+    const body = await (await GET(new Request(`http://x/api/lead-chat?webinarId=${webinarId}&after=same-b`))).json();
     expect(body.messages.map((message: { id: string }) => message.id)).toEqual(["same-a", "same-b", "same-c"]);
   });
 
@@ -55,7 +55,7 @@ describe("GET /api/lead-chat", () => {
     const own = await prisma.leadChatMessage.create({ data: { leadId, webinarId, text: "Own", createdAt: new Date("2026-10-30T19:00:00Z") } });
     const foreign = await prisma.leadChatMessage.create({ data: { leadId: other.id, webinarId, text: "Private other", createdAt: new Date("2026-10-30T20:00:00Z") } });
     const { GET } = await import("@/app/api/lead-chat/route");
-    const response = await GET(new Request(`http://x/api/lead-chat?after=${foreign.id}`));
+    const response = await GET(new Request(`http://x/api/lead-chat?webinarId=${webinarId}&after=${foreign.id}`));
     const body = await response.json();
     expect(body.messages.map((message: { id: string }) => message.id)).toEqual([own.id]);
     expect(JSON.stringify(body)).not.toContain("Private other");

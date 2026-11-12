@@ -29,11 +29,11 @@ describe("realtime authentication", () => {
   });
 
   it("derives the private lead room only from the signed cookie", async () => {
-    const identity = await authenticateRealtime({ cookie: `hw_lead=${signLeadCookie("l1")}` }, { kind: "lead" });
+    const identity = await authenticateRealtime({ cookie: `hw_lead=${signLeadCookie("l1")}` }, { kind: "lead", webinarId: "w1", leadId: "l1" });
     expect(identity).toEqual({ kind: "lead", leadId: "l1", webinarId: "w1", rooms: ["lead:l1"] });
     expect(mocks.lead).toHaveBeenCalledWith({ where: { id: "l1" }, select: { id: true, webinarId: true } });
-    expect(await authenticateRealtime({ cookie: "hw_lead=forged.l2" }, { kind: "lead" })).toBeNull();
-    expect(await authenticateRealtime({}, { kind: "lead" })).toBeNull();
+    expect(await authenticateRealtime({ cookie: "hw_lead=forged.l2" }, { kind: "lead", webinarId: "w1", leadId: "l1" })).toBeNull();
+    expect(await authenticateRealtime({}, { kind: "lead", webinarId: "w1", leadId: "l1" })).toBeNull();
   });
 
   it("keeps global staff access restricted to current admin or attendant roles", async () => {

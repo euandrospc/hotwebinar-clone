@@ -1,8 +1,7 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import type { Readable } from "node:stream";
 import { cookies, headers } from "next/headers";
-import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { getS3Client } from "@/lib/storage/s3";
 import { HLS_BUCKET } from "@/lib/storage/buckets";
 import { auth } from "@/lib/auth";
@@ -68,18 +67,14 @@ export async function GET(
   // Auth: lead cookie OR admin session. Check both; admin status wins
   // when both are present (e.g., stale lead cookie + active admin session).
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
   const session = await auth.api.getSession({ headers: await headers() });
   const isAdmin = Boolean(session);
 
   // A lead may only fetch assets of the video tied to THEIR webinar — otherwise
   // any lead of any webinar could enumerate every other webinar's HLS by videoId.
   let leadAuthorized = false;
-  if (!isAdmin && leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
-      select: { webinar: { select: { videoId: true } } }
-    });
+  if (!isAdmin) {
+    const lead = await resolveLeadRequest(req, cookieStore);
     leadAuthorized = lead?.webinar?.videoId === requestedVideoId;
   }
   const authorized = isAdmin || leadAuthorized;

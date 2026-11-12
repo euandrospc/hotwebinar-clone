@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vites
 import { prisma } from "db";
 import { signLeadCookie } from "@/lib/lead-session";
 
+let currentWebinarId = "";
 const cookieGetMock = vi.fn();
 const fetchMock = vi.fn().mockRejectedValue(new Error("Unexpected external request during a heartbeat"));
 vi.mock("next/headers", () => ({
@@ -53,6 +54,7 @@ async function makeWebinarWithLead(overrides: any = {}) {
   const lead = await prisma.lead.create({
     data: { webinarId: w.id, name: "Joe", email: "j@e.com", lastSeenAt: new Date(Date.now() - 60_000) }
   });
+  currentWebinarId = w.id;
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead };
 }
@@ -61,7 +63,7 @@ describe("POST /api/track", () => {
   it("creates VIDEO_TICK event + updates watchedSec", async () => {
     const { lead } = await makeWebinarWithLead();
     const { POST } = await import("@/app/api/track/route");
-    const req = new Request("http://localhost/api/track", {
+    const req = new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -81,7 +83,7 @@ describe("POST /api/track", () => {
       data: { lastSeenAt: new Date(Date.now() - 10_000) }
     });
     const { POST } = await import("@/app/api/track/route?" + Date.now());
-    const req = new Request("http://localhost/api/track", {
+    const req = new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -94,7 +96,7 @@ describe("POST /api/track", () => {
   it("fires PITCH_REACHED + webhook once when crossing pitchAtSec", async () => {
     const { lead, w } = await makeWebinarWithLead();
     const { POST } = await import("@/app/api/track/route?" + (Date.now() + 1));
-    const req = new Request("http://localhost/api/track", {
+    const req = new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ videoSec: 700, watchedSecDelta: 30 })
@@ -111,7 +113,7 @@ describe("POST /api/track", () => {
     const { lead } = await makeWebinarWithLead();
     await prisma.lead.update({ where: { id: lead.id }, data: { watchedSec: 290 } });
     const { POST } = await import("@/app/api/track/route?" + (Date.now() + 2));
-    const req = new Request("http://localhost/api/track", {
+    const req = new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -124,7 +126,7 @@ describe("POST /api/track", () => {
   it("returns 401 when no cookie", async () => {
     cookieGetMock.mockReturnValue(undefined);
     const { POST } = await import("@/app/api/track/route?" + (Date.now() + 3));
-    const req = new Request("http://localhost/api/track", {
+    const req = new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -138,7 +140,7 @@ describe("POST /api/track", () => {
     const { lead } = await makeWebinarWithLead();
     await prisma.lead.update({ where: { id: lead.id }, data: { ip: "unknown" } });
     const { POST } = await import("@/app/api/track/route");
-    const res = await POST(new Request("http://localhost/api/track", {
+    const res = await POST(new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "::ffff:8.8.8.8, 10.0.0.2" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -157,7 +159,7 @@ describe("POST /api/track", () => {
       data: { ip: "1.1.1.1", lat: -23.5, lng: -46.6, city: "São Paulo", country: "BR" }
     });
     const { POST } = await import("@/app/api/track/route");
-    const res = await POST(new Request("http://localhost/api/track", {
+    const res = await POST(new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: 30, watchedSecDelta: 30 })
@@ -171,7 +173,7 @@ describe("POST /api/track", () => {
   it("does not enqueue a lookup for an invalid heartbeat payload", async () => {
     await makeWebinarWithLead();
     const { POST } = await import("@/app/api/track/route");
-    const res = await POST(new Request("http://localhost/api/track", {
+    const res = await POST(new Request(`http://localhost/api/track?webinarId=${currentWebinarId}`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": "8.8.8.8" },
       body: JSON.stringify({ videoSec: -1, watchedSecDelta: 30 })

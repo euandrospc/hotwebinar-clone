@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { auth } from "@/lib/auth";
 import { canAccessVideo } from "@/lib/webinar-access";
 import { withOccurrence } from "@/lib/sync";
@@ -31,17 +31,13 @@ export async function GET(
   if (!video || !video.encKey) return new Response("not found", { status: 404 });
 
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
   const session = await auth.api.getSession({ headers: await headers() });
   let isAdmin = false;
 
   if (session && canAccessVideo(session, video)) {
     isAdmin = true;
-  } else if (leadId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
-      include: { webinar: true }
-    });
+  } else {
+    const lead = await resolveLeadRequest(req, cookieStore);
     if (!lead) return new Response("unauthorized", { status: 401 });
     // Webinar must be linked to this video
     if (lead.webinar.videoId !== videoId) {
@@ -60,8 +56,6 @@ export async function GET(
     if (elapsed > ttl) {
       return new Response("session expired", { status: 401 });
     }
-  } else {
-    return new Response("unauthorized", { status: 401 });
   }
 
   if (!refererAllowed(req, isAdmin)) {

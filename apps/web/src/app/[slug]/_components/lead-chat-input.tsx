@@ -3,13 +3,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PlayerLeadMsg } from "../_lib/public-types";
+import { leadScopedUrl } from "@/lib/lead-request-scope";
 
 interface LeadChatInputProps {
   initial: PlayerLeadMsg[];
   currentTimeSec: number;
+  webinarId: string;
+  leadId: string;
 }
 
-export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
+export function LeadChatInput({ initial, currentTimeSec, webinarId, leadId }: LeadChatInputProps) {
   const [messages, setMessages] = useState<PlayerLeadMsg[]>(initial);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -29,7 +32,7 @@ export function LeadChatInput({ initial, currentTimeSec }: LeadChatInputProps) {
     setMessages((m) => [...m, optimistic]);
     setText("");
     try {
-      const res = await fetch("/api/lead-chat", {
+      const res = await fetch(leadScopedUrl("/api/lead-chat", { webinarId, leadId }), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: trimmed, videoSec: Math.round(currentTimeSec) })

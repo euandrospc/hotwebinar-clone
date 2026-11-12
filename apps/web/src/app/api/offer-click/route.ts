@@ -2,23 +2,20 @@ import { publishFunnelEvent } from "@/server/realtime/bus";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { enqueueWebhook } from "@/lib/webhook";
 import { offerClickLimiter } from "@/lib/rate-limit";
 
-export async function POST() {
+export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const lead = await resolveLeadRequest(request, cookieStore);
+  if (!lead) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   // Throttle per lead: without this, a loop of POSTs inflates ctaClicks/metrics,
   // spams webhooks, and stuffs raffle entries (unbounded Event writes = DoS).
-  if (!offerClickLimiter.check(leadId)) {
+  if (!offerClickLimiter.check(lead.id)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
-
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
-  if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   await prisma.event.create({
     data: { webinarId: lead.webinarId, leadId: lead.id, kind: "OFFER_CLICK" }

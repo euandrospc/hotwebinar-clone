@@ -94,12 +94,13 @@ export function useRealtimeChannel(
   const [status, setStatus] = useState<RealtimeStatus>("connecting");
   const channelRef = useRef<Channel | null>(null);
   const kind = scope.kind;
-  const webinarId = scope.kind === "webinar" ? scope.webinarId : undefined;
-  const clientKey = scope.kind === "lead" ? scope.clientKey : undefined;
+  const webinarId = scope.kind === "webinar" || scope.kind === "lead" ? scope.webinarId : undefined;
+  const leadId = scope.kind === "lead" ? scope.leadId : undefined;
 
   useEffect(() => {
-    const currentScope: RealtimeScope = kind === "webinar" ? { kind, webinarId: webinarId! } : { kind };
-    const key = `${kind}:${webinarId ?? clientKey ?? ""}`;
+    const currentScope: RealtimeScope = kind === "webinar" ? { kind, webinarId: webinarId! }
+      : kind === "lead" ? { kind, webinarId: webinarId!, leadId: leadId! } : { kind };
+    const key = `${kind}:${webinarId ?? ""}:${leadId ?? ""}`;
     const channel = acquire(currentScope, key);
     channelRef.current = channel;
     const listener: Listener = {
@@ -132,7 +133,7 @@ export function useRealtimeChannel(
         }, 100);
       }
     };
-  }, [kind, webinarId, clientKey]);
+  }, [kind, webinarId, leadId]);
 
   const emitPresence = useCallback((playing: boolean) => {
     const channel = channelRef.current;

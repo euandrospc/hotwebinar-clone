@@ -341,7 +341,14 @@ export async function deleteWebinar(id: string): Promise<Result> {
   const session = await requireSession();
   const owned = await loadOwned(id, session);
   if (!owned) return notFound();
-  await prisma.webinar.delete({ where: { id } });
+  try {
+    await prisma.webinar.delete({ where: { id } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      return { error: { message: "Este webinar faz parte de um teste A/B. Preserve-o para manter o histórico; rascunhos de testes sem participantes podem ser excluídos em Teste A/B." } };
+    }
+    throw error;
+  }
   // Best-effort: clean uploaded assets (logo + offer images). Failures don't
   // block deletion since the row is already gone.
   await Promise.all([

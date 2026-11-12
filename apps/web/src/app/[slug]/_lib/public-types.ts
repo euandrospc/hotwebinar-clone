@@ -17,6 +17,8 @@ export interface PlayerOffer {
   disabled: boolean;
   sameWindow: boolean;
   raffleEnabled: boolean;
+  /** Server-verified A/B participation; never enabled on ordinary public visits. */
+  abLeadAttribution?: boolean;
 }
 
 export interface PlayerOwnerMsg {

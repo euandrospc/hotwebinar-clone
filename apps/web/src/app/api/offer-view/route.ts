@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { resolveLeadRequest } from "@/server/lead-request";
 import { enqueueWebhook } from "@/lib/webhook";
 
-export async function POST() {
+export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
-  if (!leadId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
-  if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const lead = await resolveLeadRequest(request, cookieStore);
+  if (!lead) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const existing = await prisma.event.findFirst({
     where: { webinarId: lead.webinarId, leadId: lead.id, kind: "OFFER_VIEW" }

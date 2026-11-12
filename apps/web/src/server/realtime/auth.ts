@@ -1,7 +1,7 @@
 import type { IncomingHttpHeaders } from "node:http";
 import { prisma } from "db";
 import { auth } from "../../lib/auth";
-import { verifyLeadCookie } from "../../lib/lead-session";
+import { readLeadCookieForWebinar } from "../../lib/lead-session";
 import { ADMIN_DASHBOARD_ROOM, ownerScope } from "../../lib/webinar-access";
 import type { RealtimeScope } from "../../lib/realtime-protocol";
 
@@ -12,8 +12,9 @@ export type RealtimeIdentity =
 export function validRealtimeScope(value: unknown): value is RealtimeScope {
   if (!value || typeof value !== "object") return false;
   const scope = value as Record<string, unknown>;
+  if (scope.kind === "lead") return [scope.webinarId, scope.leadId].every((id) => typeof id === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(id));
   if (scope.kind === "webinar") return typeof scope.webinarId === "string" && scope.webinarId.length > 0 && scope.webinarId.length <= 128;
-  return scope.kind === "lead" || scope.kind === "staff" || scope.kind === "dashboard";
+  return scope.kind === "staff" || scope.kind === "dashboard";
 }
 
 export function isAllowedRealtimeOrigin(origin: string | undefined, host: string | undefined): boolean {
@@ -46,10 +47,13 @@ export async function authenticateRealtime(
 ): Promise<RealtimeIdentity | null> {
   if (!validRealtimeScope(scope)) return null;
   if (scope.kind === "lead") {
-    const leadId = verifyLeadCookie(cookieValue(headers.cookie, "hw_lead"));
-    if (!leadId) return null;
+    const leadId = readLeadCookieForWebinar({ get: (name) => {
+      const value = cookieValue(headers.cookie, name);
+      return value === undefined ? undefined : { value };
+    } }, scope.webinarId);
+    if (!leadId || leadId !== scope.leadId) return null;
     const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { id: true, webinarId: true } });
-    return lead ? { kind: "lead", leadId: lead.id, webinarId: lead.webinarId, rooms: [`lead:${lead.id}`] } : null;
+    return lead?.webinarId === scope.webinarId ? { kind: "lead", leadId: lead.id, webinarId: lead.webinarId, rooms: [`lead:${lead.id}`] } : null;
   }
 
   const session = await auth.api.getSession({ headers: requestHeaders(headers) });

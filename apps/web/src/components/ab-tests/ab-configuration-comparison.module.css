@@ -1,0 +1,41 @@
+.root { min-width: 0; color: hsl(var(--foreground)); }
+.source { padding: 10px 12px; border: 1px solid hsl(var(--border) / .7); border-radius: 10px; background: hsl(var(--secondary) / .45); }
+.source strong { display: block; font-size: 11px; font-weight: 500; }
+.source p { margin-top: 3px; color: hsl(var(--muted-foreground)); font-size: 10px; line-height: 1.6; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 13px 0 9px; }
+.toolbar p { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 11px; font-weight: 500; }
+.toolbar p > span { padding: 2px 6px; border-radius: 5px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 9px; font-weight: 400; white-space: nowrap; }
+.filter { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; cursor: pointer; font-size: 11px; color: hsl(var(--muted-foreground)); }
+.filter input { width: 14px; height: 14px; margin: 0; accent-color: #0a5341; cursor: pointer; }
+.filter input:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+.tableWrap { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid hsl(var(--border)); border-radius: 10px; scrollbar-width: thin; }
+.tableWrap:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+.tableWrap table { width: 100%; min-width: 570px; table-layout: fixed; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+.tableWrap th, .tableWrap td { padding: 9px 12px; border-bottom: 1px solid hsl(var(--border) / .5); text-align: left; vertical-align: top; line-height: 1.6; overflow-wrap: anywhere; }
+.tableWrap th:first-child { width: 30%; }
+.tableWrap thead { background: hsl(var(--muted) / .55); }
+.tableWrap thead th { padding-block: 11px; font-weight: 500; }
+.tableWrap thead th:first-child { color: hsl(var(--muted-foreground)); font-weight: 400; vertical-align: middle; }
+.tableWrap tbody th { color: hsl(var(--muted-foreground)); font-weight: 400; }
+.tableWrap tbody th > span { display: inline-flex; align-items: center; gap: 6px; }
+.tableWrap tbody th small { display: block; margin-top: 3px; font-size: 9px; line-height: 1.5; }
+.tableWrap tbody:last-child tr:last-child th, .tableWrap tbody:last-child tr:last-child td { border-bottom: 0; }
+.tableWrap .group th { padding-block: 7px; background: hsl(var(--muted) / .35); color: hsl(var(--foreground)); font-size: 10px; font-weight: 500; letter-spacing: .01em; }
+.tableWrap .different { background: #f2f8ec; }
+.tableWrap td a { color: #16614b; text-decoration: underline; text-underline-offset: 3px; }
+.tableWrap td a:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 2px; }
+.variant { display: flex; align-items: center; gap: 7px; }
+.variantA, .variantB { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px; background: #0a5341; color: #fff; font-size: 9px; font-weight: 500; }
+.variantB { color: #345321; background: #d5ecb3; }
+.description { display: block; margin-top: 5px; color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 400; line-height: 1.5; }
+.marker { display: inline-block; width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: #5c8546; }
+.note { margin-top: 8px; color: hsl(var(--muted-foreground)); font-size: 9px; line-height: 1.7; }
+.empty { padding: 20px 14px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.7; }
+:global(.dark) .tableWrap .different { background: #1c3025; }
+:global(.dark) .tableWrap td a { color: #a5d7b4; }
+:global(.dark) .variantA { background: #306a50; color: #e5f0e4; }
+:global(.dark) .variantB { background: #617e3c; color: #f2f9e4; }
+:global(.dark) .filter input { accent-color: #8cbf70; }
+:global(.dark) .marker { background: #9abf7a; }
+@media (max-width: 640px) { .tableWrap th, .tableWrap td { padding-inline: 10px; } .source { padding: 10px; } }
+@media (prefers-reduced-motion: reduce) { .root *, .root *::before, .root *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

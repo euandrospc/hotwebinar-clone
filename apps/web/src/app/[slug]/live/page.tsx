@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { prisma } from "db";
-import { verifyLeadCookie } from "@/lib/lead-session";
+import { readLeadCookieForWebinar } from "@/lib/lead-session";
+import { abAssignmentCookieName } from "@/lib/ab-test-cookie";
+import { resolveBoundAbAssignment } from "@/server/ab-tests/assignment";
 import { publicWebinarDto, publicVideoDto, publicLeadWithUtmsDto } from "@/lib/public-dto";
 import { computePhase, computeInitialOffset, withOccurrence } from "@/lib/sync";
 import { maybeFireEnterWebhook } from "@/lib/webhook";
@@ -39,10 +41,11 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
   const w = withOccurrence(found, new Date());
 
   const cookieStore = await cookies();
-  const leadId = verifyLeadCookie(cookieStore.get("hw_lead")?.value);
+  const leadId = readLeadCookieForWebinar(cookieStore, w.id);
   if (!leadId) redirect(`/${slug}`);
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
   if (!lead || lead.webinarId !== w.id) redirect(`/${slug}`);
+  const experimentAssignment = await resolveBoundAbAssignment(w.id, lead.id, cookieStore.get(abAssignmentCookieName(w.id))?.value);
 
   if (!hasValidGeo(lead)) await queueLeadGeo(lead, getClientIp(await headers()));
 
@@ -90,7 +93,8 @@ export default async function LivePage({ params }: { params: Promise<{ slug: str
         passUtms: w.offerPassUtms,
         disabled: w.offerDisabled,
         sameWindow: w.offerSameWindow,
-        raffleEnabled: w.offerRaffleEnabled
+        raffleEnabled: w.offerRaffleEnabled,
+        abLeadAttribution: Boolean(experimentAssignment)
       }}
       ownerChat={w.chatMessages.map((m) => ({
         id: m.id, authorName: m.authorName, text: m.text, showAtSec: m.showAtSec, isOwner: m.isOwner

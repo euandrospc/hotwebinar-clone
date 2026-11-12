@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from "vitest";
 import { prisma } from "db";
+import { leadCookieName, signLeadCookie, verifyLeadCookie } from "@/lib/lead-session";
 
 const cookieStore = new Map<string, { value: string; options?: any }>();
 const setCookieMock = vi.fn((name: string, value: string, options?: any) => {
@@ -72,6 +73,19 @@ async function makeWebinar(overrides: any = {}) {
 }
 
 describe("submitOptin", () => {
+  it("preserves a previous legacy webinar session before signing into another webinar", async () => {
+    const oldWebinar = await makeWebinar({ slug: "legacy-tab" });
+    const previous = await prisma.lead.create({ data: { webinarId: oldWebinar.id, name: "Old", email: "old@example.test" } });
+    cookieStore.set("hw_lead", { value: signLeadCookie(previous.id) });
+    const nextWebinar = await makeWebinar({ slug: "new-tab" });
+    const { submitOptin } = await import("@/server/actions/public");
+    const form = new FormData(); form.set("name", "New"); form.set("email", "new@example.test");
+    await expect(submitOptin("new-tab", form)).rejects.toThrow(/__redirect/);
+    const next = await prisma.lead.findFirstOrThrow({ where: { webinarId: nextWebinar.id } });
+    expect(verifyLeadCookie(cookieStore.get(leadCookieName(oldWebinar.id))?.value)).toBe(previous.id);
+    expect(verifyLeadCookie(cookieStore.get(leadCookieName(nextWebinar.id))?.value)).toBe(next.id);
+    expect(verifyLeadCookie(cookieStore.get("hw_lead")?.value)).toBe(next.id);
+  });
   it("creates new lead, sets cookie, redirects to /<slug>/live", async () => {
     const w = await makeWebinar({ slug: "demo-1", webhookUrl: "https://x", webhookOnOptin: true });
     const { submitOptin } = await import("@/server/actions/public");

@@ -21,7 +21,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstub
 describe("player presence", () => {
   it("signals playback in the first second, renews the lease and clears a paused player", () => {
     const currentTimeRef = { current: 0 };
-    render(<Tracker currentTimeRef={currentTimeRef} leadId="l1" />);
+    render(<Tracker webinarId="w1" currentTimeRef={currentTimeRef} leadId="l1" />);
     act(() => vi.advanceTimersByTime(1000));
     expect(realtime.emitPresence).not.toHaveBeenCalled();
     for (let second = 1; second <= 16; second++) {
@@ -35,7 +35,7 @@ describe("player presence", () => {
 
   it("clears hidden playback and resends promptly after reconnecting", () => {
     const currentTimeRef = { current: 0 };
-    render(<Tracker currentTimeRef={currentTimeRef} leadId="l1" />);
+    render(<Tracker webinarId="w1" currentTimeRef={currentTimeRef} leadId="l1" />);
     currentTimeRef.current = 1;
     act(() => vi.advanceTimersByTime(1000));
     act(() => { hidden = true; document.dispatchEvent(new Event("visibilitychange")); });
@@ -46,5 +46,24 @@ describe("player presence", () => {
     currentTimeRef.current = 3;
     act(() => vi.advanceTimersByTime(1000));
     expect(realtime.emitPresence.mock.calls).toEqual([[true], [false], [true], [true]]);
+  });
+
+  it("keeps each mounted player's tracking and exit beacon attached to its own session", async () => {
+    const a = { current: 0 }, b = { current: 0 };
+    const sendBeacon = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("navigator", { sendBeacon });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    render(<><Tracker webinarId="webinar-a" leadId="lead-a" currentTimeRef={a} /><Tracker webinarId="webinar-b" leadId="lead-b" currentTimeRef={b} /></>);
+    a.current = 30; b.current = 15;
+    await act(async () => vi.advanceTimersByTimeAsync(30_000));
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/track?webinarId=webinar-a&leadId=lead-a",
+      "/api/track?webinarId=webinar-b&leadId=lead-b"
+    ]);
+    act(() => window.dispatchEvent(new Event("pagehide")));
+    expect(sendBeacon.mock.calls.map(([url]) => url)).toEqual([
+      "/api/track-leave?webinarId=webinar-a&leadId=lead-a",
+      "/api/track-leave?webinarId=webinar-b&leadId=lead-b"
+    ]);
   });
 });

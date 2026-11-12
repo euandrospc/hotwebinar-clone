@@ -33,6 +33,7 @@ vi.mock("@/server/realtime/auth", async (original) => {
       if (scope.kind === "staff" && headers.cookie === "staff=yes") return { kind: "staff", userId: "staff", rooms: ["staff"] };
       if (scope.kind === "lead" && headers.cookie?.startsWith("lead=")) {
         const leadId = headers.cookie.slice(5);
+        if (scope.leadId !== leadId || scope.webinarId !== "w1") return null;
         return { kind: "lead", leadId, webinarId: "w1", rooms: [`lead:${leadId}`] };
       }
       return null;
@@ -64,7 +65,9 @@ afterEach(async () => {
   await gateway.close();
 });
 
-function client(cookie: string, scope: object = { kind: "lead" }, origin: string | null = url) {
+const leadScope = (leadId: string) => ({ kind: "lead", webinarId: "w1", leadId });
+
+function client(cookie: string, scope: object = leadScope(cookie.slice("lead=".length)), origin: string | null = url) {
   const socket = connect(url, {
     transports: ["websocket"], auth: { scope }, reconnection: false, forceNew: true,
     extraHeaders: { Cookie: cookie, ...(origin ? { Origin: origin } : {}) }
@@ -88,14 +91,26 @@ function socketEvent(socket: Socket, event: string, predicate?: (value: unknown)
 
 describe("WebSocket gateway", () => {
   it("requires same-origin connections and authenticated scopes", async () => {
-    const foreign = client("lead=l1", { kind: "lead" }, "https://evil.example");
+    const foreign = client("lead=l1", leadScope("l1"), "https://evil.example");
     await socketEvent(foreign, "connect_error");
     expect(foreign.connected).toBe(false);
-    const missing = client("lead=l1", { kind: "lead" }, null);
+    const missing = client("lead=l1", leadScope("l1"), null);
     await socketEvent(missing, "connect_error");
     const unauthenticated = client("", { kind: "staff" });
     await socketEvent(unauthenticated, "connect_error");
     expect(unauthenticated.connected).toBe(false);
+  });
+
+  it("rejects missing webinar scope and a scope that disagrees with the authenticated identity", async () => {
+    const unscoped = client("lead=l1", { kind: "lead" });
+    await socketEvent(unscoped, "connect_error");
+    expect(unscoped.connected).toBe(false);
+    const wrongLead = client("lead=l1", leadScope("l2"));
+    await socketEvent(wrongLead, "connect_error");
+    expect(wrongLead.connected).toBe(false);
+    const wrongWebinar = client("lead=l1", { ...leadScope("l1"), webinarId: "w2" });
+    await socketEvent(wrongWebinar, "connect_error");
+    expect(wrongWebinar.connected).toBe(false);
   });
 
   it("delivers persisted events to the intended lead and staff without leaking to another lead", async () => {

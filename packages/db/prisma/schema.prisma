@@ -26,6 +26,7 @@ model User {
   videos           Video[]
   accountSettings  AccountSettings?
   teamChatMessages LeadChatMessage[] @relation("TeamChatAuthor")
+  abExperiments    AbExperiment[]
 
   @@map("user")
   assignedConversations Lead[] @relation("ConversationAssignee")
@@ -278,6 +279,8 @@ model Webinar {
   saleNotifications      SaleNotification[]
   audienceSamples        AudienceSample[]
   sales                  Sale[]
+  abExperimentsAsA        AbExperiment[] @relation("AbWebinarA")
+  abExperimentsAsB        AbExperiment[] @relation("AbWebinarB")
 
   @@index([ownerId, status])
   @@map("webinar")
@@ -340,11 +343,93 @@ model Lead {
   leadChatMessages  LeadChatMessage[]
   webhookDeliveries WebhookDelivery[]
   sales             Sale[]
+  abAssignments     AbAssignment[]
 
   @@unique([webinarId, email])
   @@index([webinarId, sessionStart])
   @@index([ip])
   @@map("lead")
+}
+
+enum AbExperimentMode {
+  OBSERVATIONAL
+  RANDOMIZED
+}
+
+enum AbExperimentStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum AbExperimentMetric {
+  PURCHASE
+  OFFER_CLICK
+  PITCH_REACHED
+}
+
+enum AbVariant {
+  A
+  B
+}
+
+model AbExperiment {
+  id                     String             @id @default(cuid())
+  ownerId                String
+  name                   String
+  hypothesis             String             @default("")
+  testVariable           String             @default("FULL_WEBINAR")
+  variantADescription    String             @default("")
+  variantBDescription    String             @default("")
+  mode                   AbExperimentMode
+  status                 AbExperimentStatus @default(DRAFT)
+  metric                 AbExperimentMetric @default(PURCHASE)
+  webinarAId             String
+  webinarBId             String
+  baselineRate           Float              @default(0.05)
+  minimumDetectableLift  Float              @default(0.2)
+  sampleSizePerVariant   Int
+  durationDays           Int                @default(14)
+  conversionWindowHours Int                @default(72)
+  startedAt              DateTime?
+  endsAt                 DateTime?
+  completedAt            DateTime?
+  interruptedAt          DateTime?
+  webinarAFingerprint    String?
+  webinarBFingerprint    String?
+  webinarASnapshot       Json?
+  webinarBSnapshot       Json?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  owner                  User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  webinarA               Webinar            @relation("AbWebinarA", fields: [webinarAId], references: [id], onDelete: Restrict)
+  webinarB               Webinar            @relation("AbWebinarB", fields: [webinarBId], references: [id], onDelete: Restrict)
+  assignments            AbAssignment[]
+
+  @@index([ownerId, createdAt])
+  @@map("ab_experiment")
+}
+
+model AbAssignment {
+  id           String       @id @default(cuid())
+  experimentId String
+  visitorId    String
+  variant      AbVariant
+  leadId       String?
+  createdAt    DateTime     @default(now())
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmContent   String?
+  device       String?
+  experiment   AbExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@unique([experimentId, visitorId])
+  @@index([experimentId, createdAt])
+  @@index([leadId])
+  @@map("ab_assignment")
 }
 
 enum GeoIpStatus {

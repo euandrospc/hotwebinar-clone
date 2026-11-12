@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "db";
-import { signLeadCookie } from "@/lib/lead-session";
+import { leadCookieName, signLeadCookie, verifyLeadCookie } from "@/lib/lead-session";
 import { enqueueWebhook } from "@/lib/webhook";
 import { getClientIp } from "@/lib/geoip";
 import { queueLeadGeo } from "@/server/geoip-queue";
@@ -15,6 +15,8 @@ import { optinLimiter } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
 import { canAccessWebinar } from "@/lib/webinar-access";
 import { enqueueDispatchWebhook } from "jobs";
+import { abAssignmentCookieName } from "@/lib/ab-test-cookie";
+import { bindAbAssignmentToLead } from "@/server/ab-tests/assignment";
 
 type OkResult = { ok: true };
 type ErrorResult = { error: { field?: string; message: string } };
@@ -110,16 +112,29 @@ export async function submitOptin(slug: string, formData: FormData): Promise<Act
 
   const cookie = signLeadCookie(lead.id);
   const cookieStore = await cookies();
-  cookieStore.set("hw_lead", cookie, {
+  await bindAbAssignmentToLead(w.id, lead.id, cookieStore.get(abAssignmentCookieName(w.id))?.value);
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 30,
-    // path "/" so /api/* routes (track, cta, lead-chat) receive the cookie too.
-    // Trade-off: lead session of webinar A is visible to webinar B's pages, but
-    // resolveLeadFromCookie validates lead.webinarId matches the requested webinar.
+    // Scoped names coexist at / so every public API receives its webinar session.
     path: "/"
-  });
+  };
+  // Promote the previous legacy session before another webinar replaces it.
+  // This preserves already-open tabs during the scoped-cookie rollout.
+  const previousToken = cookieStore.get("hw_lead")?.value;
+  const previousLeadId = verifyLeadCookie(previousToken);
+  if (previousLeadId && previousLeadId !== lead.id) {
+    const previousLead = await prisma.lead.findUnique({ where: { id: previousLeadId }, select: { webinarId: true } });
+    if (previousLead && previousLead.webinarId !== w.id && !cookieStore.get(leadCookieName(previousLead.webinarId))) {
+      cookieStore.set(leadCookieName(previousLead.webinarId), previousToken!, cookieOptions);
+    }
+  }
+  cookieStore.set(leadCookieName(w.id), cookie, cookieOptions);
+  // Preserve legacy entry sessions during rollout. API requests must prove their
+  // webinar scope before this fallback may be used; it never selects a webinar.
+  cookieStore.set("hw_lead", cookie, cookieOptions);
 
   await queueLeadGeo(lead);
 

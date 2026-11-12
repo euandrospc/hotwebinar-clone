@@ -1,5 +1,19 @@
 import crypto from "node:crypto";
 
+export interface LeadCookieReader { get(name: string): { value: string } | undefined }
+
+/** Separate persistent sessions prevent another webinar tab from replacing this identity. */
+export function leadCookieName(webinarId: string): string {
+  return `hw_lead_${crypto.createHash("sha256").update(webinarId).digest("hex").slice(0, 20)}`;
+}
+
+/** The caller must still check lead.webinarId against the requested webinar in the DB. */
+export function readLeadCookieForWebinar(store: LeadCookieReader, webinarId: string): string | null {
+  const scoped = store.get(leadCookieName(webinarId));
+  // A bad scoped cookie must not silently fall back to another global identity.
+  return verifyLeadCookie(scoped ? scoped.value : store.get("hw_lead")?.value);
+}
+
 function getSecret(): string {
   const v = process.env.LEAD_SESSION_SECRET;
   if (!v || v.length < 16) throw new Error("Missing or too-short env: LEAD_SESSION_SECRET");

@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 const publishChatEventMock = vi.hoisted(() => vi.fn());
 vi.mock("@/server/realtime/bus", () => ({ publishChatEvent: publishChatEventMock }));
 
+let currentWebinarId = "";
 const cookieGetMock = vi.fn();
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: cookieGetMock })
@@ -35,6 +36,7 @@ async function setup() {
   const lead = await prisma.lead.create({
     data: { webinarId: w.id, name: "Joe", email: "j@e.com" }
   });
+  currentWebinarId = w.id;
   cookieGetMock.mockReturnValue({ value: signLeadCookie(lead.id) });
   return { w, lead };
 }
@@ -43,7 +45,7 @@ describe("POST /api/lead-chat", () => {
   it("persists message scoped to leadId", async () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
-    const req = new Request("http://localhost/api/lead-chat", {
+    const req = new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: "Olá!", videoSec: 42 })
     });
@@ -67,7 +69,7 @@ describe("POST /api/lead-chat", () => {
     });
     const { POST } = await import("@/app/api/lead-chat/route");
     const clientMessageId = randomUUID();
-    const response = await POST(new Request("http://localhost/api/lead-chat", {
+    const response = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", body: JSON.stringify({ text: "Persistida", videoSec: 10, clientMessageId })
     }));
     const message = await response.json();
@@ -81,8 +83,8 @@ describe("POST /api/lead-chat", () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
     const body = JSON.stringify({ text: "Uma intenção", videoSec: 42, clientMessageId: randomUUID() });
-    const first = await POST(new Request("http://localhost/api/lead-chat", { method: "POST", body }));
-    const retry = await POST(new Request("http://localhost/api/lead-chat", { method: "POST", body }));
+    const first = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, { method: "POST", body }));
+    const retry = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, { method: "POST", body }));
     expect(await retry.json()).toEqual(await first.json());
     expect(await prisma.leadChatMessage.count({ where: { leadId: lead.id } })).toBe(1);
     expect(publishChatEventMock).toHaveBeenCalledTimes(1);
@@ -92,7 +94,7 @@ describe("POST /api/lead-chat", () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
     const body = JSON.stringify({ text: "Concorrente", clientMessageId: randomUUID() });
-    const responses = await Promise.all([0, 1].map(() => POST(new Request("http://localhost/api/lead-chat", { method: "POST", body }))));
+    const responses = await Promise.all([0, 1].map(() => POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, { method: "POST", body }))));
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     const messages = await Promise.all(responses.map((response) => response.json()));
     expect(messages[0].id).toBe(messages[1].id);
@@ -104,7 +106,7 @@ describe("POST /api/lead-chat", () => {
     const { lead } = await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
     for (const clientMessageId of [randomUUID(), randomUUID()]) {
-      expect((await POST(new Request("http://localhost/api/lead-chat", {
+      expect((await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
         method: "POST", body: JSON.stringify({ text: "Oi", clientMessageId })
       }))).status).toBe(200);
     }
@@ -119,7 +121,7 @@ describe("POST /api/lead-chat", () => {
       text: "Equipe", clientMessageId
     } });
     const { POST } = await import("@/app/api/lead-chat/route");
-    const response = await POST(new Request("http://localhost/api/lead-chat", {
+    const response = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", body: JSON.stringify({ text: "Equipe", clientMessageId })
     }));
     expect(response.status).toBe(409);
@@ -131,7 +133,7 @@ describe("POST /api/lead-chat", () => {
     const { lead } = await setup();
     publishChatEventMock.mockRejectedValueOnce(new Error("Redis unavailable"));
     const { POST } = await import("@/app/api/lead-chat/route");
-    const response = await POST(new Request("http://localhost/api/lead-chat", {
+    const response = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", body: JSON.stringify({ text: "Histórico durável", clientMessageId: randomUUID() })
     }));
     expect(response.status).toBe(200);
@@ -141,7 +143,7 @@ describe("POST /api/lead-chat", () => {
   it("rejects whitespace-only messages", async () => {
     await setup();
     const { POST } = await import("@/app/api/lead-chat/route");
-    const response = await POST(new Request("http://localhost/api/lead-chat", {
+    const response = await POST(new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", body: JSON.stringify({ text: " \n\t " })
     }));
     expect(response.status).toBe(400);
@@ -151,7 +153,7 @@ describe("POST /api/lead-chat", () => {
   it("rejects empty text 400", async () => {
     await setup();
     const { POST } = await import("@/app/api/lead-chat/route?" + Date.now());
-    const req = new Request("http://localhost/api/lead-chat", {
+    const req = new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: "", videoSec: 0 })
     });
@@ -162,7 +164,7 @@ describe("POST /api/lead-chat", () => {
   it("rejects 401 without cookie", async () => {
     cookieGetMock.mockReturnValue(undefined);
     const { POST } = await import("@/app/api/lead-chat/route?" + (Date.now() + 1));
-    const req = new Request("http://localhost/api/lead-chat", {
+    const req = new Request(`http://localhost/api/lead-chat?webinarId=${currentWebinarId}`, {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ text: "x", videoSec: 0 })
     });
