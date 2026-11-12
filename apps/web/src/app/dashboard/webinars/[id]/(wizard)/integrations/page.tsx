@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { IntegrationsForm } from "@/components/webinar/integrations-form";
 import { SalesWebhookCard } from "@/components/sales-webhook-card";
@@ -13,7 +14,7 @@ export default async function IntegrationsPage({ params }: { params: Promise<{ i
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
   const w = await prisma.webinar.findUnique({ where: { id } });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-2 xl:items-start">
       <IntegrationsForm

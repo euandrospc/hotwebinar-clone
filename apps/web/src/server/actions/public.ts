@@ -13,6 +13,7 @@ import { getClientIp } from "@/lib/geoip";
 import { queueLeadGeo } from "@/server/geoip-queue";
 import { optinLimiter } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { enqueueDispatchWebhook } from "jobs";
 
 type OkResult = { ok: true };
@@ -134,7 +135,7 @@ export async function retryWebhook(deliveryId: string): Promise<ActionResult> {
     where: { id: deliveryId },
     include: { webinar: true }
   });
-  if (!orig || orig.webinar.ownerId !== session.user.id) return err("Não encontrado");
+  if (!orig || !canAccessWebinar(session, orig.webinar)) return err("Não encontrado");
 
   const next = await prisma.webhookDelivery.create({
     data: {

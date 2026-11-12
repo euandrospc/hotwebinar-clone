@@ -32,7 +32,7 @@ describe("realtime publication", () => {
     await publishPresenceEvent("w1");
     expect(mocks.redis.sadd).toHaveBeenCalledWith("test:presence-dirty", "w1");
     await flushPresenceEvents();
-    expect(JSON.parse(mocks.redis.publish.mock.calls[0][1]).rooms).toEqual(["webinar:w1", "dashboard:owner1", "staff"]);
+    expect(JSON.parse(mocks.redis.publish.mock.calls[0][1]).rooms).toEqual(["webinar:w1", "dashboard:owner1", "dashboard:admins", "staff"]);
   });
 
   it("requeues a presence update if publishing failed", async () => {

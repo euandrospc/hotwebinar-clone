@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { RealtimeDashboard } from "@/components/webinar/realtime-dashboard";
 import { getWebinarRealtimeSnapshot } from "@/server/webinar-realtime";
@@ -21,7 +22,7 @@ export default async function RealtimePage({ params }: { params: Promise<{ id: s
     where: { id },
     select: { id: true, ownerId: true, title: true, name: true }
   });
-  if (!webinar || webinar.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, webinar)) notFound();
 
   const initialData = await getWebinarRealtimeSnapshot(id);
 

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { getWebinarRealtimeSnapshot } from "@/server/webinar-realtime";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const webinar = await prisma.webinar.findFirst({
-    where: { id, ownerId: session.user.id },
+    where: { id, ...ownerScope(session) },
     select: { id: true }
   });
   if (!webinar) return NextResponse.json({ error: "Not found" }, { status: 404, headers: responseHeaders });

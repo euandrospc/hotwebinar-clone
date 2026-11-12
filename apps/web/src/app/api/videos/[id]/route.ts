@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { canAccessVideo } from "@/lib/webinar-access";
 import { prisma } from "db";
 
 const patchSchema = z.object({
@@ -18,7 +19,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
   const video = await prisma.video.findUnique({ where: { id } });
-  if (!video || video.ownerId !== session.user.id) {
+  if (!canAccessVideo(session, video)) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 

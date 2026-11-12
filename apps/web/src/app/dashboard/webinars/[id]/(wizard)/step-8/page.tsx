@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { Step8Form } from "@/components/wizard/step-8-form";
 
@@ -15,7 +16,7 @@ export default async function Step8Page({ params }: { params: Promise<{ id: stri
     where: { id },
     include: { video: true }
   });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
 
   const durationSec =
     w.video?.durationSec ??

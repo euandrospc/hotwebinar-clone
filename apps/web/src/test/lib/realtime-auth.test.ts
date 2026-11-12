@@ -46,17 +46,18 @@ describe("realtime authentication", () => {
   });
 
   it("rechecks revoked sessions even when auth returned a cached user", async () => {
-    expect(await authenticateRealtime({}, { kind: "dashboard" })).toMatchObject({ rooms: ["dashboard:owner"] });
+    expect(await authenticateRealtime({}, { kind: "dashboard" })).toMatchObject({ rooms: ["dashboard:owner", "dashboard:admins"] });
     mocks.session.mockResolvedValue(null);
     expect(await authenticateRealtime({}, { kind: "dashboard" })).toBeNull();
   });
 
-  it("requires owner access for a webinar and excludes attendants from metrics", async () => {
+  it("lets admins watch any existing webinar and excludes attendants from metrics", async () => {
     expect(await authenticateRealtime({}, { kind: "webinar", webinarId: "w1" })).toMatchObject({ rooms: ["webinar:w1"] });
-    expect(mocks.webinar).toHaveBeenCalledWith({ where: { id: "w1", ownerId: "owner" }, select: { id: true } });
+    expect(mocks.webinar).toHaveBeenCalledWith({ where: { id: "w1" }, select: { id: true } });
     mocks.webinar.mockResolvedValue(null);
     expect(await authenticateRealtime({}, { kind: "webinar", webinarId: "foreign" })).toBeNull();
     mocks.session.mockResolvedValue({ user: { id: "staff", role: "attendant" } });
     expect(await authenticateRealtime({}, { kind: "dashboard" })).toBeNull();
+    expect(await authenticateRealtime({}, { kind: "webinar", webinarId: "w1" })).toBeNull();
   });
 });

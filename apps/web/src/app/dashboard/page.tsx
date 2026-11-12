@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { DASHBOARD_TIME_ZONE } from "@/lib/dashboard-overview";
 import { createDashboardDemo, isDashboardDemoEnabled } from "@/lib/dashboard-demo";
@@ -67,7 +68,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     ? createDashboardDemo(rangeStart, rangeEnd)
     : null;
   const webinars = demo ? [demo.webinar] : (await prisma.webinar.findMany({
-    where: { ownerId: session.user.id },
+    where: ownerScope(session),
     orderBy: { updatedAt: "desc" },
     select: { id: true, title: true, name: true, status: true }
   })).map((webinar) => ({ ...webinar, title: webinar.title || webinar.name || "Sem título" }));
@@ -76,8 +77,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     : webinars.find((webinar) => webinar.status === "ACTIVE") ?? webinars[0]);
   if (sp.webinarId && !selectedWebinar) notFound();
   const [overview, insights] = demo ? [demo.overview, demo.insights] : await Promise.all([
-    getDashboardOverview(session.user.id, rangeStart, rangeEnd, selectedWebinar?.id),
-    getDashboardInsights(session.user.id, rangeStart, rangeEnd, selectedWebinar?.id)
+    getDashboardOverview(session.user, rangeStart, rangeEnd, selectedWebinar?.id),
+    getDashboardInsights(session.user, rangeStart, rangeEnd, selectedWebinar?.id)
   ]);
   const displayParts = (date: Date) => {
     const p = zonedParts(date, DASHBOARD_TIME_ZONE);

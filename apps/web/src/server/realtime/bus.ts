@@ -1,6 +1,7 @@
 import { prisma } from "db";
 import type { RealtimeChatMessage, RealtimeEvent } from "../../lib/realtime-protocol";
 import { getRedis, realtimePrefix, waitForRedisReady } from "./redis";
+import { ADMIN_DASHBOARD_ROOM } from "../../lib/webinar-access";
 
 export interface RealtimeEnvelope {
   rooms: string[];
@@ -52,7 +53,7 @@ export async function flushPresenceEvents(): Promise<void> {
     const webinars = await prisma.webinar.findMany({ where: { id: { in: webinarIds } }, select: { id: true, ownerId: true } });
     for (const webinar of webinars) {
       const sent = await publish({
-        rooms: [`webinar:${webinar.id}`, `dashboard:${webinar.ownerId}`, "staff"],
+        rooms: [`webinar:${webinar.id}`, `dashboard:${webinar.ownerId}`, ADMIN_DASHBOARD_ROOM, "staff"],
         event: { type: "presence", webinarId: webinar.id }
       });
       if (!sent) await redis.sadd(`${realtimePrefix()}:presence-dirty`, webinar.id);

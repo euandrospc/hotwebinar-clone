@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { Step1Form } from "@/components/wizard/step-1-form";
 
@@ -12,7 +13,7 @@ export default async function Step1Page({ params }: { params: Promise<{ id: stri
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
   const w = await prisma.webinar.findUnique({ where: { id } });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
 
   return (
     <Step1Form

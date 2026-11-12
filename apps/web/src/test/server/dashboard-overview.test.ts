@@ -25,7 +25,7 @@ describe("dashboard overview query scope", () => {
       webinarId: "selected", leadId: "cookie-return", kind: "VIDEO_TICK",
       _min: { createdAt: new Date("2026-11-04T15:00:00Z") }, _max: { videoSec: 120 }
     }]);
-    const overview = await getDashboardOverview("owner", start, end, "selected");
+    const overview = await getDashboardOverview({ id: "owner" }, start, end, "selected");
     expect(queries.webinars).toHaveBeenCalledWith(expect.objectContaining({ where: { ownerId: "owner", id: "selected" } }));
     expect(queries.events).toHaveBeenCalledWith(expect.objectContaining({
       by: ["webinarId", "leadId", "kind"],
@@ -38,16 +38,25 @@ describe("dashboard overview query scope", () => {
   });
 
   it("returns no foreign webinar data and does not drop owner scope when an id is supplied", async () => {
-    const overview = await getDashboardOverview("owner", start, end, "foreign-id");
+    const overview = await getDashboardOverview({ id: "owner" }, start, end, "foreign-id");
     expect(overview.webinars).toEqual([]);
     expect(queries.events.mock.calls[0][0].where.webinar).toEqual({ ownerId: "owner", id: "foreign-id" });
     expect(queries.sales.mock.calls[0][0].where.webinar).toEqual({ ownerId: "owner", id: "foreign-id" });
   });
 
   it("defaults to all owned webinars and rejects missing authentication context", async () => {
-    await getDashboardOverview("owner", start, end);
+    await getDashboardOverview({ id: "owner" }, start, end);
     expect(queries.webinars.mock.calls[0][0].where).toEqual({ ownerId: "owner" });
-    await expect(getDashboardOverview("", start, end)).rejects.toThrow("Dashboard owner is required");
+    await expect(getDashboardOverview({ id: "" }, start, end)).rejects.toThrow("Dashboard owner is required");
     expect(queries.webinars).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets admins read every webinar while keeping the selected webinar filter", async () => {
+    await getDashboardOverview({ id: "admin", role: "admin" }, start, end, "any-owner");
+    expect(queries.webinars.mock.calls[0][0].where).toEqual({ id: "any-owner" });
+    expect(queries.events.mock.calls[0][0].where.webinar).toEqual({ id: "any-owner" });
+    expect(queries.sales.mock.calls[0][0].where.webinar).toEqual({ id: "any-owner" });
+    await getDashboardOverview({ id: "attendant", role: "attendant" }, start, end);
+    expect(queries.webinars.mock.calls[1][0].where).toEqual({ ownerId: "attendant" });
   });
 });

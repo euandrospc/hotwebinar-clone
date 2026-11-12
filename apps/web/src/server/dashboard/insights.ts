@@ -1,12 +1,13 @@
 import { prisma } from "db";
+import { ownerScope, type AccessUser } from "@/lib/webinar-access";
 import { DASHBOARD_EVENT_KINDS } from "@/lib/dashboard-overview";
 import { buildDashboardInsights, dashboardComparisonRange, type DashboardInsights } from "@/lib/dashboard-insights";
 
-/** Every query is scoped to the authenticated owner and, optionally, the selected webinar. */
-export async function getDashboardInsights(ownerId: string, rangeStart: Date, rangeEnd: Date, webinarId?: string): Promise<DashboardInsights> {
-  if (!ownerId) throw new Error("Dashboard owner is required");
+/** Every query is scoped to the webinars the user may access (all for admins) and, optionally, the selected webinar. */
+export async function getDashboardInsights(viewer: AccessUser, rangeStart: Date, rangeEnd: Date, webinarId?: string): Promise<DashboardInsights> {
+  if (!viewer?.id) throw new Error("Dashboard owner is required");
   const previous = dashboardComparisonRange(rangeStart, rangeEnd);
-  const webinarWhere = { ownerId, ...(webinarId === undefined ? {} : { id: webinarId }) };
+  const webinarWhere = { ...ownerScope(viewer), ...(webinarId === undefined ? {} : { id: webinarId }) };
   const createdAt = { gte: rangeStart, lte: rangeEnd };
   const [webinars, leads, viewerGroups, messages, sales] = await Promise.all([
     prisma.webinar.findMany({

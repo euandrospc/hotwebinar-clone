@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { publicSaleNotificationDto } from "@/lib/public-dto";
 import { SalesSimulation } from "./sales-simulation";
 
@@ -15,7 +16,7 @@ export default async function SalesPreviewPage({ params }: { params: Promise<{ i
   if (!session) notFound();
   const { id } = await params;
   const webinar = await prisma.webinar.findFirst({
-    where: { id, ownerId: session.user.id },
+    where: { id, ...ownerScope(session) },
     select: { title: true, saleNotifications: { orderBy: { showAtSec: "asc" } } }
   });
   if (!webinar) notFound();

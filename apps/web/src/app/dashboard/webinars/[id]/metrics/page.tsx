@@ -5,6 +5,7 @@ import { AudienceSummary } from "@/components/dashboard/audience-summary";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
@@ -58,7 +59,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
     where: { id },
     include: { video: { select: { durationSec: true } } }
   });
-  if (!webinar || webinar.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, webinar)) notFound();
 
   const { rangeStart, rangeEnd } = parseRange(sp.from, sp.to);
   const inRange = { gte: rangeStart, lte: rangeEnd };

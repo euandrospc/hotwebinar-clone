@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import {
   accountSettingsSchema,
   type AccountSettingsInput
@@ -71,7 +72,7 @@ export async function getWebinarSalesWebhookSecret(webinarId: string): Promise<s
     where: { id: webinarId },
     select: { ownerId: true, salesWebhookSecret: true }
   });
-  if (!row || row.ownerId !== session.user.id) return null;
+  if (!canAccessWebinar(session, row)) return null;
   return row.salesWebhookSecret;
 }
 
@@ -80,7 +81,7 @@ export async function regenerateWebinarSalesWebhookSecret(
 ): Promise<{ secret: string } | { error: string }> {
   const session = await requireSession();
   const w = await prisma.webinar.findUnique({ where: { id: webinarId }, select: { ownerId: true } });
-  if (!w || w.ownerId !== session.user.id) return { error: "not_found" };
+  if (!canAccessWebinar(session, w)) return { error: "not_found" };
   const secret = generateSecret();
   await prisma.webinar.update({ where: { id: webinarId }, data: { salesWebhookSecret: secret } });
   revalidatePath(`/dashboard/webinars/${webinarId}/integrations`);

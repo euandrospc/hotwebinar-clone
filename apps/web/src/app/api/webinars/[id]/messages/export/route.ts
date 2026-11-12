@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { buildChatXlsx } from "@/lib/chat-xlsx";
 
@@ -13,7 +14,7 @@ export async function GET(
 
   const { id } = await params;
   const webinar = await prisma.webinar.findUnique({ where: { id } });
-  if (!webinar || webinar.ownerId !== session.user.id) {
+  if (!canAccessWebinar(session, webinar)) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 

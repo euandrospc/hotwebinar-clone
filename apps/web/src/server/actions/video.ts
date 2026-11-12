@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { canAccessVideo, ownerScope } from "@/lib/webinar-access";
 import { enqueueTranscode, enqueueDeleteAssets } from "jobs";
 import { proxifyHlsUrl } from "@/lib/public-dto";
 
@@ -18,7 +19,7 @@ async function requireSession() {
 export async function listVideos() {
   const session = await requireSession();
   const rows = await prisma.video.findMany({
-    where: { ownerId: session.user.id },
+    where: ownerScope(session),
     orderBy: { createdAt: "desc" }
   });
   return rows.map((v) => ({
@@ -40,7 +41,7 @@ export async function listVideos() {
 export async function deleteVideo(id: string, force: boolean): Promise<Result> {
   const session = await requireSession();
   const video = await prisma.video.findUnique({ where: { id } });
-  if (!video || video.ownerId !== session.user.id) return { error: "not_found" };
+  if (!canAccessVideo(session, video)) return { error: "not_found" };
 
   const webinars = await prisma.webinar.findMany({
     where: { videoId: id },
@@ -50,7 +51,7 @@ export async function deleteVideo(id: string, force: boolean): Promise<Result> {
     return { error: "in_use", webinars };
   }
   await prisma.video.delete({ where: { id } });
-  await enqueueDeleteAssets({ videoId: id, ownerId: session.user.id });
+  await enqueueDeleteAssets({ videoId: id, ownerId: video.ownerId });
   revalidatePath("/dashboard/videos");
   return { ok: true };
 }
@@ -58,7 +59,7 @@ export async function deleteVideo(id: string, force: boolean): Promise<Result> {
 export async function setCustomThumb(id: string, customThumbUrl: string | null): Promise<Result> {
   const session = await requireSession();
   const video = await prisma.video.findUnique({ where: { id } });
-  if (!video || video.ownerId !== session.user.id) return { error: "not_found" };
+  if (!canAccessVideo(session, video)) return { error: "not_found" };
   await prisma.video.update({ where: { id }, data: { customThumbUrl } });
   revalidatePath("/dashboard/videos");
   return { ok: true };
@@ -67,7 +68,7 @@ export async function setCustomThumb(id: string, customThumbUrl: string | null):
 export async function retryTranscode(id: string): Promise<Result> {
   const session = await requireSession();
   const video = await prisma.video.findUnique({ where: { id } });
-  if (!video || video.ownerId !== session.user.id) return { error: "not_found" };
+  if (!canAccessVideo(session, video)) return { error: "not_found" };
   if (video.status !== "FAILED") return { error: "not_failed" };
   await prisma.video.update({ where: { id }, data: { status: "QUEUED", errorMessage: null, progress: 0 } });
   await enqueueTranscode({ videoId: id });

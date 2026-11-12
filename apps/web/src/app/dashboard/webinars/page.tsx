@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "db";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { WebinarsFilters } from "@/components/webinars/webinars-filters";
 import { WebinarsTable } from "@/components/webinars/webinars-table";
 import { NewWebinarButton } from "@/components/webinars/new-webinar-button";
@@ -31,7 +32,7 @@ export default async function WebinarsPage({
   const page = Math.max(1, parseInt(get("page") || "1", 10));
 
   const where: Prisma.WebinarWhereInput = {
-    ownerId: session.user.id,
+    ...ownerScope(session),
     ...(q && { OR: [{ name: { contains: q, mode: "insensitive" } }, { title: { contains: q, mode: "insensitive" } }] }),
     ...(status === "DRAFT" || status === "ACTIVE" || status === "ARCHIVED" ? { status } : {}),
     ...(tipo === "UNICO" ? { mode: "UNICO", recurring: false } :

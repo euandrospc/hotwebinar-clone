@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar, ownerScope } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { Step4Form } from "@/components/wizard/step-4-form";
 import type { LibraryVideo } from "@/components/videos/library-picker";
@@ -14,10 +15,10 @@ export default async function Step4Page({ params }: { params: Promise<{ id: stri
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
   const w = await prisma.webinar.findUnique({ where: { id }, include: { video: true } });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
 
   const library = await prisma.video.findMany({
-    where: { ownerId: session.user.id, status: "READY" },
+    where: { ...ownerScope(session), status: "READY" },
     orderBy: { createdAt: "desc" }
   });
   const libraryVideos: LibraryVideo[] = library.map((v) => ({

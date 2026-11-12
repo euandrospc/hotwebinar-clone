@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { leadsDateRange } from "@/lib/leads-date-range";
 import { prisma } from "db";
 
@@ -19,7 +20,7 @@ export async function GET(
 
   const { id } = await params;
   const webinar = await prisma.webinar.findUnique({ where: { id } });
-  if (!webinar || webinar.ownerId !== session.user.id) {
+  if (!canAccessWebinar(session, webinar)) {
     return new Response("Not found", { status: 404 });
   }
 

@@ -2,6 +2,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { prisma } from "db";
 import { auth } from "../../lib/auth";
 import { verifyLeadCookie } from "../../lib/lead-session";
+import { ADMIN_DASHBOARD_ROOM, ownerScope } from "../../lib/webinar-access";
 import type { RealtimeScope } from "../../lib/realtime-protocol";
 
 export type RealtimeIdentity =
@@ -66,8 +67,9 @@ export async function authenticateRealtime(
       : null;
   }
   if (user.role !== "admin") return null;
-  if (scope.kind === "dashboard") return { kind: "dashboard", userId: user.id, rooms: [`dashboard:${user.id}`] };
+  if (scope.kind === "dashboard") return { kind: "dashboard", userId: user.id, rooms: [`dashboard:${user.id}`, ADMIN_DASHBOARD_ROOM] };
 
-  const webinar = await prisma.webinar.findFirst({ where: { id: scope.webinarId, ownerId: user.id }, select: { id: true } });
+  // Only admins reach this point, and admins may watch every webinar.
+  const webinar = await prisma.webinar.findFirst({ where: { id: scope.webinarId, ...ownerScope(user) }, select: { id: true } });
   return webinar ? { kind: "webinar", userId: user.id, rooms: [`webinar:${webinar.id}`] } : null;
 }

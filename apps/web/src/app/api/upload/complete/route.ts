@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { canAccessVideo } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { headObject } from "@/lib/storage/presign";
 import { ORIGINALS_BUCKET } from "@/lib/storage/buckets";
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
 
   const video = await prisma.video.findUnique({ where: { id: parsed.data.videoId } });
-  if (!video || video.ownerId !== session.user.id) {
+  if (!canAccessVideo(session, video)) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   if (!video.originalUrl) return NextResponse.json({ error: "missing_key" }, { status: 400 });

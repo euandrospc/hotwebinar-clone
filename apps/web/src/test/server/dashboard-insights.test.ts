@@ -20,7 +20,7 @@ describe("dashboard insights query scope", () => {
     queries.webinars.mockResolvedValue([{ id: "selected", pitchAtSec: 300, video: { durationSec: 600 } }]);
     queries.leads.mockResolvedValue([{ id: "returning", webinarId: "selected", watchedSec: 1800, country: "BR", region: "SP" }]);
     queries.events.mockResolvedValue([{ webinarId: "selected", leadId: "returning", _max: { videoSec: 400 } }]);
-    const result = await getDashboardInsights("owner", start, end, "selected");
+    const result = await getDashboardInsights({ id: "owner" }, start, end, "selected");
     const scope = { ownerId: "owner", id: "selected" };
     expect(queries.webinars.mock.calls[0][0].where).toEqual(scope);
     for (const name of ["leads", "events", "messages", "sales"] as const) {
@@ -59,19 +59,26 @@ describe("dashboard insights query scope", () => {
   });
 
   it("does not broaden foreign or empty selections and defaults to all owned webinars only when omitted", async () => {
-    const result = await getDashboardInsights("owner", start, end, "foreign");
+    const result = await getDashboardInsights({ id: "owner" }, start, end, "foreign");
     expect(result.geography.totalAccesses).toBe(0);
     expect(queries.webinars.mock.calls[0][0].where).toEqual({ ownerId: "owner", id: "foreign" });
-    await getDashboardInsights("owner", start, end, "");
+    await getDashboardInsights({ id: "owner" }, start, end, "");
     expect(queries.webinars.mock.calls[1][0].where).toEqual({ ownerId: "owner", id: "" });
-    await getDashboardInsights("owner", start, end);
+    await getDashboardInsights({ id: "owner" }, start, end);
     expect(queries.webinars.mock.calls[2][0].where).toEqual({ ownerId: "owner" });
   });
 
   it("rejects missing owner and invalid ranges before issuing queries", async () => {
-    await expect(getDashboardInsights("", start, end)).rejects.toThrow("Dashboard owner is required");
-    await expect(getDashboardInsights("owner", end, start)).rejects.toThrow(RangeError);
-    await expect(getDashboardInsights("owner", new Date("invalid"), end)).rejects.toThrow(RangeError);
+    await expect(getDashboardInsights({ id: "" }, start, end)).rejects.toThrow("Dashboard owner is required");
+    await expect(getDashboardInsights({ id: "owner" }, end, start)).rejects.toThrow(RangeError);
+    await expect(getDashboardInsights({ id: "owner" }, new Date("invalid"), end)).rejects.toThrow(RangeError);
     for (const query of Object.values(queries)) expect(query).not.toHaveBeenCalled();
+  });
+
+  it("lets admins read every webinar while keeping the selected webinar filter", async () => {
+    await getDashboardInsights({ id: "admin", role: "admin" }, start, end, "any-owner");
+    expect(queries.webinars.mock.calls[0][0].where).toEqual({ id: "any-owner" });
+    await getDashboardInsights({ id: "admin", role: "admin" }, start, end);
+    expect(queries.webinars.mock.calls[1][0].where).toEqual({});
   });
 });

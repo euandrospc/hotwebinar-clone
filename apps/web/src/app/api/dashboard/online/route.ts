@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { getOnlineSnapshot } from "@/lib/online";
 import type { RealtimeAudienceHistory } from "@/lib/dashboard-realtime-preview";
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   try {
     if (webinarId) {
       const webinar = await prisma.webinar.findFirst({
-        where: { id: webinarId, ownerId: session.user.id }, select: { id: true }
+        where: { id: webinarId, ...ownerScope(session) }, select: { id: true }
       });
       if (!webinar) return NextResponse.json({ error: "Not found" }, { status: 404, headers: responseHeaders });
     }
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     const [snap, samples] = await Promise.all([
       getOnlineSnapshot(),
       webinarId ? prisma.audienceSample.findMany({
-        where: { webinarId, webinar: { ownerId: session.user.id }, observedAt: { gte: from, lte: to } },
+        where: { webinarId, webinar: ownerScope(session), observedAt: { gte: from, lte: to } },
         orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
         select: { observedAt: true, online: true }
       }) : Promise.resolve([])
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
     // Keep the existing owner-wide live count; only history uses the requested scope.
     const webinars = snap.byWebinar.size
       ? await prisma.webinar.findMany({
-          where: { id: { in: [...snap.byWebinar.keys()] }, ownerId: session.user.id },
+          where: { id: { in: [...snap.byWebinar.keys()] }, ...ownerScope(session) },
           select: { id: true, title: true, name: true }
         })
       : [];

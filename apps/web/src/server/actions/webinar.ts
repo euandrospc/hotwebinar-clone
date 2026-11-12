@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma, Prisma } from "db";
 import { auth } from "@/lib/auth";
+import { canAccessVideo, canAccessWebinar } from "@/lib/webinar-access";
 import {
   step1Schema,
   step2Schema,
@@ -29,16 +30,17 @@ import { HLS_BUCKET } from "@/lib/storage/buckets";
 
 type Result = { ok: true } | { error: { field?: string; message: string } };
 
+type AccessSession = Awaited<ReturnType<typeof requireSession>>;
+
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
   return session;
 }
 
-async function loadOwned(id: string, userId: string) {
+async function loadOwned(id: string, session: AccessSession) {
   const w = await prisma.webinar.findUnique({ where: { id } });
-  if (!w || w.ownerId !== userId) return null;
-  return w;
+  return canAccessWebinar(session, w) ? w : null;
 }
 
 function notFound(): Result {
@@ -64,7 +66,7 @@ export async function createDraftWebinar(): Promise<{ id: string }> {
 
 export async function updateWebinarStep1(id: string, input: Step1Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step1Schema.safeParse(input);
   if (!parsed.success) {
@@ -95,7 +97,7 @@ export async function updateWebinarStep1(id: string, input: Step1Input): Promise
 
 export async function updateWebinarStep2(id: string, input: Step2Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step2Schema.safeParse(input);
   if (!parsed.success) {
@@ -127,7 +129,7 @@ export async function updateWebinarStep2(id: string, input: Step2Input): Promise
 
 export async function updateWebinarStep3(id: string, input: Step3Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step3Schema.safeParse(input);
   if (!parsed.success) {
@@ -165,7 +167,7 @@ export async function updateWebinarStep3(id: string, input: Step3Input): Promise
 
 export async function updateWebinarStep4(id: string, input: Step4Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step4Schema.safeParse(input);
   if (!parsed.success) {
@@ -198,7 +200,7 @@ export async function updateWebinarStep4(id: string, input: Step4Input): Promise
     } else {
       const v = await prisma.video.create({
         data: {
-          ownerId: session.user.id,
+          ownerId: owned.ownerId,
           name: owned.title || "Vídeo externo",
           source: "EXTERNAL",
           originalUrl: data.videoExternalUrl,
@@ -212,7 +214,7 @@ export async function updateWebinarStep4(id: string, input: Step4Input): Promise
   } else {
     // library or upload-complete: validate video ownership + ready
     const v = await prisma.video.findUnique({ where: { id: data.videoId } });
-    if (!v || v.ownerId !== session.user.id) {
+    if (!canAccessVideo(session, v)) {
       return { error: { field: "videoId", message: "Vídeo não encontrado" } };
     }
     if (v.status !== "READY") {
@@ -231,7 +233,7 @@ export async function updateWebinarStep4(id: string, input: Step4Input): Promise
 
 export async function updateWebinarStep5(id: string, input: Step5Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step5Schema.safeParse(input);
   if (!parsed.success) {
@@ -269,7 +271,7 @@ export async function updateWebinarStep5(id: string, input: Step5Input): Promise
 
 export async function updateWebinarStep6(id: string, input: Step6Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step6Schema.safeParse(input);
   if (!parsed.success) {
@@ -318,7 +320,7 @@ export async function updateWebinarStep6(id: string, input: Step6Input): Promise
 
 export async function publishWebinar(id: string): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const missing: string[] = [];
   if (!owned.name) missing.push("name");
@@ -337,7 +339,7 @@ export async function publishWebinar(id: string): Promise<Result> {
 
 export async function deleteWebinar(id: string): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   await prisma.webinar.delete({ where: { id } });
   // Best-effort: clean uploaded assets (logo + offer images). Failures don't
@@ -358,7 +360,7 @@ export async function deleteWebinar(id: string): Promise<Result> {
 
 export async function duplicateWebinar(id: string): Promise<{ newId: string } | { error: { message: string } }> {
   const session = await requireSession();
-  const src = await loadOwned(id, session.user.id);
+  const src = await loadOwned(id, session);
   if (!src) return { error: { message: "Webinar não encontrado" } };
 
   const messages = await prisma.chatMessage.findMany({ where: { webinarId: id } });
@@ -431,7 +433,7 @@ export async function duplicateWebinar(id: string): Promise<{ newId: string } | 
 
 export async function updateWebinarStep7(id: string, input: Step7Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step7Schema.safeParse(input);
   if (!parsed.success) {
@@ -456,7 +458,7 @@ export async function updateWebinarStep7(id: string, input: Step7Input): Promise
 
 export async function updateWebinarStep8(id: string, input: Step8Input): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = step8Schema.safeParse(input);
   if (!parsed.success) {
@@ -478,7 +480,7 @@ export async function updateWebinarStep8(id: string, input: Step8Input): Promise
 
 export async function updateWebinarIntegrations(id: string, input: IntegrationsInput): Promise<Result> {
   const session = await requireSession();
-  const owned = await loadOwned(id, session.user.id);
+  const owned = await loadOwned(id, session);
   if (!owned) return notFound();
   const parsed = integrationsSchema.safeParse(input);
   if (!parsed.success) {

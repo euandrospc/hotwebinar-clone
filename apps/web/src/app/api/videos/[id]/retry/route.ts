@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { canAccessVideo } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { enqueueTranscode } from "jobs";
 
@@ -10,7 +11,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const video = await prisma.video.findUnique({ where: { id } });
-  if (!video || video.ownerId !== session.user.id) {
+  if (!canAccessVideo(session, video)) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
   if (video.status !== "FAILED") {

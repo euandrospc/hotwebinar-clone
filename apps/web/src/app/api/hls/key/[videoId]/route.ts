@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { prisma } from "db";
 import { verifyLeadCookie } from "@/lib/lead-session";
 import { auth } from "@/lib/auth";
+import { canAccessVideo } from "@/lib/webinar-access";
 import { withOccurrence } from "@/lib/sync";
 
 const MIN_TTL_MS = 15 * 60 * 1000; // floor: 15 minutes
@@ -34,7 +35,7 @@ export async function GET(
   const session = await auth.api.getSession({ headers: await headers() });
   let isAdmin = false;
 
-  if (session && video.ownerId === session.user.id) {
+  if (session && canAccessVideo(session, video)) {
     isAdmin = true;
   } else if (leadId) {
     const lead = await prisma.lead.findUnique({

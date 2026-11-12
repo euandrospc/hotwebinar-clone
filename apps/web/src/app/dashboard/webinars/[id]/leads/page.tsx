@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { MousePointerClick, Download } from "@/components/icons";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,7 +42,7 @@ export default async function LeadsPage({ params, searchParams }: PageProps) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
   const w = await prisma.webinar.findUnique({ where: { id }, select: { id: true, ownerId: true, title: true, name: true } });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
 
   const q = (sp.q ?? "").trim();
   const clicked = sp.clicked === "1";

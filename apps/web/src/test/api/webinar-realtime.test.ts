@@ -1,10 +1,10 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma, type Prisma } from "db";
 
-const state = vi.hoisted(() => ({ userId: "realtime-owner" as string | null }));
+const state = vi.hoisted(() => ({ userId: "realtime-owner" as string | null, role: undefined as string | undefined }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/auth", () => ({
-  auth: { api: { getSession: async () => state.userId ? { user: { id: state.userId } } : null } }
+  auth: { api: { getSession: async () => state.userId ? { user: { id: state.userId, role: state.role } } : null } }
 }));
 
 const OWNER = "realtime-owner";
@@ -23,6 +23,7 @@ beforeAll(() => {
 beforeEach(async () => {
   vi.resetModules();
   state.userId = OWNER;
+  state.role = undefined;
   await prisma.user.deleteMany({ where: { id: { in: [OWNER, OTHER] } } });
   await prisma.user.createMany({ data: [
     { id: OWNER, name: "Realtime owner", email: "realtime-owner@example.test" },
@@ -74,6 +75,15 @@ describe("GET /api/webinars/[id]/realtime", () => {
   it("returns 404 for another owner's webinar and unknown webinars", async () => {
     expect((await request(FOREIGN)).status).toBe(404);
     expect((await request("missing-webinar")).status).toBe(404);
+  });
+
+  it("lets an admin read a webinar created by someone else, without widening attendants", async () => {
+    state.userId = "realtime-admin";
+    state.role = "admin";
+    expect((await request(FOREIGN)).status).toBe(200);
+    expect((await request("missing-webinar")).status).toBe(404);
+    state.role = "attendant";
+    expect((await request(FOREIGN)).status).toBe(404);
   });
 
   it("returns individual pins for this webinar's active players without exposing contact details", async () => {

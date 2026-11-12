@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 
 const schema = z.object({
   enabled: z.boolean(), name: z.string().trim().min(1).max(60),
@@ -12,7 +13,7 @@ const schema = z.object({
 async function owned(id: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session || (session.user as { role?: string }).role !== "admin") return null;
-  return prisma.webinar.findFirst({ where: { id, ownerId: session.user.id } });
+  return prisma.webinar.findFirst({ where: { id, ...ownerScope(session) } });
 }
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const webinar = await owned((await params).id);

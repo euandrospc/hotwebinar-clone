@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { prisma } from "db";
 
 export async function GET() {
@@ -8,7 +9,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const videos = await prisma.video.findMany({
-    where: { ownerId: session.user.id },
+    where: ownerScope(session),
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

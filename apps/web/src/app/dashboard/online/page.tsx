@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
+import { ownerScope } from "@/lib/webinar-access";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { getOnlineSnapshot } from "@/lib/online";
 import { ClientPolling } from "@/components/videos/client-polling";
@@ -47,7 +48,7 @@ export default async function OnlinePage({ searchParams }: { searchParams: Promi
   const online = await getOnlineSnapshot();
 
   const leads = await prisma.lead.findMany({
-    where: { id: { in: [...online.leadIds] }, webinar: { ownerId: session.user.id }, ...(webinarId ? { webinarId } : {}) },
+    where: { id: { in: [...online.leadIds] }, webinar: ownerScope(session), ...(webinarId ? { webinarId } : {}) },
     orderBy: { sessionStart: "desc" },
     select: {
       id: true, name: true, email: true, phone: true, city: true, region: true, country: true,

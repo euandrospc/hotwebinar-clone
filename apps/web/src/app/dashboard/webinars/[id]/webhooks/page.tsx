@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { WebhookRow, type WebhookRowData } from "@/components/webinar/webhook-row";
 import { WebinarTabs } from "@/components/webinar/webinar-tabs";
@@ -24,7 +25,7 @@ export default async function WebhooksPage({ params, searchParams }: PageProps) 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) notFound();
   const w = await prisma.webinar.findUnique({ where: { id } });
-  if (!w || w.ownerId !== session.user.id) notFound();
+  if (!canAccessWebinar(session, w)) notFound();
 
   const page = Math.max(1, Number(sp.page ?? "1"));
   const where: any = { webinarId: id };
