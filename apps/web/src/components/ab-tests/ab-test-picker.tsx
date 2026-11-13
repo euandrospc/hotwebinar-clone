@@ -5,15 +5,17 @@ import { Check, ChevronDown, ChevronLeftIcon as ChevronLeft, ChevronRight, Searc
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AB_METRIC_LABELS, AB_STATUS_LABELS, type AbExperimentDto } from "@/lib/ab-tests";
 import { cn } from "@/lib/utils";
+import { abCollectionPhase } from "@/lib/ab-lifecycle";
 import adminStyles from "@/components/admin/admin-page.module.css";
 import styles from "./ab-test-picker.module.css";
 
 const PAGE_SIZE = 6;
-const statusLabels = { ...AB_STATUS_LABELS, COLLECTION_ENDED: "Coleta encerrada" };
+const statusLabels = { ...AB_STATUS_LABELS, COLLECTION_ENDED: "Coleta encerrada", SCHEDULED: "Agendado", COLLECTING: "Acompanhando", MATURING: "Aguardando conversões", COMPLETE: "Concluído" };
 type PickerStatus = keyof typeof statusLabels;
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
 
 function displayStatus(experiment: AbExperimentDto): PickerStatus {
+  if (experiment.observationUnit === "DAILY_SESSION") return abCollectionPhase(experiment);
   if (experiment.mode === "RANDOMIZED" && (experiment.status === "RUNNING" || experiment.status === "PAUSED") && experiment.endsAt && new Date(experiment.endsAt).getTime() <= Date.now()) return "COLLECTION_ENDED";
   return experiment.status;
 }
@@ -38,7 +40,7 @@ export function AbTestPicker({ experiments, selectedId, onSelect }: AbTestPicker
   const filtered = useMemo(() => {
     const needle = normalize(query.trim());
     return experiments.filter(experiment => (!status || displayStatus(experiment) === status)
-      && (!mode || experiment.mode === mode)
+      && (!mode || (mode === "DAILY_SESSION" ? experiment.observationUnit === "DAILY_SESSION" : experiment.mode === mode))
       && [experiment.name, experiment.hypothesis, experiment.webinarA.name, experiment.webinarA.title, experiment.webinarB.name, experiment.webinarB.title].some(value => normalize(value).includes(needle)));
   }, [experiments, query, status, mode, open]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -82,7 +84,7 @@ export function AbTestPicker({ experiments, selectedId, onSelect }: AbTestPicker
         <label className={styles.search}><Search aria-hidden="true" /><input ref={searchRef} aria-label="Buscar teste" placeholder="Buscar nome, hipótese ou webinar…" value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} onKeyDown={event => { if (event.key === "ArrowDown" && visible.length) { event.preventDefault(); focusOption(0); } }} />{query && <button type="button" aria-label="Limpar busca de testes" onClick={() => { setQuery(""); setPage(1); searchRef.current?.focus(); }}><X aria-hidden="true" /></button>}</label>
         <div className={styles.filters}>
           <select aria-label="Filtrar testes por status" value={status} onChange={event => { setStatus(event.target.value); setPage(1); }}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-          <select aria-label="Filtrar testes por modalidade" value={mode} onChange={event => { setMode(event.target.value); setPage(1); }}><option value="">Todas as modalidades</option><option value="RANDOMIZED">Experimento randomizado</option><option value="OBSERVATIONAL">Comparação observacional</option></select>
+          <select aria-label="Filtrar testes por modalidade" value={mode} onChange={event => { setMode(event.target.value); setPage(1); }}><option value="">Todas as modalidades</option><option value="RANDOMIZED">Experimento randomizado</option><option value="OBSERVATIONAL">Comparação observacional</option><option value="DAILY_SESSION">Acompanhamento recorrente</option></select>
         </div>
       </div>
       <div ref={listRef} className={styles.list} role="listbox" aria-label="Testes disponíveis">
@@ -92,7 +94,7 @@ export function AbTestPicker({ experiments, selectedId, onSelect }: AbTestPicker
           return <button type="button" key={experiment.id} role="option" aria-selected={current} tabIndex={current || (!selectedOnPage && index === 0) ? 0 : -1} className={cn(styles.option, current && styles.selected)} onClick={() => { onSelect(experiment.id); setOpen(false); }} onKeyDown={event => navigateOptions(event, index)}>
             <div className={styles.optionHeading}><strong title={experiment.name}>{experiment.name}</strong>{current && <Check aria-hidden="true" />}</div>
             <p title={`A: ${experiment.webinarA.title || experiment.webinarA.name} · B: ${experiment.webinarB.title || experiment.webinarB.name}`}><span>A</span> {experiment.webinarA.title || experiment.webinarA.name}<i aria-hidden="true"> / </i><span>B</span> {experiment.webinarB.title || experiment.webinarB.name}</p>
-            <div className={styles.metadata}><span className={styles.status} data-status={shownStatus}>{statusLabels[shownStatus]}</span><span>{experiment.mode === "RANDOMIZED" ? "Experimento · 50/50" : "Histórico"}</span><span>{AB_METRIC_LABELS[experiment.metric]}</span></div>
+            <div className={styles.metadata}><span className={styles.status} data-status={shownStatus}>{statusLabels[shownStatus]}</span><span>{experiment.mode === "RANDOMIZED" ? "Experimento · 50/50" : experiment.observationUnit === "DAILY_SESSION" ? "Recorrente" : "Histórico"}</span><span>{AB_METRIC_LABELS[experiment.metric]}</span></div>
           </button>;
         })}
       </div>

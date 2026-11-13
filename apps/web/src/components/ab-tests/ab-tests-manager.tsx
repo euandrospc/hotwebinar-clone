@@ -13,11 +13,13 @@ import { AbExperimentForm, type AbExperimentInput } from "./ab-experiment-form";
 import { AbReportPanel } from "./ab-report-panel";
 import { AbTestPicker } from "./ab-test-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { calendarFilters, dateLabel, downloadAbCsv } from "./ab-utils";
+import { calendarFilters, dateLabel, dayInBrasilia, downloadAbCsv } from "./ab-utils";
 import adminStyles from "@/components/admin/admin-page.module.css";
 import styles from "./ab-tests.module.css";
 import { createAbTestsDemo, getAbTestsDemoReport } from "@/lib/ab-tests-demo";
 import { calculateSampleSize } from "@/lib/ab-statistics";
+import { abCollectionPhase, abRecurringRange } from "@/lib/ab-lifecycle";
+import { AbPeriodNavigation } from "./ab-period-navigation";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { ...init, cache: "no-store", headers: { ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers } });
@@ -25,8 +27,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) throw new Error(body.message || body.error || "Não foi possível concluir esta ação.");
   return body as T;
 }
-const pastCollection = (experiment: AbExperimentDto) => experiment.mode === "RANDOMIZED" && experiment.endsAt !== null && new Date(experiment.endsAt).getTime() <= Date.now();
-const statusLabel = (experiment: AbExperimentDto) => pastCollection(experiment) && ["RUNNING", "PAUSED"].includes(experiment.status) ? "Coleta encerrada" : AB_STATUS_LABELS[experiment.status];
+const pastCollection = (experiment: AbExperimentDto) => (experiment.mode === "RANDOMIZED" || experiment.observationUnit === "DAILY_SESSION") && experiment.endsAt !== null && new Date(experiment.endsAt).getTime() <= Date.now();
+const recurringLabels = { SCHEDULED: "Agendado", COLLECTING: "Acompanhando", MATURING: "Aguardando conversões", COMPLETE: "Concluído" };
+const statusLabel = (experiment: AbExperimentDto) => experiment.observationUnit === "DAILY_SESSION" ? recurringLabels[abCollectionPhase(experiment)] : pastCollection(experiment) && ["RUNNING", "PAUSED"].includes(experiment.status) ? "Coleta encerrada" : AB_STATUS_LABELS[experiment.status];
 
 type TransitionAction = "start" | "pause" | "resume" | "complete" | "delete";
 const actionLabels: Record<TransitionAction, string> = { start: "Iniciar teste", pause: "Pausar coleta", resume: "Retomar coleta", complete: "Encerrar coleta", delete: "Excluir rascunho" };
@@ -39,12 +42,18 @@ function ExperimentContext({ experiment, busy, onEdit, onAction, onWindowChange,
 }) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [, refreshPhase] = useState(0);
   const closed = pastCollection(experiment);
   const [windowHours, setWindowHours] = useState(String(experiment.conversionWindowHours));
   const [windowError, setWindowError] = useState<string | null>(null);
   useEffect(() => { setWindowHours(String(experiment.conversionWindowHours)); setWindowError(null); }, [experiment.id, experiment.conversionWindowHours]);
 
   useEffect(() => { setCopied(false); setCopyError(null); }, [experiment.id]);
+  useEffect(() => {
+    if (experiment.observationUnit !== "DAILY_SESSION" || abCollectionPhase(experiment) === "COMPLETE") return;
+    const timer = window.setInterval(() => { refreshPhase(value => value + 1); if (abCollectionPhase(experiment) === "COMPLETE") window.clearInterval(timer); }, 60000);
+    return () => window.clearInterval(timer);
+  }, [experiment.id, experiment.observationUnit, experiment.startedAt, experiment.endsAt, experiment.conversionWindowHours]);
 
   async function copyLink() {
     if (!experiment.publicPath) return;
@@ -66,10 +75,11 @@ function ExperimentContext({ experiment, busy, onEdit, onAction, onWindowChange,
             <p className={styles.hypothesis}>{experiment.hypothesis}</p>
             <dl className={styles.contextFacts}>
               <div><dt>Variável testada</dt><dd>{AB_TEST_VARIABLE_LABELS[experiment.testVariable ?? "FULL_WEBINAR"]}</dd></div>
-              <div><dt>Modalidade</dt><dd>{experiment.mode === "RANDOMIZED" ? "Experimento randomizado · 50 / 50" : "Comparação observacional"}</dd></div>
+              <div><dt>Modalidade</dt><dd>{experiment.mode === "RANDOMIZED" ? "Experimento randomizado · 50 / 50" : experiment.observationUnit === "DAILY_SESSION" ? "Acompanhamento recorrente" : "Comparação observacional"}</dd></div>
               <div><dt>Métrica principal</dt><dd>{AB_METRIC_LABELS[experiment.metric]}</dd></div>
               <div><dt>Janela de conversão</dt><dd>{experiment.conversionWindowHours} horas</dd></div>
               <div><dt>Criado em</dt><dd>{dateLabel(experiment.createdAt)}</dd></div>
+              {experiment.observationUnit === "DAILY_SESSION" && <div><dt>Período planejado</dt><dd>{dateLabel(experiment.startedAt)} — {dateLabel(experiment.endsAt)}</dd></div>}
             </dl>
             {experiment.mode === "OBSERVATIONAL" && <form className={styles.windowForm} onSubmit={async event => {
               event.preventDefault(); setWindowError(null);
@@ -83,9 +93,9 @@ function ExperimentContext({ experiment, busy, onEdit, onAction, onWindowChange,
           </PopoverContent>
         </Popover>
         {experiment.status === "DRAFT" && <><Button variant="outline" className={styles.button} onClick={onEdit} disabled={busy}><Pencil aria-hidden="true" />Editar</Button><Button variant="ghost" className={styles.iconButton} aria-label="Excluir rascunho" onClick={() => onAction("delete")} disabled={busy}><Trash2 aria-hidden="true" /></Button><Button className={styles.button} onClick={() => onAction("start")} disabled={busy}><Play aria-hidden="true" />Iniciar teste</Button></>}
-        {experiment.status === "RUNNING" && !closed && <Button variant="outline" className={styles.button} onClick={() => onAction("pause")} disabled={busy}>Pausar coleta</Button>}
-        {experiment.status === "PAUSED" && !closed && <Button className={styles.button} onClick={() => onAction("resume")} disabled={busy}><Play aria-hidden="true" />Retomar coleta</Button>}
-        {["RUNNING", "PAUSED"].includes(experiment.status) && <Button variant="outline" className={styles.button} onClick={() => onAction("complete")} disabled={busy}>{closed ? "Concluir teste" : "Encerrar coleta"}</Button>}
+        {experiment.mode === "RANDOMIZED" && experiment.status === "RUNNING" && !closed && <Button variant="outline" className={styles.button} onClick={() => onAction("pause")} disabled={busy}>Pausar coleta</Button>}
+        {experiment.mode === "RANDOMIZED" && experiment.status === "PAUSED" && !closed && <Button className={styles.button} onClick={() => onAction("resume")} disabled={busy}><Play aria-hidden="true" />Retomar coleta</Button>}
+        {["RUNNING", "PAUSED"].includes(experiment.status) && (experiment.mode === "RANDOMIZED" || experiment.observationUnit === "DAILY_SESSION" && abCollectionPhase(experiment) === "COLLECTING") && <Button variant="outline" className={styles.button} onClick={() => onAction("complete")} disabled={busy}>{experiment.observationUnit === "DAILY_SESSION" ? "Encerrar acompanhamento" : closed ? "Concluir teste" : "Encerrar coleta"}</Button>}
       </div>
     </div>
     <div className={styles.variantLinks}>{(["A", "B"] as const).map(key => {
@@ -110,6 +120,10 @@ function ExperimentDetail({ experiment, demo = false }: { experiment: AbExperime
   const serializedFilters = JSON.stringify(filters);
   const reportKey = `${experiment.id}:${serializedFilters}`;
   const report = result?.key === reportKey ? result.report : null;
+  const navigationReport = report ?? result?.report;
+  const selectedPeriod = navigationReport?.periods && (filters.from || filters.to
+    ? [...navigationReport.periods.daily, ...navigationReport.periods.weekly, navigationReport.periods.total].find(period => period.from === filters.from && period.to === filters.to)
+    : navigationReport.periods.total);
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   useEffect(() => {
@@ -132,10 +146,11 @@ function ExperimentDetail({ experiment, demo = false }: { experiment: AbExperime
   }, [experiment.id, experiment.updatedAt, serializedFilters, revision, demo]);
 
   useEffect(() => {
-    if (experiment.status !== "RUNNING") return;
-    const timer = window.setInterval(() => setRevision(value => value + 1), 60000);
+    const needsPolling = () => experiment.observationUnit === "DAILY_SESSION" ? abCollectionPhase(experiment) !== "COMPLETE" : experiment.status === "RUNNING";
+    if (!needsPolling()) return;
+    const timer = window.setInterval(() => { setRevision(value => value + 1); if (!needsPolling()) window.clearInterval(timer); }, 60000);
     return () => window.clearInterval(timer);
-  }, [experiment.status]);
+  }, [experiment.status, experiment.observationUnit, experiment.startedAt, experiment.endsAt, experiment.conversionWindowHours]);
 
   function applyFilters() {
     if (draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to) { setFilterError("A data inicial deve ser anterior ou igual à final."); return; }
@@ -146,13 +161,18 @@ function ExperimentDetail({ experiment, demo = false }: { experiment: AbExperime
   }
 
   return <div className={styles.detail}>
+    {navigationReport?.periods && <AbPeriodNavigation report={navigationReport} from={filters.from} to={filters.to} loading={loading} onSelect={period => {
+      setFilters(current => { const { from: _from, to: _to, ...segments } = current; return period ? { ...segments, from: period.from, to: period.to } : segments; });
+      setDraftFilters(current => ({ ...current, from: period ? dayInBrasilia(period.from) : "", to: period ? dayInBrasilia(period.to) : "" }));
+      setFilterError(null);
+    }} />}
     <div className={styles.reportToolbar}><div className={styles.actions}><Button variant="outline" className={styles.button} aria-expanded={filtersOpen} aria-controls="ab-report-filters" onClick={() => setFiltersOpen(value => !value)}><Filter aria-hidden="true" />Filtros{activeFilterCount > 0 && <span className={styles.filterCount}>{activeFilterCount}</span>}</Button><span className={styles.filterSummary}>{activeFilterCount ? "Recorte exploratório" : "Todo o período e público do teste"}</span>{activeFilterCount > 0 && <button className={styles.textButton} type="button" onClick={() => { setFilters({}); setDraftFilters({}); setFilterError(null); }}>Limpar filtros</button>}</div><div className={styles.actions}><span className={styles.updated} role="status">{loading ? "Atualizando resultados…" : report ? `Atualizado às ${new Date(report.generatedAt).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })}` : ""}</span><Button variant="outline" className={styles.iconButton} disabled={loading} aria-label="Atualizar resultados" onClick={() => setRevision(value => value + 1)}><RefreshCw aria-hidden="true" /></Button><Button variant="outline" className={styles.button} disabled={!report || loading || Boolean(error)} onClick={() => report && downloadAbCsv(report)}><Download aria-hidden="true" />Exportar CSV</Button></div></div>
     {filtersOpen && <AdminSurface><form id="ab-report-filters" className={styles.filters} onSubmit={event => { event.preventDefault(); applyFilters(); }}>
       <div className={styles.filterFields}><label className={styles.field}><span>Entradas a partir de</span><input type="date" value={draftFilters.from ?? ""} max={draftFilters.to || undefined} onChange={event => setDraftFilters(value => ({ ...value, from: event.target.value }))} /></label><label className={styles.field}><span>Entradas até</span><input type="date" value={draftFilters.to ?? ""} min={draftFilters.from || undefined} onChange={event => setDraftFilters(value => ({ ...value, to: event.target.value }))} /></label>
         {(Object.keys(filterLabels) as (keyof typeof filterLabels)[]).map(key => <label key={key} className={styles.field}><span>{filterLabels[key]}</span><select value={draftFilters[key] ?? ""} onChange={event => setDraftFilters(value => ({ ...value, [key]: event.target.value }))}><option value="">Todos</option>{Array.from(new Set([...(filterOptions?.[key] ?? []), ...(draftFilters[key] ? [draftFilters[key]] : [])])).map(value => <option key={value} value={value}>{value === "__unknown__" ? "Não informado" : key === "device" ? deviceLabels[value] ?? value : value}</option>)}</select></label>)}
       </div><div className={styles.filterFooter}><p><Info aria-hidden="true" />Datas de entrada em Brasília. Filtros mantêm a janela de conversão e tornam a leitura exploratória.</p><Button type="submit" className={styles.button}>Aplicar filtros</Button></div>{filterError && <p role="alert" className={styles.error}>{filterError}</p>}
     </form></AdminSurface>}
-    {error ? <AdminSurface><div className={styles.loadError} role="alert"><strong>Não foi possível atualizar os resultados</strong><p>{error}</p><Button variant="outline" onClick={() => setRevision(value => value + 1)}>Tentar novamente</Button></div></AdminSurface> : report ? <div aria-busy={loading}><AbReportPanel report={report} /></div> : <AdminSurface><div className={styles.loading} role="status">Carregando o comparativo…</div></AdminSurface>}
+    {error ? <AdminSurface><div className={styles.loadError} role="alert"><strong>Não foi possível atualizar os resultados</strong><p>{error}</p><Button variant="outline" onClick={() => setRevision(value => value + 1)}>Tentar novamente</Button></div></AdminSurface> : report && selectedPeriod?.state === "UPCOMING" ? <AdminSurface><div className={styles.chartEmpty}>Este período ainda não começou. Os resultados serão atualizados automaticamente.</div></AdminSurface> : report && selectedPeriod?.state === "EMPTY" && !report.diagnostics?.audience?.A.sampleCount && !report.diagnostics?.audience?.B.sampleCount ? <AdminSurface><div className={styles.chartEmpty}>Sem registros de participação neste período. Escolha outro dia, semana ou o total do acompanhamento.</div></AdminSurface> : report ? <div aria-busy={loading}><AbReportPanel report={report} /></div> : <AdminSurface><div className={styles.loading} role="status">Carregando o comparativo…</div></AdminSurface>}
   </div>;
 }
 
@@ -205,6 +225,8 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
       if (!webinarA || !webinarB || webinarA.id === webinarB.id) throw new Error("Escolha dois webinars diferentes.");
       if (editing && editing.status !== "DRAFT") throw new Error("O plano fica fixo após o início.");
       const historical = input.mode === "OBSERVATIONAL";
+      const recurring = historical && input.observationUnit === "DAILY_SESSION";
+      const range = recurring && input.from ? abRecurringRange(input.from, input.durationDays) : null;
       const configurationFor = (id: string) => preview.experiments.flatMap(item => [
         { id: item.webinarAId, value: item.configuration?.A }, { id: item.webinarBId, value: item.configuration?.B }
       ]).find(item => item.id === id && item.value)?.value;
@@ -212,10 +234,10 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
       result = { experiment: {
         ...editable, mode: input.mode, id: editing?.id ?? `demo-ab-local-${crypto.randomUUID()}`,
         webinarA, webinarB, sampleSizePerVariant: calculateSampleSize(input.baselineRate, input.minimumDetectableLift),
-        status: historical ? "COMPLETED" : "DRAFT", createdAt: editing?.createdAt ?? now, updatedAt: now,
-        startedAt: historical ? input.from ?? null : null, endsAt: historical ? input.to ?? null : null,
-        completedAt: historical ? now : null, interruptedAt: null, assignmentCount: 0, publicPath: null,
-        ...(configA && configB ? { configuration: { A: configA, B: configB, frozen: false } } : {})
+        status: range && range.endsAt.getTime() > Date.now() ? "RUNNING" : historical ? "COMPLETED" : "DRAFT", createdAt: editing?.createdAt ?? now, updatedAt: now,
+        startedAt: range?.startedAt.toISOString() ?? (historical ? input.from ?? null : null), endsAt: range?.endsAt.toISOString() ?? (historical ? input.to ?? null : null),
+        completedAt: historical && !recurring ? now : null, interruptedAt: null, assignmentCount: 0, publicPath: null,
+        ...(configA && configB ? { configuration: { A: configA, B: configB, frozen: recurring } } : {})
       } };
       preview.experiments = [result.experiment, ...preview.experiments.filter(item => item.id !== result.experiment.id)];
     } else {
@@ -261,7 +283,7 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
             changed.status = "PAUSED";
             changed.interruptedAt = changed.interruptedAt ?? now.toISOString();
           } else if (action === "resume") changed.status = "RUNNING";
-          else { changed.status = "COMPLETED"; changed.completedAt = now.toISOString(); }
+          else { changed.status = "COMPLETED"; changed.completedAt = now.toISOString(); if (changed.observationUnit === "DAILY_SESSION") changed.endsAt = now.toISOString(); }
           result = { experiment: changed };
           preview.experiments = preview.experiments.map(item => item.id === changed.id ? changed : item);
         } else {
@@ -283,6 +305,6 @@ export function AbTestsManager({ demo = false }: { demo?: boolean }) {
       </section>}
     </>}
     {form && <AbExperimentForm experiment={form === "new" ? undefined : form} webinars={webinars} onClose={() => setForm(null)} onSave={saveExperiment} />}
-    <Dialog open={Boolean(confirmation)} onOpenChange={open => { if (!open && !busy) setConfirmation(null); }}><DialogContent className={cn(adminStyles.portal, styles.confirmDialog)}><DialogHeader><DialogTitle>{confirmation ? actionLabels[confirmation.action] : "Confirmar ação"}</DialogTitle><DialogDescription>{confirmation?.experiment.name}</DialogDescription></DialogHeader><p className={styles.confirmText}>{confirmation?.action === "start" ? "O planejamento ficará bloqueado. O link distribuirá novos visitantes em 50% A e 50% B. Use o mesmo link nas campanhas e mantenha a mudança testada estável até concluir o experimento." : confirmation?.action === "complete" ? "A coleta de novos visitantes será encerrada. Quem já entrou poderá voltar à sua variante, e as conversões continuarão sendo observadas dentro da janela. Encerrar antes do prazo torna a leitura antecipada e impede uma conclusão definitiva." : confirmation?.action === "pause" ? "Novos visitantes ficarão fora enquanto a coleta estiver pausada. Participantes existentes mantêm sua variante e o prazo não é estendido. Pausar antes do fim torna a conclusão exploratória, mesmo após retomar. Para uma conclusão confirmatória, crie um novo teste." : confirmation?.action === "resume" ? "O link voltará a distribuir novos visitantes entre as versões. O plano e o prazo original serão mantidos. A interrupção anterior mantém a leitura exploratória; um novo teste é necessário para uma conclusão confirmatória." : "Este rascunho será excluído. Os webinars e seus dados continuarão disponíveis."}</p>{mutationError && <p role="alert" className={styles.error}>{mutationError}</p>}<div className={styles.dialogActions}><Button variant="outline" disabled={busy} onClick={() => setConfirmation(null)}>Cancelar</Button><Button disabled={busy} variant={confirmation?.action === "delete" ? "destructive" : "default"} onClick={applyAction}>{busy ? "Aguarde…" : confirmation ? actionLabels[confirmation.action] : "Confirmar"}</Button></div></DialogContent></Dialog>
+    <Dialog open={Boolean(confirmation)} onOpenChange={open => { if (!open && !busy) setConfirmation(null); }}><DialogContent className={cn(adminStyles.portal, styles.confirmDialog)}><DialogHeader><DialogTitle>{confirmation ? actionLabels[confirmation.action] : "Confirmar ação"}</DialogTitle><DialogDescription>{confirmation?.experiment.name}</DialogDescription></DialogHeader><p className={styles.confirmText}>{confirmation?.action === "start" ? "O planejamento ficará bloqueado. O link distribuirá novos visitantes em 50% A e 50% B. Use o mesmo link nas campanhas e mantenha a mudança testada estável até concluir o experimento." : confirmation?.action === "complete" && confirmation.experiment.observationUnit === "DAILY_SESSION" ? "O acompanhamento deixará de incluir novas participações a partir de agora. As compras de quem já entrou continuam sendo registradas até completar a janela de conversão. Os webinars seguem sua programação." : confirmation?.action === "complete" ? "A coleta de novos visitantes será encerrada. Quem já entrou poderá voltar à sua variante, e as conversões continuarão sendo observadas dentro da janela. Encerrar antes do prazo torna a leitura antecipada e impede uma conclusão definitiva." : confirmation?.action === "pause" ? "Novos visitantes ficarão fora enquanto a coleta estiver pausada. Participantes existentes mantêm sua variante e o prazo não é estendido. Pausar antes do fim torna a conclusão exploratória, mesmo após retomar. Para uma conclusão confirmatória, crie um novo teste." : confirmation?.action === "resume" ? "O link voltará a distribuir novos visitantes entre as versões. O plano e o prazo original serão mantidos. A interrupção anterior mantém a leitura exploratória; um novo teste é necessário para uma conclusão confirmatória." : "Este rascunho será excluído. Os webinars e seus dados continuarão disponíveis."}</p>{mutationError && <p role="alert" className={styles.error}>{mutationError}</p>}<div className={styles.dialogActions}><Button variant="outline" disabled={busy} onClick={() => setConfirmation(null)}>Cancelar</Button><Button disabled={busy} variant={confirmation?.action === "delete" ? "destructive" : "default"} onClick={applyAction}>{busy ? "Aguarde…" : confirmation ? actionLabels[confirmation.action] : "Confirmar"}</Button></div></DialogContent></Dialog>
   </AdminPage>;
 }

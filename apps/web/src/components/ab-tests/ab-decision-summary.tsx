@@ -16,6 +16,7 @@ function nextStep(report: AbReport): { title: string; description: string } {
   const missingB = Math.max(0, report.experiment.sampleSizePerVariant - report.variants[1].mature);
   const pending = report.variants[0].pending + report.variants[1].pending;
   if (state === "OBSERVATIONAL" && report.readout === "OBSERVED" && pending > 0) return { title: "Acompanhe os resultados já registrados", description: `${count(pending)} entradas ainda não completaram ${report.experiment.conversionWindowHours}h. Compare os dados parciais, considerando o tempo de observação diferente e a origem dos públicos; isso não declara um horário vencedor.` };
+  if (report.experiment.observationUnit === "DAILY_SESSION") return { title: "Compare dias, semanas e o total", description: "Observe se a diferença entre os horários se repete. Considere o tamanho e a origem dos públicos, a chegada ao pitch e as compras por participação. O acompanhamento reúne " + report.experiment.durationDays + " dias; resultados com janela aberta ainda podem mudar." };
   const finalReadoutAt = report.experiment.endsAt ? new Date(new Date(report.experiment.endsAt).getTime() + report.experiment.conversionWindowHours * 3_600_000).toISOString() : null;
   const plan: Record<AbInferenceState, { title: string; description: string }> = {
     DRAFT: { title: "Revise a mudança antes de iniciar", description: "Confirme o que muda de A para B, a métrica principal e o funcionamento dos eventos e da integração de vendas." },

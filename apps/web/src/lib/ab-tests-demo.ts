@@ -9,6 +9,7 @@ const COMPLETED_ID = "demo-ab-novo-pitch";
 const RUNNING_ID = "demo-ab-chamada-oferta";
 const HISTORICAL_ID = "demo-ab-comparacao-webinars";
 const SCHEDULE_ID = "demo-ab-horario-19h-21h";
+const RECURRING_ID = "demo-ab-recorrente-15h-20h";
 
 /** Fail closed outside a local development request, even if a demo query is supplied. */
 export function isAbTestsDemoEnabled(mode: string | undefined, environment: string | undefined, host: string | null): boolean {
@@ -44,7 +45,9 @@ export function createAbTestsDemo(now = new Date()): { experiments: AbExperiment
     webinar("oferta-direta", "IA na prática · oferta direta"),
     webinar("automacoes", "Automações que economizam tempo"),
     { ...webinar("horario-19h", "IA na prática · sessão às 19h"), mode: "UNICO" as const },
-    { ...webinar("horario-21h", "IA na prática · sessão às 21h"), mode: "UNICO" as const }
+    { ...webinar("horario-21h", "IA na prática · sessão às 21h"), mode: "UNICO" as const },
+    { ...webinar("horario-15h", "IA na prática · sessão às 15h"), mode: "UNICO" as const },
+    { ...webinar("horario-20h", "IA na prática · sessão às 20h"), mode: "UNICO" as const }
   ];
   const make = (input: Partial<AbExperimentDto> & Pick<AbExperimentDto, "id" | "name" | "hypothesis">): AbExperimentDto => {
     const start = today - 18 * DAY_MS;
@@ -60,9 +63,10 @@ export function createAbTestsDemo(now = new Date()): { experiments: AbExperiment
       assignmentCount: 8700, publicPath: null, ...input
     };
     const configuration = (variant: AbVariantKey): AbVariantConfiguration => {
-      const scheduled = experiment.id === SCHEDULE_ID;
+      const recurring = experiment.id === RECURRING_ID;
+      const scheduled = experiment.id === SCHEDULE_ID || recurring;
       const selected = variant === "A" ? experiment.webinarA : experiment.webinarB;
-      const startAt = scheduled ? new Date(start + (variant === "A" ? 19 : 21) * HOUR_MS).toISOString() : null;
+      const startAt = scheduled ? new Date(new Date(experiment.startedAt!).getTime() + (recurring ? variant === "A" ? 15 : 20 : variant === "A" ? 19 : 21) * HOUR_MS).toISOString() : null;
       return { version: 1, title: selected.title, mode: selected.mode, timezone: "America/Sao_Paulo", startAt,
         endAt: startAt ? new Date(new Date(startAt).getTime() + 90 * 60_000).toISOString() : null,
         recurring: scheduled, recurringDays: scheduled ? [0, 1, 2, 3, 4, 5, 6] : [],
@@ -74,7 +78,7 @@ export function createAbTestsDemo(now = new Date()): { experiments: AbExperiment
         offerPassUtms: true, accessFacilitated: false, fields: { name: true, email: true, phone: false }, chatAiEnabled: true,
         chatAiName: "Equipe Bravy", audienceMode: "NONE" };
     };
-    experiment.configuration = { A: configuration("A"), B: configuration("B"), frozen: experiment.mode === "RANDOMIZED" };
+    experiment.configuration = { A: configuration("A"), B: configuration("B"), frozen: experiment.mode === "RANDOMIZED" || experiment.observationUnit === "DAILY_SESSION" };
     return experiment;
   };
   return { webinars, experiments: [
@@ -106,7 +110,14 @@ export function createAbTestsDemo(now = new Date()): { experiments: AbExperiment
       hypothesis: "Transmitir às 21h facilita a presença do público após o expediente, mantendo vídeo e oferta.",
       variantADescription: "Mesma apresentação e oferta, transmissão sincronizada às 19h.",
       variantBDescription: "Mesma apresentação e oferta, transmissão sincronizada às 21h.",
-      webinarAId: webinars[4].id, webinarBId: webinars[5].id, webinarA: webinars[4], webinarB: webinars[5], assignmentCount: 8700 })
+      webinarAId: webinars[4].id, webinarBId: webinars[5].id, webinarA: webinars[4], webinarB: webinars[5], assignmentCount: 8700 }),
+    make({ id: RECURRING_ID, name: "15h × 20h · acompanhamento de 30 dias", testVariable: "SCHEDULE",
+      mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", status: "RUNNING", durationDays: 30, conversionWindowHours: 24,
+      hypothesis: "Comparar presença, chegada ao pitch e compras dos horários diários durante 30 dias.",
+      variantADescription: "Webinar diário às 15h, mantendo o link atual.", variantBDescription: "Webinar diário às 20h, mantendo o link atual.",
+      webinarAId: webinars[6].id, webinarBId: webinars[7].id, webinarA: webinars[6], webinarB: webinars[7],
+      startedAt: new Date(today - 9 * DAY_MS).toISOString(), endsAt: new Date(today + 21 * DAY_MS - 1).toISOString(),
+      completedAt: null, assignmentCount: 0 })
   ] };
 }
 
@@ -136,10 +147,11 @@ export function getAbTestsDemoReport(experiment: AbExperimentDto, filters: AbRep
   const sales: AbReportSale[] = [];
   const running = experiment.id === RUNNING_ID;
   const historical = experiment.id === HISTORICAL_ID;
-  const scheduled = experiment.id === SCHEDULE_ID;
+  const recurring = experiment.id === RECURRING_ID;
+  const scheduled = experiment.id === SCHEDULE_ID || recurring;
   const known = running || historical || scheduled || experiment.id === COMPLETED_ID;
-  const days = running ? 7 : 14;
-  const amounts = historical ? [1584, 1416] : running ? [1210, 1228] : [4328, 4372];
+  const days = recurring ? 10 : running ? 7 : 14;
+  const amounts = recurring ? [2200, 2800] : historical ? [1584, 1416] : running ? [1210, 1228] : [4328, 4372];
   const start = experiment.startedAt ? new Date(experiment.startedAt).getTime() : null;
   const pitchAtSec = { A: experiment.configuration?.A.pitchAtSec ?? 2160, B: experiment.configuration?.B.pitchAtSec ?? 1740 };
   // Drafts and tests created in the preview start empty, just like a real test.
@@ -152,21 +164,23 @@ export function getAbTestsDemoReport(experiment: AbExperimentDto, filters: AbRep
         for (let index = 0; index < volumes[day]; index++, ordinal++) {
           const seed = ordinal + (arm === "B" ? 90001 : 10001) + (running ? 200000 : historical ? 400000 : 0);
           const id = `${experiment.id}-${arm}-${ordinal}`;
-          const at = new Date(start + day * DAY_MS + (scheduled ? 16 : 8) * HOUR_MS + Math.floor(fraction(seed, 3) * (scheduled ? 2.75 : 14) * HOUR_MS));
+          const sessionHour = recurring ? arm === "A" ? 15 : 20 : arm === "A" ? 19 : 21;
+          const at = new Date(start + day * DAY_MS + (recurring ? sessionHour - .5 : scheduled ? 16 : 8) * HOUR_MS + Math.floor(fraction(seed, 3) * (recurring ? .5 : scheduled ? 2.75 : 14) * HOUR_MS));
           const channel = fraction(seed, 173);
           const source = channel < .58 ? "meta" : channel < .86 ? "google" : "organico";
           const deviceShare = fraction(seed, 541);
           const device = deviceShare < .73 ? "mobile" : deviceShare < .96 ? "desktop" : "tablet";
           const score = historical && ordinal < 8 ? Math.min(.7, fraction(seed, 91)) : fraction(seed, 91);
-          const identified = historical || score < (arm === "A" ? .939 : .95);
-          const leadId = identified ? `demo-ab-lead-${id}` : null;
+          const identified = recurring || historical || score < (arm === "A" ? .939 : .95);
+          const identity = recurring ? `${experiment.id}-${arm}-${index}` : id;
+          const leadId = identified ? `demo-ab-lead-${identity}` : null;
           const sourceGain = source === "organico" ? .012 : source === "google" ? .004 : -.006;
           const dailyGain = .008 * Math.sin(day * .75) + .002 * Math.cos(day * 1.6);
           const purchaseRate = (arm === "A" ? .101 : historical ? .118 : .135) + sourceGain + dailyGain + (device === "desktop" ? .004 : 0);
           const clickRate = (arm === "A" ? .247 : running ? .304 : .292) + sourceGain + dailyGain * 2;
           units.push({
             id, variant: arm, webinarId, leadId, assignedAt: at,
-            email: !identified ? null : historical && ordinal < 8 ? `shared-demo-${ordinal}@example.test` : `${id}@example.test`,
+            email: !identified ? null : historical && ordinal < 8 ? `shared-demo-${ordinal}@example.test` : `${identity}@example.test`,
             source, medium: source === "organico" ? "organic" : "cpc",
             campaign: source === "organico" ? "conteudo-organico" : fraction(seed, 817) < .68 ? "webinar-ia-pratica" : "remarketing-aula",
             content: source === "organico" ? "newsletter" : ["video-caso-real", "carrossel-beneficios", "depoimento-aluno"][Math.floor(fraction(seed, 1223) * 3)],
@@ -177,7 +191,7 @@ export function getAbTestsDemoReport(experiment: AbExperimentDto, filters: AbRep
           };
           if (!identified) continue;
           addEvent("OPTIN", 2);
-          const sessionStart = start + day * DAY_MS + (arm === "A" ? 19 : 21) * HOUR_MS;
+          const sessionStart = start + day * DAY_MS + sessionHour * HOUR_MS;
           const scheduledOffsetMinutes = scheduled ? (sessionStart - at.getTime()) / 60_000 : 0;
           const reachedPitch = score < (arm === "A" ? .61 : .67) + dailyGain;
           if (score < (arm === "A" ? .809 : .836)) {
@@ -217,7 +231,7 @@ export function getAbTestsDemoReport(experiment: AbExperimentDto, filters: AbRep
   // Independent synthetic snapshot series, never reconstructed by adding entrants.
   if (known && start !== null && experiment.status !== "DRAFT") {
     for (const variant of ["A", "B"] as const) for (let day = 0; day < days + Math.ceil(experiment.conversionWindowHours / 24); day++) {
-      const sessionStart = start + day * DAY_MS + (scheduled ? variant === "A" ? 19 : 21 : 19) * HOUR_MS;
+      const sessionStart = start + day * DAY_MS + (recurring ? variant === "A" ? 15 : 20 : scheduled ? variant === "A" ? 19 : 21 : 19) * HOUR_MS;
       const durationSec = scheduled ? 5400 : 7200;
       const amplitude = (variant === "A" ? 190 : scheduled ? 238 : 216) * (.9 + fraction(day, 4051) * .2);
       for (let seconds = 0; seconds < durationSec; seconds += 15) {
@@ -227,5 +241,11 @@ export function getAbTestsDemoReport(experiment: AbExperimentDto, filters: AbRep
     }
   }
   report.diagnostics!.audience = buildAbAudienceFromSamples(audiencePlan, samples);
+  if (report.periods) {
+    for (const period of [...report.periods.daily, ...report.periods.weekly, report.periods.total]) {
+      const plan = createAbAudiencePlan({ experiment, units, filters: { ...filters, from: period.from, to: period.to }, now, schedules });
+      period.audience = buildAbAudienceFromSamples(plan, samples);
+    }
+  }
   return report;
 }

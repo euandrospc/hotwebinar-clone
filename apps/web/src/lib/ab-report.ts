@@ -1,4 +1,4 @@
-import type { AbExperimentDto, AbInferenceState, AbReport, AbReportFilters, AbVariantKey, AbVariantReport } from "@/lib/ab-tests";
+import type { AbExperimentDto, AbInferenceState, AbPeriodReport, AbReport, AbReportFilters, AbVariantKey, AbVariantReport } from "@/lib/ab-tests";
 import { AB_METRIC_LABELS, abMetricBase } from "@/lib/ab-tests";
 import { compareProportions, sampleRatioMismatchPValue, wilsonInterval } from "@/lib/ab-statistics";
 import { buildAbDiagnostics, type AbDiagnosticUnit } from "@/lib/ab-insights";
@@ -78,6 +78,7 @@ function inferenceDescription(state: AbInferenceState, experiment: AbExperimentD
 export function buildAbReport(input: BuildAbReportInput): AbReport {
   const { experiment } = input;
   const observed = experiment.mode === "OBSERVATIONAL";
+  const recurring = observed && experiment.observationUnit === "DAILY_SESSION";
   const now = input.now ?? new Date();
   const filters = input.filters ?? {};
   const windowMs = experiment.conversionWindowHours * 3_600_000;
@@ -118,7 +119,7 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
       const arms = emailAssignments.get(email) ?? new Set<AbVariantKey>();
       arms.add(unit.variant);
       emailAssignments.set(email, arms);
-      const key = `${unit.variant}:${email}`;
+      const key = `${unit.variant}:${email}${recurring ? `:${dateKey(unit.assignedAt)}` : ""}`;
       const assigned = armEmailAssignments.get(key) ?? [];
       assigned.push(unit);
       armEmailAssignments.set(key, assigned);
@@ -134,7 +135,12 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     while (cursor !== root) { const next = identityParent.get(cursor)!; identityParent.set(cursor, root); cursor = next; }
     return root;
   };
-  for (const assigned of [...leadAssignments.values(), ...armEmailAssignments.values()]) {
+  const identityAssignments = recurring ? [...leadAssignments.values()].flatMap((assigned) => {
+    const days = new Map<string, AbReportUnit[]>();
+    for (const unit of assigned) { const key = dateKey(unit.assignedAt); days.set(key, [...(days.get(key) ?? []), unit]); }
+    return [...days.values()];
+  }) : [...leadAssignments.values()];
+  for (const assigned of [...identityAssignments, ...armEmailAssignments.values()]) {
     for (const unit of assigned.slice(1)) identityParent.set(identityRoot(unit.id), identityRoot(assigned[0].id));
   }
   const identitySizes = new Map<string, number>();
@@ -151,13 +157,18 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
   const stateByUnit = new Map(units.map((unit) => [unit.id, { unit, viewer: false, pitch: false, click: false, buyer: false, sales: 0, revenue: 0, maxVideoSec: null as number | null,
     firstPlaybackAt: null as Date | null, firstPitchAt: null as Date | null, firstClickAt: null as Date | null, firstPurchaseAt: null as Date | null }]));
   const earlier = (current: Date | null, next: Date) => !current || next < current ? next : current;
-  const ownsOutcomes = (unit: AbReportUnit) => !unit.leadId || leadAssignments.get(`${unit.webinarId}:${unit.leadId}`)?.[0]?.id === unit.id;
+  const ownsOutcomes = (unit: AbReportUnit) => recurring || !unit.leadId || leadAssignments.get(`${unit.webinarId}:${unit.leadId}`)?.[0]?.id === unit.id;
 
+  const nextEntryByUnit = new Map<string, number>();
+  if (recurring) for (const assigned of leadAssignments.values()) {
+    for (let index = 0; index < assigned.length - 1; index++) nextEntryByUnit.set(assigned[index].id, assigned[index + 1].assignedAt.getTime());
+  }
   for (const event of input.events) {
     const state = stateByUnit.get(event.unitId);
     if (!state || !state.unit.leadId || !ownsOutcomes(state.unit)) continue;
     const elapsed = event.firstOccurredAt.getTime() - state.unit.assignedAt.getTime();
-    if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > windowMs || event.firstOccurredAt > now) continue;
+    if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > windowMs || event.firstOccurredAt > now
+      || event.firstOccurredAt.getTime() >= (nextEntryByUnit.get(state.unit.id) ?? Infinity)) continue;
     if (event.kind === "VIDEO_TICK") {
       state.viewer = true;
       state.firstPlaybackAt = earlier(state.firstPlaybackAt, event.firstOccurredAt);
@@ -169,7 +180,8 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     if (event.kind === "PITCH_REACHED") state.firstPitchAt = earlier(state.firstPitchAt, event.firstOccurredAt);
     if (event.firstPitchAt) {
       const elapsedPitch = event.firstPitchAt.getTime() - state.unit.assignedAt.getTime();
-      if (Number.isFinite(elapsedPitch) && elapsedPitch >= 0 && elapsedPitch <= windowMs && event.firstPitchAt <= now) {
+      if (Number.isFinite(elapsedPitch) && elapsedPitch >= 0 && elapsedPitch <= windowMs && event.firstPitchAt <= now
+        && event.firstPitchAt.getTime() < (nextEntryByUnit.get(state.unit.id) ?? Infinity)) {
         state.firstPitchAt = earlier(state.firstPitchAt, event.firstPitchAt);
       }
     }
@@ -187,7 +199,10 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     if (startedAt === null || !Number.isFinite(saleAt) || saleAt < startedAt || saleAt > now.getTime() || saleAt > collectionEnd + windowMs) continue;
     seenSaleIds.add(sale.id);
     if (sale.currency.trim().toUpperCase() !== "BRL") { excludedCurrencySales++; continue; }
-    const unit = sale.leadId ? leadAssignments.get(`${sale.webinarId}:${sale.leadId}`)?.[0] : undefined;
+    const assigned = sale.leadId ? leadAssignments.get(`${sale.webinarId}:${sale.leadId}`) : undefined;
+    // Resolve ownership on the complete plan before applying a day/segment filter.
+    // A sale at the next entry belongs to the next participation, never both.
+    const unit = recurring ? [...(assigned ?? [])].reverse().find((entry) => entry.assignedAt.getTime() <= saleAt) : assigned?.[0];
     if (!unit || saleAt < unit.assignedAt.getTime() || saleAt > unit.assignedAt.getTime() + windowMs) {
       unattributedSales++;
       continue;
@@ -235,10 +250,51 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
     const day = dailyCounts.get(dateKey(unit.assignedAt));
     if (day) { day[unit.variant].count++; day[unit.variant].conversions += Number(converted); }
   }
+  if (recurring) for (const variant of variants) {
+    variant.uniquePeople = new Set(selected.filter((unit) => unit.variant === variant.key && unit.leadId)
+      .map((unit) => realEmail(unit.email) ?? `${unit.webinarId}:${unit.leadId}`)).size;
+  }
   for (const variant of variants) {
     const base = abMetricBase(variant);
     variant.rate = base ? variant.conversions / base : null;
     variant.interval = observed ? null : wilsonInterval(variant.conversions, variant.mature);
+  }
+  let periods: AbReport["periods"];
+  if (recurring && startedAt !== null && endsAt !== null) {
+    const periodSelectedIds = new Set(units.filter((unit) => segmentKeys.every((key) => !filters[key] || segment(unit[key]) === filters[key])).map((unit) => unit.id));
+    const period = (key: string, label: string, periodFrom: number, periodTo: number): AbPeriodReport => {
+      const rows: [AbVariantReport, AbVariantReport] = [emptyVariant("A", experiment), emptyVariant("B", experiment)];
+      const people = { A: new Set<string>(), B: new Set<string>() };
+      for (const state of stateByUnit.values()) {
+        const { unit } = state, at = unit.assignedAt.getTime();
+        if (!periodSelectedIds.has(unit.id) || at < periodFrom || at > periodTo) continue;
+        const row = rows[unit.variant === "A" ? 0 : 1];
+        row.assigned++; row.evaluated!++;
+        if (at + windowMs <= now.getTime()) row.mature++; else row.pending++;
+        row.identified += Number(Boolean(unit.leadId));
+        row.viewers += Number(state.viewer); row.pitch += Number(state.pitch); row.clicks += Number(state.click);
+        row.buyers += Number(state.buyer); row.sales += state.sales; row.revenueCents += state.revenue;
+        row.conversions += Number(experiment.metric === "PURCHASE" ? state.buyer : experiment.metric === "OFFER_CLICK" ? state.click : state.pitch);
+        if (unit.leadId) people[unit.variant].add(realEmail(unit.email) ?? `${unit.webinarId}:${unit.leadId}`);
+      }
+      for (const row of rows) { row.rate = row.evaluated ? row.conversions / row.evaluated : null; row.uniquePeople = people[row.key].size; }
+      const state = periodFrom > now.getTime() ? "UPCOMING" : rows.every((row) => row.assigned === 0) ? "EMPTY"
+        : periodTo + windowMs > now.getTime() || rows.some((row) => row.pending > 0) ? "PARTIAL" : "COMPLETE";
+      return { key, label, from: new Date(periodFrom).toISOString(), to: new Date(periodTo).toISOString(), state, variants: rows };
+    };
+    const dayStart = new Date(`${dateKey(new Date(startedAt))}T00:00:00-03:00`).getTime();
+    const daily: AbPeriodReport[] = [], weekly: AbPeriodReport[] = [];
+    const labelDate = (at: number) => dateKey(new Date(at)).split("-").slice(1).reverse().join("/");
+    for (let at = dayStart, index = 0; at <= endsAt; at += 86_400_000, index++) {
+      const left = Math.max(at, startedAt), right = Math.min(at + 86_400_000 - 1, endsAt);
+      if (left <= right) daily.push(period(dateKey(new Date(at)), labelDate(at), left, right));
+      if (index % 7 === 0) {
+        const weekEnd = Math.min(at + 7 * 86_400_000 - 1, endsAt);
+        const weekFrom = Math.max(at, startedAt), weekTo = weekEnd;
+        if (weekFrom <= weekTo) weekly.push(period(`week-${index / 7 + 1}`, `Semana ${index / 7 + 1} · ${labelDate(at)}–${labelDate(weekEnd)}`, weekFrom, weekTo));
+      }
+    }
+    periods = { daily, weekly, total: period("total", `Total dos ${experiment.durationDays} dias`, startedAt, endsAt) };
   }
   const statistics = compareProportions(variants[0].conversions, abMetricBase(variants[0]), variants[1].conversions, abMetricBase(variants[1]));
   if (observed) { statistics.pValue = null; statistics.interval = null; }
@@ -248,7 +304,9 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
   if (input.configurationChanged) warnings.push("A configuração de uma versão mudou após o início, ou seu registro original está ausente. A comparação permanece descritiva; inicie um novo experimento com versões estáveis.");
   if (experiment.metric === "PURCHASE") warnings.push("Compras usam a atribuição registrada na integração. Vendas vinculadas por e-mail ou telefone podem ter sido atribuídas ao webinar mais recente; nenhuma atribuição é refeita neste relatório.");
   if (overlapPeople) warnings.push(`${overlapPeople} identidade(s) por e-mail aparecem nas duas versões. A comparação pode conter contaminação entre grupos.`);
-  if (duplicateIdentities) warnings.push(`${duplicateIdentities} identidade(s) por acesso ou e-mail aparecem mais de uma vez na mesma versão. Todos os navegadores permanecem na base; cada acesso vinculado contribui com resultados somente na primeira alocação. Vendas não são reatribuídas por e-mail.`);
+  if (duplicateIdentities && !recurring) warnings.push(`${duplicateIdentities} identidade(s) por acesso ou e-mail aparecem mais de uma vez na mesma versão. Todos os navegadores permanecem na base; cada acesso vinculado contribui com resultados somente na primeira alocação. Vendas não são reatribuídas por e-mail.`);
+  if (recurring) warnings.push("Participações são acessos identificados por dia de Brasília, não sessões agendadas reconstruídas. A mesma pessoa pode participar em dias diferentes; pessoas únicas são deduplicadas no período. Cada compra pertence à participação elegível mais recente do mesmo acesso e webinar dentro da janela, antes dos filtros.");
+  if (recurring && duplicateIdentities) warnings.push(`${duplicateIdentities} identidade(s) aparecem em mais de um cadastro no mesmo dia e versão. Não há reatribuição por e-mail.`);
   if (unattributedSales) warnings.push(`${unattributedSales} venda(s) em reais não pertencem a uma janela elegível da coorte e não entram na conversão nem na receita comparada.`);
   if (excludedCurrencySales) warnings.push(`${excludedCurrencySales} venda(s) em outras moedas não entram nos resultados. Os valores financeiros consideram somente BRL.`);
   if (srmPValue !== null && srmPValue < 0.0005) warnings.push("A distribuição total dos navegadores difere do sorteio 50/50 esperado (SRM). O diagnóstico usa todas as alocações, sem filtros.");
@@ -268,7 +326,7 @@ export function buildAbReport(input: BuildAbReportInput): AbReport {
   else if (statistics.pValue < 0.05 && statistics.interval && statistics.interval[1] < 0) state = "WINNER_A";
   else state = "INCONCLUSIVE";
   return {
-    experiment, generatedAt: now.toISOString(), filters, readout: observed ? "OBSERVED" : "MATURE", variants,
+    experiment, generatedAt: now.toISOString(), filters, ...(periods ? { periods } : {}), readout: observed ? "OBSERVED" : "MATURE", variants,
     daily: [...dailyCounts].map(([date, day]) => ({ date, A: day.A.count ? day.A.conversions / day.A.count : null, B: day.B.count ? day.B.conversions / day.B.count : null })),
     integrity: { overlapPeople, duplicateIdentities, unattributedSales, excludedCurrencySales, srmPValue, warnings },
     inference: { state, ...inferenceDescription(state, experiment), ...statistics }, filterOptions,

@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   session: { user: { id: "owner", role: "admin" } } as { user: { id: string; role: string } } | null,
-  lock: vi.fn(), find: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), webinars: vi.fn(), transaction: vi.fn()
+  lock: vi.fn(), find: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), webinars: vi.fn(), webinarUpdate: vi.fn(), transaction: vi.fn()
 }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: async () => mocks.session } } }));
 vi.mock("db", () => ({ prisma: {
   $transaction: mocks.transaction,
-  abExperiment: { findFirst: mocks.find, findMany: mocks.findMany }, webinar: { findMany: mocks.webinars }
+  abExperiment: { findFirst: mocks.find, findMany: mocks.findMany }, webinar: { findMany: mocks.webinars, update: mocks.webinarUpdate }
 } }));
 import { createExperiment, updateExperiment, deleteExperiment, getExperiment, requireAbAdmin } from "@/server/ab-tests/experiments";
 
@@ -15,6 +15,10 @@ const now = new Date("2026-11-11T12:00:00Z");
 const a = { id: "a", ownerId: "owner", title: "A", name: "A", status: "ACTIVE", slug: "version-a", mode: "JIT", recurringDays: [], video: { status: "READY", hlsUrl: "https://video.test/a.m3u8", durationSec: 3600 }, pitchAtSec: 1800, offerDisabled: false, offerLink: "https://checkout.test/a", offerShowAtSec: 1800, offerHideAtSec: null };
 const b = { ...a, id: "b", title: "B", name: "B", slug: "version-b" };
 const plan = { name: "Oferta alternativa", hypothesis: "Nova oferta aumenta compras", webinarAId: "a", webinarBId: "b", metric: "PURCHASE", baselineRate: 0.05, minimumDetectableLift: 0.2, durationDays: 14, conversionWindowHours: 72 };
+const recurringA = { ...a, mode: "UNICO", recurring: true, recurringDays: [0, 1, 2, 3, 4, 5, 6], timezone: "America/Sao_Paulo",
+  startDate: new Date("2026-11-11T18:00:00Z"), endDate: new Date("2026-11-11T20:10:00Z") };
+const recurringB = { ...recurringA, ...b, mode: "UNICO", recurringDays: recurringA.recurringDays,
+  startDate: new Date("2026-10-30T23:00:00Z"), endDate: new Date("2026-10-31T01:10:00Z") };
 function record(extra: Record<string, unknown> = {}) {
   return { id: "exp", ownerId: "owner", ...plan, mode: "RANDOMIZED", status: "DRAFT", sampleSizePerVariant: 8158,
     startedAt: null, endsAt: null, completedAt: null, createdAt: now, updatedAt: now, webinarA: a, webinarB: b,
@@ -27,7 +31,7 @@ beforeEach(() => {
   mocks.create.mockImplementation(async ({ data }) => record(data));
   mocks.update.mockImplementation(async ({ data }) => record(data)); mocks.remove.mockResolvedValue({});
   mocks.transaction.mockImplementation(async (fn) => fn({ $queryRaw: mocks.lock,
-    abExperiment: { findFirst: mocks.find, create: mocks.create, update: mocks.update, delete: mocks.remove }, webinar: { findMany: mocks.webinars }
+    abExperiment: { findFirst: mocks.find, create: mocks.create, update: mocks.update, delete: mocks.remove }, webinar: { findMany: mocks.webinars, update: mocks.webinarUpdate }
   }));
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
@@ -55,6 +59,73 @@ describe("experiment management", () => {
     await expect(createExperiment("owner", { ...plan, mode: "OBSERVATIONAL" })).rejects.toMatchObject({ code: "invalid_range" });
     const result = await createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", from: "2026-11-01T03:00:00Z", to: "2026-11-08T03:00:00Z" });
     expect(result.status).toBe("COMPLETED"); expect(result.publicPath).toBeNull(); expect(result.startedAt).toBe("2026-11-01T03:00:00.000Z");
+    expect(result.observationUnit).toBe("LEAD");
+    await expect(createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", from: "2026-11-11T03:00:00Z", to: "2026-12-11T02:59:59.999Z" }))
+      .rejects.toMatchObject({ code: "invalid_range" });
+  });
+  it("creates a 30-day recurring comparison from the first webinar day without writing either webinar", async () => {
+    mocks.webinars.mockResolvedValue([recurringA, recurringB]);
+    const result = await createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION",
+      from: "2026-11-11T18:00:00Z", durationDays: 30, conversionWindowHours: 24 });
+
+    expect(result).toMatchObject({ status: "RUNNING", observationUnit: "DAILY_SESSION", durationDays: 30, conversionWindowHours: 24,
+      startedAt: "2026-11-11T03:00:00.000Z", endsAt: "2026-12-11T02:59:59.999Z", completedAt: null, publicPath: null });
+    expect(result.configuration).toMatchObject({ frozen: true, A: { startAt: "2026-11-11T18:00:00.000Z" }, B: { startAt: "2026-10-30T23:00:00.000Z" } });
+    expect(mocks.create.mock.calls[0][0].data).toMatchObject({ observationUnit: "DAILY_SESSION", webinarAFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      webinarBFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/) });
+    expect(mocks.webinarUpdate).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("defaults recurring comparisons to 30 days and 24 hours and permits a future start", async () => {
+    mocks.webinars.mockResolvedValue([recurringA, recurringB]);
+    const { durationDays: _duration, conversionWindowHours: _window, ...minimalPlan } = plan;
+    const result = await createExperiment("owner", { ...minimalPlan, mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", from: "2026-11-15T03:00:00Z" });
+    expect(result).toMatchObject({ status: "RUNNING", durationDays: 30, conversionWindowHours: 24,
+      startedAt: "2026-11-15T03:00:00.000Z", endsAt: "2026-12-15T02:59:59.999Z" });
+  });
+  it("keeps already-ended daily comparisons completed and derives elapsed status on reads without updating", async () => {
+    mocks.webinars.mockResolvedValue([recurringA, recurringB]);
+    const result = await createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", from: "2026-10-01T03:00:00Z", durationDays: 30 });
+    expect(result).toMatchObject({ status: "COMPLETED", completedAt: "2026-10-31T02:59:59.999Z" });
+    mocks.find.mockResolvedValue(record({ mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", status: "RUNNING", endsAt: new Date("2026-11-11T02:59:59.999Z") }));
+    expect((await getExperiment("owner", "exp")).status).toBe("COMPLETED");
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("rejects recurring units for randomization, missing starts and conflicting end dates", async () => {
+    await expect(createExperiment("owner", { ...plan, mode: "RANDOMIZED", observationUnit: "DAILY_SESSION" }))
+      .rejects.toMatchObject({ code: "invalid_observation_unit" });
+    for (const range of [{}, { from: "2026-11-11T03:00:00Z", to: "2026-12-11T02:59:59.999Z" }]) {
+      await expect(createExperiment("owner", { ...plan, mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", ...range }))
+        .rejects.toMatchObject({ code: "invalid_range" });
+    }
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+  it("requires published recurrent scheduled webinars only for the new daily comparison", async () => {
+    const input = { ...plan, mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", from: "2026-11-11T03:00:00Z" };
+    for (const broken of [{ ...recurringB, mode: "JIT" }, { ...recurringB, recurring: false }, { ...recurringB, recurringDays: [] },
+      { ...recurringB, startDate: null }, { ...recurringB, endDate: recurringB.startDate }]) {
+      mocks.webinars.mockResolvedValue([recurringA, broken]);
+      await expect(createExperiment("owner", input)).rejects.toMatchObject({ code: "invalid_recurring_schedule" });
+    }
+    mocks.webinars.mockResolvedValue([recurringA, { ...recurringB, status: "ARCHIVED" }]);
+    await expect(createExperiment("owner", input)).rejects.toMatchObject({ code: "variants_not_active" });
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.webinarUpdate).not.toHaveBeenCalled();
+  });
+  it("ends daily collection early while preserving conversion time and rejecting pause/resume", async () => {
+    const original = record({ mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", status: "RUNNING", conversionWindowHours: 24,
+      startedAt: new Date("2026-11-11T03:00:00Z"), endsAt: new Date("2026-12-11T02:59:59.999Z") });
+    mocks.find.mockResolvedValue(original);
+    mocks.update.mockImplementation(async ({ data }) => ({ ...original, ...data }));
+    for (const action of ["start", "pause", "resume"]) await expect(updateExperiment("owner", "exp", { action })).rejects.toMatchObject({ code: "invalid_transition" });
+    const result = await updateExperiment("owner", "exp", { action: "complete" });
+    expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "COMPLETED", endsAt: now, completedAt: now } }));
+    expect(result).toMatchObject({ conversionWindowHours: 24, endsAt: now.toISOString(), status: "COMPLETED" });
+    expect(mocks.webinarUpdate).not.toHaveBeenCalled();
+    mocks.find.mockResolvedValue({ ...original, startedAt: new Date("2026-11-12T03:00:00Z") });
+    await expect(updateExperiment("owner", "exp", { action: "complete" })).rejects.toMatchObject({ code: "invalid_transition" });
+    mocks.find.mockResolvedValue({ ...original, endsAt: new Date("2026-11-10T03:00:00Z") });
+    await expect(updateExperiment("owner", "exp", { action: "complete" })).rejects.toMatchObject({ code: "invalid_transition" });
   });
   it.each([24, 72, 168])("changes only the conversion window of an observational comparison to %sh", async (conversionWindowHours) => {
     const original = record({ mode: "OBSERVATIONAL", status: "COMPLETED", startedAt: new Date("2026-11-01T03:00:00Z"),

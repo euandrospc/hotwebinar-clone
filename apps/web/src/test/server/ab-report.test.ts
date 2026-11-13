@@ -185,3 +185,62 @@ describe("A/B report database boundaries", () => {
     expect(JSON.parse(queries.outcomes.mock.calls[0][1])[0].pitchAtSec).toBeNull();
   });
 });
+
+describe("recurring reporting SQL", () => {
+  it("groups identified activity by Brasilia day, excludes click-only entries and bounds successive windows", async () => {
+    const base = row("OBSERVATIONAL");
+    queries.experiment.mockResolvedValue({ ...base, observationUnit: "DAILY_SESSION", dto: { ...base.dto, observationUnit: "DAILY_SESSION" } });
+    queries.leads.mockResolvedValue([{ id: "lead-a", webinarId: "a", email: "a@example.com", userAgent: null, utmSource: null, utmMedium: null, utmCampaign: null, utmContent: null }]);
+    queries.outcomes.mockImplementation(async (strings: TemplateStringsArray) => {
+      const sql = strings.join("");
+      if (sql.includes('GROUP BY e."webinarId"')) return [
+        { webinarId: "a", leadId: "lead-a", entryDate: "2026-11-01", assignedAt: start },
+        { webinarId: "a", leadId: "lead-a", entryDate: "2026-11-02", assignedAt: new Date("2026-11-02T03:00:00Z") }
+      ];
+      return [];
+    });
+    await getAbReport("owner", "experiment", {}, now);
+    expect(queries.entries).not.toHaveBeenCalled();
+    const [entrySql, owner, a, b] = queries.outcomes.mock.calls[0];
+    expect(entrySql.join("")).toContain(`(e."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo'`);
+    expect(entrySql.join("")).toContain("IN ('OPTIN', 'VIDEO_TICK', 'PITCH_REACHED')");
+    expect(entrySql.join("")).not.toContain("OFFER_CLICK");
+    expect([owner, a, b]).toEqual(["owner", "a", "b"]);
+    const [eventSql, json] = queries.outcomes.mock.calls[1];
+    expect(JSON.parse(json)).toEqual([
+      { unitId: "observed:lead-a:2026-11-01", webinarId: "a", leadId: "lead-a", pitchAtSec: 120,
+        from: "2026-11-01T03:00:00.000Z", to: "2026-11-02T03:00:00.000Z", nextEntry: "2026-11-02T03:00:00.000Z" },
+      { unitId: "observed:lead-a:2026-11-02", webinarId: "a", leadId: "lead-a", pitchAtSec: 120,
+        from: "2026-11-02T03:00:00.000Z", to: "2026-11-03T03:00:00.000Z", nextEntry: null }
+    ]);
+    expect(eventSql.join("")).toContain(`e."createdAt" < (u."nextEntry" AT TIME ZONE 'UTC')`);
+  });
+  it("batches daily/weekly/total audience with owner isolation and calendar snapshot boundaries", async () => {
+    const base = row("OBSERVATIONAL");
+    queries.experiment.mockResolvedValue({ ...base, observationUnit: "DAILY_SESSION", dto: { ...base.dto, observationUnit: "DAILY_SESSION" } });
+    queries.outcomes.mockImplementation(async (strings: TemplateStringsArray) => {
+      const sql = strings.join("");
+      if (sql.includes("FROM windows u")) return [
+        { key: "total", variant: "A", average: 12.5, peak: 20, peakAt: start, sampleCount: 4 },
+        { key: "selected", variant: "A", average: 10, peak: 10, peakAt: start, sampleCount: 3 },
+        { key: "2026-11-01", variant: "A", average: 10, peak: 10, peakAt: start, sampleCount: 3 },
+        { key: "2026-11-02", variant: "A", average: 20, peak: 20, peakAt: new Date("2026-11-02T03:00:00Z"), sampleCount: 1 }
+      ];
+      return [];
+    });
+    const report = await getAbReport("owner", "experiment", { from: start.toISOString(), to: "2026-11-02T02:59:59.999Z" }, now);
+    expect(queries.audienceAggregate).not.toHaveBeenCalled();
+    expect(queries.audiencePeak).not.toHaveBeenCalled();
+    const batch = queries.outcomes.mock.calls.find(([sql]) => sql.join("").includes("FROM windows u"))!;
+    expect(batch[0].join("")).toContain('w."ownerId" = ');
+    expect(batch[2]).toBe("owner");
+    const windows = JSON.parse(batch[1]);
+    expect(windows.find((window: { key: string; variant: string }) => window.key === "2026-11-02" && window.variant === "A")).toMatchObject({
+      from: "2026-11-02T03:00:00.000Z", to: "2026-11-03T02:59:59.999Z"
+    });
+    expect(report.diagnostics!.audience!.A.average).toBe(10);
+    expect(report.periods!.total.audience!.A).toMatchObject({ average: 12.5, peak: 20, sampleCount: 4 });
+    expect(report.periods!.total.audience!.window).toBe("CALENDAR_PERIOD");
+    expect(report.periods!.daily[1].audience!.A.average).toBe(20);
+  });
+});

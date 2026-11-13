@@ -1,5 +1,6 @@
 /** Shared wire contract for experiment management and cohort-based reporting. */
 export type AbMode = "OBSERVATIONAL" | "RANDOMIZED";
+export type AbObservationUnit = "LEAD" | "DAILY_SESSION";
 export type AbStatus = "DRAFT" | "RUNNING" | "PAUSED" | "COMPLETED";
 export type AbMetric = "PURCHASE" | "OFFER_CLICK" | "PITCH_REACHED";
 export type AbVariantKey = "A" | "B";
@@ -9,6 +10,8 @@ export interface AbWebinarOption {
 }
 export interface AbExperimentDto {
   id: string; name: string; hypothesis: string; mode: AbMode; status: AbStatus; metric: AbMetric;
+  /** Recurring observations count identified activity once per webinar/person/Brasília day. */
+  observationUnit?: AbObservationUnit;
   testVariable?: AbTestVariable; variantADescription?: string; variantBDescription?: string;
   configuration?: { A: AbVariantConfiguration; B: AbVariantConfiguration; frozen: boolean };
   webinarAId: string; webinarBId: string; webinarA: AbWebinarOption; webinarB: AbWebinarOption;
@@ -27,6 +30,8 @@ export interface AbVariantReport {
   key: AbVariantKey; webinarId: string; label: string;
   /** Randomized browsers, or identified accesses for an observational comparison. */
   assigned: number;
+  /** Distinct identified people in this period; daily participations may repeat across days. */
+  uniquePeople?: number;
   /** Actual units with a complete conversion window, independent of readout. */
   mature: number; pending: number; identified: number; viewers: number;
   /** Outcome denominator: all observed entries, or only mature randomized units. */
@@ -63,7 +68,7 @@ export interface AbAudienceMetrics {
   };
 }
 export interface AbAudienceComparison {
-  scope: "WEBINAR_TOTAL"; window: "MATURE_COHORT_WINDOWS" | "OBSERVED_COHORT_WINDOWS"; cadenceSeconds: 15;
+  scope: "WEBINAR_TOTAL"; window: "MATURE_COHORT_WINDOWS" | "OBSERVED_COHORT_WINDOWS" | "CALENDAR_PERIOD"; cadenceSeconds: 15;
   A: AbAudienceMetrics; B: AbAudienceMetrics;
 }
 export interface AbReportDiagnostics {
@@ -92,6 +97,8 @@ export interface AbReport {
   readout?: "MATURE" | "OBSERVED";
   variants: [AbVariantReport, AbVariantReport];
   daily: { date: string; A: number | null; B: number | null }[];
+  /** Fixed calendar buckets, with ratios recomputed from counts and exclusive purchase attribution. */
+  periods?: { daily: AbPeriodReport[]; weekly: AbPeriodReport[]; total: AbPeriodReport };
   integrity: {
     overlapPeople: number; duplicateIdentities: number; unattributedSales: number;
     excludedCurrencySales: number; srmPValue: number | null; warnings: string[];
@@ -103,6 +110,13 @@ export interface AbReport {
   filterOptions: { source: string[]; medium: string[]; campaign: string[]; content: string[]; device: string[] };
   /** Optional for compatibility with previously saved responses and consumers. */
   diagnostics?: AbReportDiagnostics;
+}
+
+export interface AbPeriodReport {
+  key: string; label: string; from: string; to: string;
+  state: "UPCOMING" | "EMPTY" | "PARTIAL" | "COMPLETE";
+  variants: [AbVariantReport, AbVariantReport];
+  audience?: AbAudienceComparison;
 }
 
 /** Also supports saved responses created before explicit readout denominators. */

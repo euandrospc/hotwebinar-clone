@@ -13,6 +13,7 @@ import styles from "./ab-tests.module.css";
 
 export interface AbExperimentInput {
   name: string; hypothesis: string; mode: AbMode; metric: AbMetric;
+  observationUnit?: "LEAD" | "DAILY_SESSION";
   webinarAId: string; webinarBId: string; baselineRate: number; minimumDetectableLift: number;
   durationDays: number; conversionWindowHours: number; from?: string; to?: string;
   testVariable?: AbTestVariable; variantADescription?: string; variantBDescription?: string;
@@ -28,6 +29,7 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
   const [variantADescription, setVariantADescription] = useState(experiment?.variantADescription ?? "");
   const [variantBDescription, setVariantBDescription] = useState(experiment?.variantBDescription ?? "");
   const [mode, setMode] = useState<AbMode>(experiment?.mode ?? "RANDOMIZED");
+  const [recurring, setRecurring] = useState(experiment?.observationUnit === "DAILY_SESSION");
   const [metric, setMetric] = useState<AbMetric>(experiment?.metric ?? "PURCHASE");
   const [webinarAId, setWebinarAId] = useState(experiment?.webinarAId ?? webinars[0]?.id ?? "");
   const [webinarBId, setWebinarBId] = useState(experiment?.webinarBId ?? webinars[1]?.id ?? "");
@@ -36,7 +38,7 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
   const [duration, setDuration] = useState(String(experiment?.durationDays ?? 14));
   const [windowHours, setWindowHours] = useState(String(experiment?.conversionWindowHours ?? 72));
   const [expectedDailyTraffic, setExpectedDailyTraffic] = useState("");
-  const [from, setFrom] = useState(dayInBrasilia(new Date(Date.now() - 30 * 86400000)));
+  const [from, setFrom] = useState(dayInBrasilia(experiment?.startedAt ?? new Date(Date.now() - 30 * 86400000)));
   const [to, setTo] = useState(dayInBrasilia());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +60,11 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
     if (!name.trim() || !hypothesis.trim()) { setError("Preencha o nome e a hipótese do teste."); return; }
     if (!webinarAId || !webinarBId || webinarAId === webinarBId) { setError("Escolha dois webinars diferentes para A e B."); return; }
     if (mode === "RANDOMIZED" && (!sampleSize || !Number.isFinite(sampleSize))) { setError("Informe uma conversão base e um ganho mínimo válidos. A conversão esperada deve ficar abaixo de 100%."); return; }
-    if (mode === "OBSERVATIONAL" && (!from || !to || from > to)) { setError("Informe um período válido para comparar os acessos."); return; }
+    if (mode === "OBSERVATIONAL" && (!from || (!recurring && (!to || from > to)))) { setError("Informe um período válido para comparar os acessos."); return; }
+    if (recurring && mode === "OBSERVATIONAL" && (!Number.isInteger(collectionDays) || collectionDays < 7 || collectionDays > 90)) { setError("Escolha uma duração entre 7 e 90 dias."); return; }
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), hypothesis: hypothesis.trim(), testVariable, variantADescription: variantADescription.trim(), variantBDescription: variantBDescription.trim(), mode, metric, webinarAId, webinarBId, baselineRate: mode === "RANDOMIZED" ? baselineRate : .05, minimumDetectableLift: mode === "RANDOMIZED" ? minimumDetectableLift : .2, durationDays: mode === "RANDOMIZED" ? Number(duration) : 14, conversionWindowHours: Number(windowHours), ...(mode === "OBSERVATIONAL" ? calendarFilters(from, to) : {}) });
+      await onSave({ name: name.trim(), hypothesis: hypothesis.trim(), testVariable, variantADescription: variantADescription.trim(), variantBDescription: variantBDescription.trim(), mode, metric, webinarAId, webinarBId, baselineRate: mode === "RANDOMIZED" ? baselineRate : .05, minimumDetectableLift: mode === "RANDOMIZED" ? minimumDetectableLift : .2, durationDays: mode === "RANDOMIZED" || recurring ? Number(duration) : 14, conversionWindowHours: Number(windowHours), ...(mode === "OBSERVATIONAL" ? { observationUnit: recurring ? "DAILY_SESSION" as const : "LEAD" as const, ...calendarFilters(from, recurring ? "" : to) } : {}) });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível salvar o teste."); }
     finally { setSaving(false); }
   }
@@ -81,7 +84,7 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
               }
             }}>
               <span>{value === "RANDOMIZED" ? "Experimento com divisão de tráfego" : "Comparar webinars existentes"}</span>
-              <small>{value === "RANDOMIZED" ? "Um link distribui visitantes em 50% A / 50% B." : "Analise o histórico e encontre hipóteses para testar."}</small>
+              <small>{value === "RANDOMIZED" ? "Um link distribui visitantes em 50% A / 50% B." : "Compare o histórico ou acompanhe webinars recorrentes."}</small>
             </button>)}
           </div>
           <label className={styles.field}><span>Nome do teste</span><input autoFocus value={name} onChange={event => setName(event.target.value)} required minLength={3} maxLength={120} placeholder="Ex.: abertura direta × abertura com história" /></label>
@@ -96,7 +99,7 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
           <p className={styles.formNote}>Escolha duas versões já configuradas em Webinars. As condições acima documentam a mudança; horários, vídeo e oferta são definidos no editor de cada versão.</p>
           <div className={styles.variantSwap}><Button type="button" variant="ghost" className={styles.button} disabled={!webinarAId || !webinarBId} onClick={() => { setWebinarAId(webinarBId); setWebinarBId(webinarAId); setVariantADescription(variantBDescription); setVariantBDescription(variantADescription); }}><RefreshCw aria-hidden="true" />Inverter A e B</Button></div>
           <div className={styles.fieldGrid}>
-            <label className={styles.field}><span>Métrica principal</span><select value={metric} onChange={event => setMetric(event.target.value as AbMetric)}>{Object.entries(AB_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>Cada visitante converte no máximo uma vez.</small></label>
+            <label className={styles.field}><span>Métrica principal</span><select value={metric} onChange={event => setMetric(event.target.value as AbMetric)}>{Object.entries(AB_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><small>{mode === "OBSERVATIONAL" && recurring ? "Cada participação converte no máximo uma vez por métrica." : "Cada visitante converte no máximo uma vez."}</small></label>
             <label className={styles.field}><span>Janela de conversão</span><select value={windowHours} onChange={event => setWindowHours(event.target.value)}><option value="24">24 horas após a entrada</option><option value="72">72 horas após a entrada</option><option value="168">7 dias após a entrada</option></select><small>A mesma oportunidade de conversão para A e B.</small></label>
           </div>
           {mode === "RANDOMIZED" ? <>
@@ -116,12 +119,14 @@ export function AbExperimentForm({ experiment, webinars, onClose, onSave }: {
             </div>
             <p className={styles.formNote}><Info aria-hidden="true" />O teste é salvo como rascunho. Ao iniciar, use o link do teste nas campanhas; os webinars precisam estar publicados. A leitura final também aguarda a janela de conversão.</p>
           </> : <>
-            <div className={styles.fieldGrid}><label className={styles.field}><span>Entradas a partir de</span><input type="date" required value={from} max={to} onChange={event => setFrom(event.target.value)} /></label><label className={styles.field}><span>Entradas até</span><input type="date" required value={to} min={from} max={dayInBrasilia()} onChange={event => setTo(event.target.value)} /></label></div>
-            <p className={styles.formNote}><Info aria-hidden="true" />O histórico compara acessos identificados, no fuso de Brasília. Como os públicos não foram sorteados, diferenças observadas não comprovam que uma versão causou mais conversões.</p>
+            <label className={styles.recurringOption}><input type="checkbox" checked={recurring} disabled={Boolean(experiment)} onChange={event => { setRecurring(event.target.checked); if (event.target.checked) { setDuration("30"); setWindowHours("24"); setFrom(dayInBrasilia()); } }} /><span><strong>Acompanhar webinars recorrentes</strong><small>Comparativos diários, semanais e do período completo, mantendo os links atuais.</small></span></label>
+            <div className={styles.fieldGrid}><label className={styles.field}><span>Entradas a partir de</span><input type="date" required value={from} max={recurring ? undefined : to} onChange={event => setFrom(event.target.value)} /></label>{recurring ? <label className={styles.field}><span>Duração do acompanhamento (dias)</span><input type="number" required min="7" max="90" step="1" value={duration} onChange={event => setDuration(event.target.value)} /><small>Inclui o primeiro dia. Semanas de sete dias a partir do início.</small></label> : <label className={styles.field}><span>Entradas até</span><input type="date" required value={to} min={from} max={dayInBrasilia()} onChange={event => setTo(event.target.value)} /></label>}</div>
+            {recurring && from && Number.isInteger(collectionDays) && collectionDays >= 7 && collectionDays <= 90 && <p className={styles.formNote}>Período: {new Date(`${from}T12:00:00-03:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })} a {new Date(new Date(`${from}T12:00:00-03:00`).getTime() + (collectionDays - 1) * 86400000).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}. Resultados aparecem durante a coleta; cada participação mantém sua janela de {windowHours}h.</p>}
+            <p className={styles.formNote}><Info aria-hidden="true" />{recurring ? "Uma participação por pessoa, webinar e dia de atividade em Brasília. Quem retorna em outro dia participa novamente; cada compra é atribuída uma única vez." : "O histórico compara acessos identificados, no fuso de Brasília."} Como os públicos não foram sorteados, diferenças observadas não comprovam que uma versão causou mais conversões.</p>
           </>}
         </fieldset>
         {error && <p role="alert" className={styles.error}>{error}</p>}
-        <div className={styles.dialogActions}><Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button><Button type="submit" disabled={saving || webinars.length < 2}>{saving ? "Salvando…" : experiment ? "Salvar planejamento" : mode === "RANDOMIZED" ? "Criar rascunho" : "Criar comparação"}</Button></div>
+        <div className={styles.dialogActions}><Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button><Button type="submit" disabled={saving || webinars.length < 2}>{saving ? "Salvando…" : experiment ? "Salvar planejamento" : mode === "RANDOMIZED" ? "Criar rascunho" : recurring ? "Criar acompanhamento" : "Criar comparação"}</Button></div>
       </form>
     </DialogContent>
   </Dialog>;

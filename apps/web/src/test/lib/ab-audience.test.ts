@@ -88,3 +88,33 @@ describe("contextual A/B simultaneous audience", () => {
     expect(unsynced.A.pitchTargets).toEqual([]); expect(unsynced.A.pitchReason).toContain("próprio relógio");
   });
 });
+
+describe("recurring calendar audience", () => {
+  const recurring = { ...experiment, mode: "OBSERVATIONAL" as const, observationUnit: "DAILY_SESSION" as const };
+  it("uses calendar dates independent of entrants, weights readings and never sums peaks", () => {
+    const samples = [
+      { variant: "A" as const, observedAt: new Date("2026-11-01T22:00:00Z"), online: 10 },
+      { variant: "A" as const, observedAt: new Date("2026-11-01T22:00:15Z"), online: 10 },
+      { variant: "A" as const, observedAt: new Date("2026-11-01T22:00:30Z"), online: 10 },
+      { variant: "A" as const, observedAt: new Date("2026-11-02T22:00:00Z"), online: 20 }
+    ];
+    const full = createAbAudiencePlan({ experiment: recurring, units: [], now, schedules: { A: schedule } });
+    expect(full.window).toBe("CALENDAR_PERIOD");
+    const total = buildAbAudienceFromSamples(full, samples);
+    expect(total.A).toMatchObject({ average: 12.5, peak: 20, sampleCount: 4 });
+    const day = createAbAudiencePlan({ experiment: recurring, units, now,
+      filters: { from: "2026-11-01T03:00:00Z", to: "2026-11-02T02:59:59.999Z" } });
+    expect(day.A.windows).toEqual([{ from: new Date("2026-11-01T03:00:00Z"), to: new Date("2026-11-02T02:59:59.999Z") }]);
+    expect(buildAbAudienceFromSamples(day, samples).A).toMatchObject({ average: 10, peak: 10, sampleCount: 3 });
+  });
+  it("does not read future snapshots or manufacture segmented or missing audience", () => {
+    const before = createAbAudiencePlan({ experiment: recurring, units, now: new Date("2026-10-31T03:00:00Z") });
+    expect(before.A.windows).toEqual([]);
+    expect(buildAbAudienceFromSamples(before, []).A).toMatchObject({ average: null, peak: null, sampleCount: 0 });
+    const scoped = createAbAudiencePlan({ experiment: recurring, units, now, filters: { source: "meta" } });
+    expect(buildAbAudienceFromSamples(scoped, [{ variant: "A", observedAt: entry, online: 55 }]).A.average).toBeNull();
+    expect(scoped.A.reason).toContain("não permite aplicar filtros");
+    const live = createAbAudiencePlan({ experiment: recurring, units, now: entry });
+    expect(live.A.windows[0].to).toEqual(entry);
+  });
+});

@@ -383,6 +383,7 @@ model AbExperiment {
   variantADescription    String             @default("")
   variantBDescription    String             @default("")
   mode                   AbExperimentMode
+  observationUnit        String             @default("LEAD")
   status                 AbExperimentStatus @default(DRAFT)
   metric                 AbExperimentMetric @default(PURCHASE)
   webinarAId             String

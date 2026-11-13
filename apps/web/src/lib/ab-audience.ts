@@ -54,6 +54,7 @@ export function createAbAudiencePlan(input: {
 }): AbAudiencePlan {
   const { experiment, units, now } = input;
   const observed = experiment.mode === "OBSERVATIONAL";
+  const recurring = observed && experiment.observationUnit === "DAILY_SESSION";
   const filters = input.filters ?? {};
   const keys = ["source", "medium", "campaign", "content", "device"] as const;
   const scoped = keys.some((key) => Boolean(filters[key]));
@@ -65,6 +66,16 @@ export function createAbAudiencePlan(input: {
   const to = filters.to ? new Date(filters.to).getTime() : Infinity;
   const arm = (variant: AbVariantKey): AbAudienceArmPlan => {
     const windows: AbAudienceWindow[] = [];
+    if (recurring) {
+      // Daily snapshots are calendar context, independent of personal 24h
+      // attribution windows; a sample can belong to exactly one day.
+      const left = Math.max(startedAt, from), right = Math.min(endedAt, to);
+      if (left <= right) windows.push({ from: new Date(left), to: new Date(right) });
+      const reason = scoped ? "O histórico de simultâneos é agregado por webinar e não permite aplicar filtros de origem, campanha ou dispositivo."
+        : !windows.length ? "Este período ainda não ocorreu ou está fora do acompanhamento." : null;
+      const pitch = pitchTargets(input.schedules?.[variant], windows, Boolean(input.configurationChanged));
+      return { windows, pitchTargets: reason ? [] : pitch.targets, reason, pitchReason: reason ?? pitch.reason };
+    }
     const expectedWebinar = variant === "A" ? experiment.webinarAId : experiment.webinarBId;
     const selected = units.filter((unit) => unit.variant === variant && unit.webinarId === expectedWebinar
       && unit.assignedAt.getTime() >= startedAt && unit.assignedAt.getTime() <= endedAt
@@ -82,7 +93,7 @@ export function createAbAudiencePlan(input: {
     const pitch = pitchTargets(input.schedules?.[variant], windows, Boolean(input.configurationChanged));
     return { windows, pitchTargets: reason ? [] : pitch.targets, reason, pitchReason: reason ?? pitch.reason };
   };
-  return { A: arm("A"), B: arm("B"), window: observed ? "OBSERVED_COHORT_WINDOWS" : "MATURE_COHORT_WINDOWS" };
+  return { A: arm("A"), B: arm("B"), window: recurring ? "CALENDAR_PERIOD" : observed ? "OBSERVED_COHORT_WINDOWS" : "MATURE_COHORT_WINDOWS" };
 }
 
 export function assembleAbAudience(plan: AbAudiencePlan, aggregates: Partial<Record<AbVariantKey, AbAudienceAggregate>>, samples: readonly AbAudienceSample[]): AbAudienceComparison {

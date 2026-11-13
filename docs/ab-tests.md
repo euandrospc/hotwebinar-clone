@@ -8,7 +8,7 @@ O seletor no topo reúne busca por teste, hipótese ou webinar, filtros de statu
 
 ## Prévia local
 
-Em `NODE_ENV=development`, acessando por `localhost`, `127.0.0.1` ou `[::1]`, a tela abre preenchida com quatro cenários sintéticos: resultado concluído, teste em coleta, comparação histórica e horários 19h × 21h. A página continua exigindo autenticação administrativa. Filtros, gráfico, exportação e leitura estatística usam coortes determinísticas em memória e o mesmo cálculo do relatório real.
+Em `NODE_ENV=development`, acessando por `localhost`, `127.0.0.1` ou `[::1]`, a tela abre preenchida com cinco cenários sintéticos: resultado concluído, teste em coleta, comparação histórica, horários 19h × 21h e acompanhamento recorrente 15h × 20h por 30 dias. A página continua exigindo autenticação administrativa. Filtros, gráfico, exportação e leitura estatística usam coortes determinísticas em memória e o mesmo cálculo do relatório real.
 
 Criação, edição e mudanças de status nesta prévia também ficam apenas em memória e são descartadas ao recarregar. Não são criados experimentos, acessos, eventos ou vendas no banco; não há chamadas às APIs de testes nem links para webinars fictícios. A prévia não fornece link público para distribuição de tráfego.
 
@@ -36,6 +36,22 @@ Audiência simultânea é contextual: leituras de `AudienceSample` do webinar in
 Horários diferentes avaliam a estratégia de programação, incluindo espera. A janela continua começando na entrada do visitante, e deve comportar transmissão e oportunidade de compra. O modo histórico descreve públicos e períodos diferentes, sem demonstrar causalidade.
 
 ## Unidade e atribuição
+
+### Acompanhamento recorrente
+
+A opção recorrente acompanha dois webinars diários pelos links existentes durante um prazo fixo, com início retroativo permitido. O prazo seleciona novas participações; as compras da última participação continuam sendo observadas até completar sua janela. O acompanhamento passa por programado, acompanhando, aguardando conversões e concluído conforme as datas, sem depender de alterações nos webinars ou de tarefas agendadas.
+
+Para este modo, `observationUnit=DAILY_SESSION`: uma participação é um acesso identificado por webinar e dia de Brasília, na primeira ocorrência de `OPTIN`, `VIDEO_TICK` ou `PITCH_REACHED`. Clique sozinho não inicia outra participação. O histórico não possui identificador imutável de ocorrência da transmissão; portanto, esta unidade descreve **atividade identificada por dia**, e não comprova presença em uma sessão programada. Acesso após o encerramento ainda pertence ao dia em que ocorreu. Reprodução e chegada ao pitch são medidas separadas.
+
+Uma pessoa pode participar em vários dias. O painel distingue participações e pessoas identificadas únicas; somar participações diárias não equivale a somar pessoas distintas. A janela de resultados começa na entrada de cada participação. Eventos são exclusivos até a próxima entrada do mesmo acesso/webinar ou o fim da janela, o que ocorrer primeiro. Cada pedido pertence à última entrada elegível anterior à compra, no mesmo webinar/acesso. A atribuição é resolvida antes dos filtros: mudar de dia para semana não transfere nem duplica a venda. Compradores contam uma vez por participação; pedidos e receita contam cada venda uma única vez.
+
+As visões diária, semanal e total usam as mesmas atribuições. Semanas são blocos de sete dias a partir do início, com último bloco reduzido quando necessário. Para 11/11–10/12, são 30 dias completos de Brasília, de 11/11 às 00h até 10/12 às 23h59m59s. Taxas são recalculadas pela soma dos numeradores dividida pela soma das bases, nunca pela média simples de percentuais. Datas futuras indicam que ainda não ocorreram; ausência de registros não cria uma taxa ou leitura de audiência fictícia. Janelas ainda abertas tornam os resultados parciais.
+
+Neste modo, audiência simultânea usa amostras do webinar no **período de calendário selecionado**, em vez de janelas de atribuição sobrepostas. A média é ponderada pela quantidade de leituras válidas, o pico é o máximo observado e ausência de amostras permanece desconhecida. O público simultâneo no pitch depende de leitura próxima ao instante programado. Filtros de aquisição/dispositivo não produzem audiência segmentada a partir desses totais. Configurações são copiadas somente para o teste como referência; iniciar ou encerrar acompanhamento não muda horários, links, vídeo ou oferta dos webinars.
+
+Os resultados continuam observacionais, sem vencedor causal. Repetir em vários dias não sorteia públicos nem elimina diferenças de aquisição. UTMs e dispositivo históricos vêm do cadastro atual, e alterações externas de configuração continuam sendo uma limitação da reconstrução.
+
+### Comparações históricas e experimentos randomizados
 
 No experimento, a unidade é um navegador alocado, inclusive quem não preencheu o formulário. Na comparação histórica, a unidade é um acesso identificado por webinar, com entrada no primeiro evento observado dentro do período escolhido. Não se trata de leads captados fora da plataforma.
 
@@ -72,7 +88,7 @@ Referências primárias utilizadas:
 
 ## Operação técnica
 
-- Persistência: `AbExperiment` e `AbAssignment`, migrations `20261111120000_ab_tests`, `20261111123000_ab_interruption` e `20261111220000_ab_test_design`.
+- Persistência: `AbExperiment` e `AbAssignment`, migrations `20261111120000_ab_tests`, `20261111123000_ab_interruption`, `20261111220000_ab_test_design` e `20261113090000_ab_daily_sessions`. O novo marcador tem padrão `LEAD`, preservando as unidades dos registros anteriores; `DAILY_SESSION` é restrito ao modo observacional.
 - APIs administrativas: `/api/ab-tests`, `/api/ab-tests/:id`, `/api/ab-tests/:id/report`. Exigem autenticação, papel de administrador e isolamento por proprietário. Mutações também verificam origem.
 - Plano somente editável em rascunho; exclusão somente de rascunhos sem participantes. Webinars referenciados não podem ser apagados enquanto preservam o histórico.
 - Início exige variantes da mesma conta, publicadas, com hipótese e vídeo pronto. A métrica de pitch exige momento alcançável; clique exige oferta habilitada, link válido e período de exibição válido. Essas verificações de configuração não certificam a reprodução nem o callback da integração de compras. Programações diferentes são permitidas quando a variável declarada é horário/programação; nos demais casos, a programação deve ser compatível. Um webinar não participa simultaneamente de dois experimentos randomizados ativos/pausados.

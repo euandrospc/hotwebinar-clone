@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { ADMIN_ROLES, hasRole } from "@/lib/roles";
 import { AB_TEST_VARIABLE_LABELS, type AbExperimentDto, type AbTestVariable } from "@/lib/ab-tests";
 import { calculateSampleSize } from "@/lib/ab-statistics";
+import { abRecurringRange } from "@/lib/ab-lifecycle";
 import { computePhase, withOccurrence } from "@/lib/sync";
 import { webinarFingerprint } from "./webinar-fingerprint";
 import { abReadinessIssues } from "./readiness";
@@ -52,7 +53,9 @@ export function serializeExperiment(row: ExperimentRow): AbExperimentDto {
   const frozenA = readAbConfigurationSnapshot(row.webinarASnapshot), frozenB = readAbConfigurationSnapshot(row.webinarBSnapshot);
   const option = (w: ExperimentRow["webinarA"]) => ({ id: w.id, title: w.title, name: w.name, slug: w.slug, status: w.status, mode: w.mode });
   return {
-    id: row.id, name: row.name, hypothesis: row.hypothesis, mode: row.mode, status: row.status, metric: row.metric,
+    id: row.id, name: row.name, hypothesis: row.hypothesis, mode: row.mode,
+    status: row.observationUnit === "DAILY_SESSION" && row.endsAt && row.endsAt < new Date() ? "COMPLETED" : row.status,
+    observationUnit: row.observationUnit === "DAILY_SESSION" ? "DAILY_SESSION" : "LEAD", metric: row.metric,
     testVariable: row.testVariable in AB_TEST_VARIABLE_LABELS ? row.testVariable as AbTestVariable : "FULL_WEBINAR",
     variantADescription: row.variantADescription ?? "", variantBDescription: row.variantBDescription ?? "",
     configuration: { A: frozenA ?? snapshotAbConfiguration(row.webinarA), B: frozenB ?? snapshotAbConfiguration(row.webinarB), frozen: Boolean(frozenA && frozenB) },
@@ -82,6 +85,9 @@ const planShape = {
 };
 export const createExperimentSchema = z.object({
   ...planShape, mode: z.enum(["OBSERVATIONAL", "RANDOMIZED"]),
+  observationUnit: z.enum(["LEAD", "DAILY_SESSION"]).default("LEAD"),
+  durationDays: planShape.durationDays.removeDefault().optional(),
+  conversionWindowHours: planShape.conversionWindowHours.removeDefault().optional(),
   from: z.string().datetime({ offset: true }).optional(), to: z.string().datetime({ offset: true }).optional()
 }).strict();
 const editSchema = z.object({ action: z.literal("edit"), ...planShape }).strict();
@@ -151,10 +157,18 @@ export async function getExperiment(ownerId: string, id: string) {
 }
 
 export async function createExperiment(ownerId: string, input: unknown) {
-  const value = parsed(createExperimentSchema, input), plan = planData(value);
+  const inputValue = parsed(createExperimentSchema, input);
+  const recurring = inputValue.observationUnit === "DAILY_SESSION";
+  const value = { ...inputValue, durationDays: inputValue.durationDays ?? (recurring ? 30 : 14),
+    conversionWindowHours: inputValue.conversionWindowHours ?? (recurring ? 24 : 72) };
+  const plan = planData(value);
   const now = new Date();
   let startedAt: Date | null = null, endsAt: Date | null = null;
-  if (value.mode === "OBSERVATIONAL") {
+  if (recurring) {
+    if (value.mode !== "OBSERVATIONAL") throw new AbTestError("invalid_observation_unit", 400, "Participações diárias são exclusivas de comparações observacionais.");
+    if (!value.from || value.to) throw new AbTestError("invalid_range", 400, "Informe a data de início e a duração do acompanhamento.");
+    ({ startedAt, endsAt } = abRecurringRange(value.from, value.durationDays));
+  } else if (value.mode === "OBSERVATIONAL") {
     if (!value.from || !value.to) throw new AbTestError("invalid_range", 400, "Escolha o período da comparação.");
     startedAt = new Date(value.from); endsAt = new Date(value.to);
     if (startedAt >= endsAt || endsAt.getTime() - startedAt.getTime() > 366 * 86_400_000 || startedAt > now || endsAt.getTime() > now.getTime() + 86_400_000) {
@@ -165,10 +179,25 @@ export async function createExperiment(ownerId: string, input: unknown) {
   }
   return prisma.$transaction(async (tx) => {
     await lockOwner(tx, ownerId);
-    await ownedWebinars(tx, ownerId, value.webinarAId, value.webinarBId);
+    const [a, b] = await ownedWebinars(tx, ownerId, value.webinarAId, value.webinarBId);
+    let frozenConfiguration: Pick<Prisma.AbExperimentUncheckedCreateInput, "webinarAFingerprint" | "webinarBFingerprint" | "webinarASnapshot" | "webinarBSnapshot"> = {};
+    if (recurring) {
+      if ([a, b].some(w => w.status !== "ACTIVE" || !w.slug)) throw new AbTestError("variants_not_active", 409, "Selecione dois webinars publicados com seus links definidos.");
+      if ([a, b].some(w => w.mode !== "UNICO" || !w.recurring || !w.recurringDays.length || !w.startDate || !w.endDate || w.startDate >= w.endDate)) {
+        throw new AbTestError("invalid_recurring_schedule", 409, "O acompanhamento diário exige dois webinars com programação recorrente válida.");
+      }
+      frozenConfiguration = {
+        webinarAFingerprint: webinarFingerprint(a), webinarBFingerprint: webinarFingerprint(b),
+        webinarASnapshot: snapshotAbConfiguration(a) as unknown as Prisma.InputJsonValue,
+        webinarBSnapshot: snapshotAbConfiguration(b) as unknown as Prisma.InputJsonValue
+      };
+    }
+    const collecting = recurring && endsAt && endsAt >= now;
     const row = await tx.abExperiment.create({ data: {
-      ...plan, ownerId, mode: value.mode, status: value.mode === "OBSERVATIONAL" ? "COMPLETED" : "DRAFT",
-      startedAt, endsAt, completedAt: value.mode === "OBSERVATIONAL" ? now : null
+      ...plan, ownerId, mode: value.mode, observationUnit: value.observationUnit,
+      status: value.mode === "OBSERVATIONAL" ? (collecting ? "RUNNING" : "COMPLETED") : "DRAFT",
+      startedAt, endsAt, completedAt: value.mode === "OBSERVATIONAL" && !collecting ? (recurring ? endsAt : now) : null,
+      ...frozenConfiguration
     }, include: experimentInclude });
     return serializeExperiment(row);
   });
@@ -219,6 +248,11 @@ export async function updateExperiment(ownerId: string, id: string, input: unkno
         minimumDetectableLift: plan.minimumDetectableLift, sampleSizePerVariant: plan.sampleSizePerVariant,
         durationDays: plan.durationDays, conversionWindowHours: plan.conversionWindowHours,
         webinarA: { connect: { id: plan.webinarAId } }, webinarB: { connect: { id: plan.webinarBId } } };
+    } else if (row.mode === "OBSERVATIONAL" && row.observationUnit === "DAILY_SESSION" && value.action === "complete") {
+      if (row.status !== "RUNNING" || !row.startedAt || row.startedAt > now || !row.endsAt || row.endsAt <= now) {
+        throw new AbTestError("invalid_transition", 409, "Só é possível encerrar um acompanhamento durante seu período de coleta.");
+      }
+      data = { status: "COMPLETED", endsAt: now, completedAt: now };
     } else {
       if (row.mode !== "RANDOMIZED") throw new AbTestError("invalid_transition", 409, "Comparações históricas não distribuem tráfego.");
       if (value.action === "start") {

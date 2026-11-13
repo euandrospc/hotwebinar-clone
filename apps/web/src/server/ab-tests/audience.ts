@@ -23,3 +23,43 @@ export async function getAbAudienceContext(ownerId: string, webinarIds: Record<A
   }));
   return assembleAbAudience(plan, aggregates, samples);
 }
+
+/** Aggregate all calendar comparisons in two queries, rather than one per day. */
+export async function getAbAudienceContexts(ownerId: string, webinarIds: Record<AbVariantKey, string>, plans: Record<string, AbAudiencePlan>) {
+  const windows = Object.entries(plans).flatMap(([key, plan]) => (["A", "B"] as const).flatMap((variant) =>
+    plan[variant].reason ? [] : plan[variant].windows.map((window) => ({ key, variant, webinarId: webinarIds[variant],
+      from: window.from.toISOString(), to: window.to.toISOString() }))));
+  const targets = Object.entries(plans).flatMap(([key, plan]) => (["A", "B"] as const).flatMap((variant) =>
+    plan[variant].reason ? [] : plan[variant].pitchTargets.map((target) => ({ key, variant, webinarId: webinarIds[variant], at: target.toISOString() }))));
+  type AggregateRow = AbAudienceAggregate & { key: string; variant: AbVariantKey };
+  type SampleRow = AbAudienceSample & { key: string };
+  const [aggregates, samples] = await Promise.all([
+    windows.length ? prisma.$queryRaw<AggregateRow[]>`
+      WITH windows AS (
+        SELECT * FROM jsonb_to_recordset(${JSON.stringify(windows)}::jsonb)
+        AS u(key text, variant text, "webinarId" text, "from" timestamptz, "to" timestamptz)
+      )
+      SELECT u.key, u.variant, avg(s.online)::float8 AS average, max(s.online)::integer AS peak,
+        (array_agg(s."observedAt" ORDER BY s.online DESC, s."observedAt" ASC))[1] AS "peakAt",
+        count(*)::integer AS "sampleCount"
+      FROM windows u JOIN webinar w ON w.id = u."webinarId" AND w."ownerId" = ${ownerId}
+      JOIN audience_sample s ON s."webinarId" = w.id AND s.online >= 0
+        AND s."observedAt" >= (u."from" AT TIME ZONE 'UTC') AND s."observedAt" <= (u."to" AT TIME ZONE 'UTC')
+      GROUP BY u.key, u.variant
+    ` : Promise.resolve([] as AggregateRow[]),
+    targets.length ? prisma.$queryRaw<SampleRow[]>`
+      WITH targets AS (
+        SELECT * FROM jsonb_to_recordset(${JSON.stringify(targets)}::jsonb)
+        AS u(key text, variant text, "webinarId" text, at timestamptz)
+      )
+      SELECT DISTINCT u.key, u.variant, s.online, s."observedAt"
+      FROM targets u JOIN webinar w ON w.id = u."webinarId" AND w."ownerId" = ${ownerId}
+      JOIN audience_sample s ON s."webinarId" = w.id AND s.online >= 0
+        AND s."observedAt" >= ((u.at - interval '15 seconds') AT TIME ZONE 'UTC')
+        AND s."observedAt" <= ((u.at + interval '15 seconds') AT TIME ZONE 'UTC')
+    ` : Promise.resolve([] as SampleRow[])
+  ]);
+  return Object.fromEntries(Object.entries(plans).map(([key, plan]) => [key, assembleAbAudience(plan,
+    Object.fromEntries(aggregates.filter((row) => row.key === key).map((row) => [row.variant, row])),
+    samples.filter((row) => row.key === key))]));
+}

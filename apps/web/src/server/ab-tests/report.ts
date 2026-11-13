@@ -5,7 +5,7 @@ import { realtimeDeviceType } from "@/lib/webinar-realtime";
 import { AbTestError, experimentInclude, serializeExperiment } from "./experiments";
 import { webinarFingerprint } from "./webinar-fingerprint";
 import { assembleAbAudience, createAbAudiencePlan, type AbAudienceSchedule } from "@/lib/ab-audience";
-import { getAbAudienceContext } from "./audience";
+import { getAbAudienceContext, getAbAudienceContexts } from "./audience";
 
 const eventKinds = ["OPTIN", "VIDEO_TICK", "PITCH_REACHED", "OFFER_CLICK"] as const;
 
@@ -17,13 +17,14 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   });
   if (!experiment) throw new AbTestError("not_found", 404);
   const dto = serializeExperiment(experiment);
+  const recurring = dto.mode === "OBSERVATIONAL" && dto.observationUnit === "DAILY_SESSION";
   const webinarWhere = { ownerId, id: { in: [experiment.webinarAId, experiment.webinarBId] } };
   const webinars = await prisma.webinar.findMany({ where: webinarWhere });
   // A deleted or foreign webinar must never silently become an empty arm.
   if (webinars.length !== 2) throw new AbTestError("not_found", 404);
   const webinarA = webinars.find((webinar) => webinar.id === experiment.webinarAId)!;
   const webinarB = webinars.find((webinar) => webinar.id === experiment.webinarBId)!;
-  const configurationChanged = experiment.mode === "RANDOMIZED" && Boolean(experiment.startedAt) && (
+  const configurationChanged = (experiment.mode === "RANDOMIZED" || recurring) && Boolean(experiment.startedAt) && (
     experiment.webinarAFingerprint !== webinarFingerprint(webinarA) || experiment.webinarBFingerprint !== webinarFingerprint(webinarB)
   );
   const pitchAtSec = {
@@ -43,6 +44,9 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   if (!experiment.startedAt || experiment.startedAt > collectionEnd) {
     const report = buildAbReport({ experiment: dto, units: [], events: [], sales: [], pitchAtSec, filters, now, configurationChanged });
     report.diagnostics!.audience = assembleAbAudience(createAbAudiencePlan({ experiment: dto, units: [], filters, now, schedules, configurationChanged }), {}, []);
+    if (report.periods) for (const period of [...report.periods.daily, ...report.periods.weekly, report.periods.total]) {
+      period.audience = assembleAbAudience(createAbAudiencePlan({ experiment: dto, units: [], filters: { ...filters, from: period.from, to: period.to }, now, schedules, configurationChanged }), {}, []);
+    }
     return report;
   }
   const collectionRange = { gte: experiment.startedAt, lte: collectionEnd };
@@ -70,13 +74,23 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   } else {
     // First observed event in the fixed collection window. Lead.sessionStart is
     // mutable on return visits and cannot reconstruct a historical entry cohort.
-    const entries = await prisma.event.groupBy({
+    const entries = recurring ? (await prisma.$queryRaw<{ webinarId: string; leadId: string; entryDate: string; assignedAt: Date }[]>`
+      SELECT e."webinarId", e."leadId",
+        to_char((e."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS "entryDate",
+        min(e."createdAt") AS "assignedAt"
+      FROM event e JOIN webinar w ON w.id = e."webinarId" AND w."ownerId" = ${ownerId}
+      WHERE e."webinarId" IN (${experiment.webinarAId}, ${experiment.webinarBId}) AND e."leadId" IS NOT NULL
+        AND e.kind IN ('OPTIN', 'VIDEO_TICK', 'PITCH_REACHED')
+        AND e."createdAt" >= (${experiment.startedAt}::timestamptz AT TIME ZONE 'UTC')
+        AND e."createdAt" <= (${collectionEnd}::timestamptz AT TIME ZONE 'UTC')
+      GROUP BY e."webinarId", e."leadId", "entryDate"
+    `).map((entry) => ({ ...entry, _min: { createdAt: entry.assignedAt } })) : await prisma.event.groupBy({
       by: ["webinarId", "leadId"],
       where: { webinar: webinarWhere, leadId: { not: null }, kind: { in: [...eventKinds] }, createdAt: collectionRange },
       _min: { createdAt: true }
     });
     const leads = entries.length ? await prisma.lead.findMany({
-      where: { webinar: webinarWhere, id: { in: entries.flatMap((entry) => entry.leadId ? [entry.leadId] : []) } },
+      where: { webinar: webinarWhere, id: { in: [...new Set(entries.flatMap((entry) => entry.leadId ? [entry.leadId] : []))] } },
       select: { id: true, webinarId: true, email: true, userAgent: true, utmSource: true, utmMedium: true, utmCampaign: true, utmContent: true }
     }) : [];
     const leadById = new Map(leads.map((lead) => [lead.id, lead]));
@@ -84,7 +98,7 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
       const lead = entry.leadId ? leadById.get(entry.leadId) : undefined;
       if (!lead || lead.webinarId !== entry.webinarId || !entry._min.createdAt) continue;
       units.push({
-        id: `observed:${lead.id}`, variant: lead.webinarId === experiment.webinarAId ? "A" : "B", webinarId: lead.webinarId,
+        id: `observed:${lead.id}${recurring && "entryDate" in entry ? `:${entry.entryDate}` : ""}`, variant: lead.webinarId === experiment.webinarAId ? "A" : "B", webinarId: lead.webinarId,
         leadId: lead.id, email: lead.email, assignedAt: entry._min.createdAt,
         source: lead.utmSource, medium: lead.utmMedium, campaign: lead.utmCampaign,
         content: lead.utmContent, device: realtimeDeviceType(lead.userAgent)
@@ -98,18 +112,27 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   // per-unit timestamp join prevents old/later visits from entering its result.
   // No N+1 query per visitor and no materialization of millions of VIDEO_TICKs.
   const firstLeadIds = new Set<string>();
-  const windows = [...units].sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id)).flatMap((unit) => {
-    if (!unit.leadId || firstLeadIds.has(unit.leadId)) return [];
-    firstLeadIds.add(unit.leadId);
+  const ordered = [...units].sort((a, b) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id));
+  const nextByUnit = new Map<string, Date>(), lastByLead = new Map<string, AbReportUnit>();
+  if (recurring) for (const unit of ordered) {
+    const key = `${unit.webinarId}:${unit.leadId}`, previous = lastByLead.get(key);
+    if (previous) nextByUnit.set(previous.id, unit.assignedAt);
+    lastByLead.set(key, unit);
+  }
+  const windows = ordered.flatMap((unit) => {
+    const leadKey = `${unit.webinarId}:${unit.leadId}`;
+    if (!unit.leadId || (!recurring && firstLeadIds.has(leadKey))) return [];
+    firstLeadIds.add(leadKey);
     if (experiment.mode === "RANDOMIZED" && unit.assignedAt.getTime() + windowMs > now.getTime()) return [];
     return [{ unitId: unit.id, leadId: unit.leadId, webinarId: unit.webinarId, pitchAtSec: pitchAtSec[unit.variant],
+      ...(recurring ? { nextEntry: nextByUnit.get(unit.id)?.toISOString() ?? null } : {}),
       from: unit.assignedAt.toISOString(), to: new Date(Math.min(unit.assignedAt.getTime() + windowMs, now.getTime())).toISOString() }];
   });
   const [events, sales] = await Promise.all([
     windows.length ? prisma.$queryRaw<AbReportEvent[]>`
       WITH units AS (
         SELECT * FROM jsonb_to_recordset(${JSON.stringify(windows)}::jsonb)
-        AS u("unitId" text, "leadId" text, "webinarId" text, "pitchAtSec" integer, "from" timestamptz, "to" timestamptz)
+        AS u("unitId" text, "leadId" text, "webinarId" text, "pitchAtSec" integer, "from" timestamptz, "to" timestamptz, "nextEntry" timestamptz)
       )
       SELECT u."unitId", e.kind::text AS kind, min(e."createdAt") AS "firstOccurredAt", max(e."videoSec") AS "maxVideoSec",
         min(e."createdAt") FILTER (WHERE e.kind::text = 'PITCH_REACHED' OR
@@ -118,6 +141,7 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
       JOIN webinar w ON w.id = u."webinarId" AND w."ownerId" = ${ownerId}
       JOIN event e ON e."webinarId" = w.id AND e."leadId" = u."leadId"
         AND e."createdAt" >= (u."from" AT TIME ZONE 'UTC') AND e."createdAt" <= (u."to" AT TIME ZONE 'UTC')
+        AND (u."nextEntry" IS NULL OR e."createdAt" < (u."nextEntry" AT TIME ZONE 'UTC'))
       WHERE e.kind::text IN ('OPTIN', 'VIDEO_TICK', 'PITCH_REACHED', 'OFFER_CLICK')
       GROUP BY u."unitId", e.kind
     ` : Promise.resolve([] as AbReportEvent[]),
@@ -128,6 +152,14 @@ export async function getAbReport(ownerId: string, experimentId: string, filters
   ]);
   const report = buildAbReport({ experiment: dto, units, events, sales, pitchAtSec, filters, now, configurationChanged });
   const audiencePlan = createAbAudiencePlan({ experiment: dto, units, filters, now, schedules, configurationChanged });
-  report.diagnostics!.audience = await getAbAudienceContext(ownerId, { A: webinarA.id, B: webinarB.id }, audiencePlan);
+  if (report.periods) {
+    const periods = [...report.periods.daily, ...report.periods.weekly, report.periods.total];
+    const plans = { selected: audiencePlan, ...Object.fromEntries(periods.map((period) => [period.key, createAbAudiencePlan({
+      experiment: dto, units, filters: { ...filters, from: period.from, to: period.to }, now, schedules, configurationChanged
+    })])) };
+    const audiences = await getAbAudienceContexts(ownerId, { A: webinarA.id, B: webinarB.id }, plans);
+    report.diagnostics!.audience = audiences.selected;
+    for (const period of periods) period.audience = audiences[period.key];
+  } else report.diagnostics!.audience = await getAbAudienceContext(ownerId, { A: webinarA.id, B: webinarB.id }, audiencePlan);
   return report;
 }

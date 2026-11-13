@@ -11,16 +11,18 @@ const subtract = (a: number | null, b: number | null) => a === null || b === nul
 export function AbComparisonTable({ report }: { report: AbReport }) {
   const [a, b] = report.variants;
   const observed = report.readout === "OBSERVED";
+  const recurring = report.experiment.observationUnit === "DAILY_SESSION";
   const baseA = abMetricBase(a), baseB = abMetricBase(b);
   type Row = { label: string; note?: string; A: string; B: string; delta: string; detailA?: string; detailB?: string; detailDelta?: string };
   const rows: Row[] = [
-    { label: report.experiment.mode === "RANDOMIZED" ? "Visitantes distribuídos" : "Acessos identificados", A: count(a.assigned), B: count(b.assigned), delta: signed(b.assigned - a.assigned) },
+    { label: report.experiment.mode === "RANDOMIZED" ? "Visitantes distribuídos" : recurring ? "Participações por dia" : "Acessos identificados", note: recurring ? "Uma participação por pessoa, webinar e dia de atividade." : undefined, A: count(a.assigned), B: count(b.assigned), delta: signed(b.assigned - a.assigned) },
+    ...(recurring ? [{ label: "Pessoas identificadas únicas", note: "Deduplicadas no recorte; o total não soma pessoas dos dias.", A: a.uniquePeople === undefined ? "—" : count(a.uniquePeople), B: b.uniquePeople === undefined ? "—" : count(b.uniquePeople), delta: a.uniquePeople === undefined || b.uniquePeople === undefined ? "—" : signed(b.uniquePeople - a.uniquePeople) }] : []),
     { label: "Janela completa", note: observed ? "Entradas que já tiveram o prazo inteiro para converter." : "Base das etapas e das taxas abaixo.", A: count(a.mature), B: count(b.mature), delta: signed(b.mature - a.mature), detailA: `${percent(rate(a.mature, a.assigned))} das entradas`, detailB: `${percent(rate(b.mature, b.assigned))} das entradas` },
     { label: "Aguardando janela", A: count(a.pending), B: count(b.pending), delta: signed(b.pending - a.pending) }
   ];
   const stageRows: { label: string; key: "identified" | "viewers" | "pitch" | "clicks" | "buyers" }[] = [
     { label: "Com identificação", key: "identified" }, { label: "Com registro de reprodução", key: "viewers" },
-    { label: "Chegaram ao pitch", key: "pitch" }, { label: "Clicaram na oferta", key: "clicks" }, { label: "Compradores", key: "buyers" }
+    { label: "Chegaram ao pitch", key: "pitch" }, { label: "Clicaram na oferta", key: "clicks" }, { label: recurring ? "Participações com compra" : "Compradores", key: "buyers" }
   ];
   for (const stage of stageRows) rows.push({ label: stage.label, A: count(a[stage.key]), B: count(b[stage.key]), delta: percentagePoints(subtract(rate(a[stage.key], baseA), rate(b[stage.key], baseB))), detailA: `${percent(rate(a[stage.key], baseA))} de ${count(baseA)}`, detailB: `${percent(rate(b[stage.key], baseB))} de ${count(baseB)}`, detailDelta: `${signed(b[stage.key] - a[stage.key])} entradas` });
   rows.push(

@@ -37,7 +37,7 @@ export function buildAbCsv(report: AbReport): string {
     ["Detalhe", report.inference.detail],
     ...Object.entries(report.filters).map(([key, value]) => [`Filtro ${key}`, value ?? ""]),
     [],
-    ["Variante", "Webinar", "Entradas", "Base das métricas", "Janela completa", "Aguardando janela", "Identificados", "Reprodução", "Pitch", "Clique na oferta", "Compradores", "Pedidos BRL", "Receita BRL", "Conversões da métrica", "Taxa (fração)", "IC95 inferior", "IC95 superior"],
+    ["Variante", "Webinar", "Entradas", "Base das métricas", "Janela completa", "Aguardando janela", "Identificados", "Reprodução", "Pitch", "Clique na oferta", report.experiment.observationUnit === "DAILY_SESSION" ? "Participações com compra" : "Compradores", "Pedidos BRL", "Receita BRL", "Conversões da métrica", "Taxa (fração)", "IC95 inferior", "IC95 superior"],
     ...report.variants.map(v => [v.key, v.label, v.assigned, abMetricBase(v), v.mature, v.pending, v.identified, v.viewers, v.pitch, v.clicks, v.buyers, v.sales, v.revenueCents / 100, v.conversions, v.rate, v.interval?.[0] ?? null, v.interval?.[1] ?? null]),
     [], ["Diferença B − A (fração)", report.inference.delta], ["Variação relativa (fração)", report.inference.relativeLift],
     ["p-valor", report.inference.pValue], ["p-valor SRM", report.integrity.srmPValue],
@@ -45,6 +45,22 @@ export function buildAbCsv(report: AbReport): string {
     [], ["Dia de entrada (Brasília)", "Taxa A (fração)", "Taxa B (fração)"],
     ...report.daily.map(day => [day.date, day.A, day.B])
   ];
+  if (report.periods) {
+    rows.push([], ["Acompanhamento recorrente: participações por pessoa, webinar e dia de atividade em Brasília"],
+      ["Pessoas únicas são deduplicadas no período. Compras e receita não se repetem entre dias. Semanas de sete dias desde o início."],
+      ["As linhas abaixo cobrem o plano completo e respeitam os filtros de público; o filtro de datas se aplica ao resumo acima."],
+      ["Agrupamento", "Período", "Início (UTC)", "Fim inclusivo (UTC)", "Estado", "Variante", "Webinar", "Participações", "Pessoas únicas", "Reprodução", "Pitch", "Cliques", "Participações com compra", "Pedidos BRL", "Receita BRL", "Conversão principal (fração)", "Conversão compra (fração)", "Janela completa", "Aguardando janela", "Audiência média", "Pico simultâneo", "Leituras", "Média no pitch", "Pico no pitch", "Leituras no pitch"]);
+    for (const [group, periods] of [["Diário", report.periods.daily], ["Semanal", report.periods.weekly], ["Total", [report.periods.total]]] as const) {
+      for (const period of periods) for (const variant of period.variants) {
+        const audience = period.audience?.[variant.key];
+        const absent = period.state === "UPCOMING" || period.state === "EMPTY";
+        rows.push([group, period.label, period.from, period.to, period.state, variant.key, variant.label,
+          absent ? null : variant.assigned, absent ? null : variant.uniquePeople ?? null, absent ? null : variant.viewers, absent ? null : variant.pitch, absent ? null : variant.clicks, absent ? null : variant.buyers, absent ? null : variant.sales, absent ? null : variant.revenueCents / 100,
+          absent ? null : variant.rate, absent || !abMetricBase(variant) ? null : variant.buyers / abMetricBase(variant), absent ? null : variant.mature, absent ? null : variant.pending,
+          audience?.average ?? null, audience?.peak ?? null, audience?.sampleCount ?? null, audience?.pitch.average ?? null, audience?.pitch.peak ?? null, audience?.pitch.sampleCount ?? null]);
+      }
+    }
+  }
   const diagnostics = report.diagnostics;
   if (diagnostics) {
     rows.push([], ["Alcance por posição máxima registrada; não é tempo assistido contínuo"],

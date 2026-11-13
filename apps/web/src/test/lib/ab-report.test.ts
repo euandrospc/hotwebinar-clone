@@ -283,3 +283,72 @@ describe("A/B descriptive diagnostics share the report cohort", () => {
     expect(data.diagnostics!.position.points.at(-1)?.seconds).toBe(60);
   });
 });
+
+describe("recurring daily participation comparisons", () => {
+  const recurring = () => experiment({ mode: "OBSERVATIONAL", observationUnit: "DAILY_SESSION", durationDays: 30,
+    startedAt: "2026-11-01T03:00:00Z", endsAt: "2026-12-01T02:59:59.999Z", publicPath: null });
+  const first = new Date("2026-11-01T20:00:00Z"), second = new Date("2026-11-02T18:00:00Z");
+  const repeatUnits = () => [unit("day1", "A", { leadId: "p", email: "p@example.com", assignedAt: first }),
+    unit("day2", "A", { leadId: "p", email: "p@example.com", assignedAt: second })];
+  it("counts repeated daily participation, preserves one unique person and exclusive midnight/boundary sales", () => {
+    const data = report({ experiment: recurring(), units: repeatUnits(),
+      events: [event("day1", "VIDEO_TICK", { firstOccurredAt: first, maxVideoSec: 300 }),
+        event("day1", "OFFER_CLICK", { firstOccurredAt: new Date("2026-11-02T04:00:00Z") }),
+        event("day1", "OFFER_CLICK", { firstOccurredAt: second }), // next-entry boundary is excluded
+        event("day2", "VIDEO_TICK", { firstOccurredAt: second, maxVideoSec: 300, firstPitchAt: new Date(second.getTime() + 1000) })],
+      sales: [sale("midnight", "p", { createdAt: new Date("2026-11-02T04:00:00Z") }),
+        sale("boundary", "p", { createdAt: second }), sale("boundary", "p", { createdAt: second })] });
+    expect(data.variants[0]).toMatchObject({ assigned: 2, uniquePeople: 1, viewers: 2, pitch: 2, buyers: 2, sales: 2, revenueCents: 19400 });
+    expect(data.integrity.duplicateIdentities).toBe(0);
+    expect(data.periods!.daily[0].variants[0]).toMatchObject({ assigned: 1, clicks: 1, buyers: 1, sales: 1 });
+    expect(data.periods!.daily[1].variants[0]).toMatchObject({ assigned: 1, clicks: 0, buyers: 1, sales: 1 });
+    expect(data.periods!.total.variants[0].uniquePeople).toBe(1);
+    expect(data.inference).toMatchObject({ state: "OBSERVATIONAL", pValue: null, interval: null });
+  });
+  it("does not move a sale to the previous day when the later day is filtered out", () => {
+    const data = report({ experiment: recurring(), units: repeatUnits(), sales: [sale("boundary", "p", { createdAt: second })],
+      filters: { from: "2026-11-01T03:00:00Z", to: "2026-11-02T02:59:59.999Z" } });
+    expect(data.variants[0]).toMatchObject({ assigned: 1, buyers: 0, sales: 0 });
+    // Period navigation keeps the full calendar and stable attribution.
+    expect(data.periods!.daily).toHaveLength(30);
+    expect(data.periods!.daily[1].variants[0].sales).toBe(1);
+    expect(data.periods!.total.variants[0].sales).toBe(1);
+  });
+  it("respects segment filters in all periods while keeping expected repeat identities", () => {
+    const units = [...repeatUnits(), unit("other", "A", { assignedAt: second, source: "google" })];
+    const data = report({ experiment: recurring(), units, filters: { source: "meta" } });
+    expect(data.periods!.total.variants[0]).toMatchObject({ assigned: 2, uniquePeople: 1 });
+    expect(data.integrity.duplicateIdentities).toBe(0);
+  });
+  it("recalculates weighted totals and keeps upcoming/missing periods distinct", () => {
+    const data = report({ experiment: recurring(), now: new Date("2026-11-04T03:00:00Z"),
+      units: [unit("a1", "A", { assignedAt: first }), unit("a2", "A", { assignedAt: first }), unit("a3", "A", { assignedAt: first }),
+        unit("a4", "A", { assignedAt: second })], sales: [sale("s4", "a4", { createdAt: second })] });
+    expect(data.periods!.daily[0].variants[0].rate).toBe(0);
+    expect(data.periods!.daily[1].variants[0].rate).toBe(1);
+    expect(data.periods!.weekly[0].variants[0].rate).toBe(.25);
+    expect(data.periods!.total.variants[0].rate).toBe(.25);
+    expect(data.periods!.daily[2].state).toBe("EMPTY");
+    expect(data.periods!.daily[4].state).toBe("UPCOMING");
+    expect(data.periods!.daily[4].variants[0].rate).toBeNull();
+    expect(data.periods!.weekly).toHaveLength(5);
+    expect(data.periods!.weekly[4]).toMatchObject({ from: "2026-11-29T03:00:00.000Z", to: "2026-12-01T02:59:59.999Z" });
+    expect(data.periods!.total.state).toBe("PARTIAL");
+  });
+  it("accepts last-day conversion after collection ends, and rejects entries outside the plan", () => {
+    const finalEntry = new Date("2026-11-30T22:00:00Z");
+    const data = report({ experiment: recurring(), now: new Date("2026-12-02T03:00:00Z"),
+      units: [unit("last", "A", { assignedAt: finalEntry }), unit("outside", "A", { assignedAt: new Date("2026-12-01T03:00:00Z") })],
+      sales: [sale("final", "last", { createdAt: new Date("2026-12-01T21:00:00Z") }),
+        sale("late", "last", { createdAt: new Date("2026-12-01T22:00:00.001Z") })] });
+    expect(data.variants[0]).toMatchObject({ assigned: 1, buyers: 1, sales: 1 });
+    expect(data.periods!.daily[29].variants[0].sales).toBe(1);
+    expect(data.periods!.total.state).toBe("COMPLETE");
+  });
+  it("flags separate identities duplicated within the same day, not ordinary returns", () => {
+    const units = [...repeatUnits(), unit("second-id", "A", { leadId: "different", email: "P@example.com", assignedAt: first })];
+    const data = report({ experiment: recurring(), units });
+    expect(data.integrity.duplicateIdentities).toBe(1);
+    expect(data.periods!.total.variants[0].uniquePeople).toBe(1);
+  });
+});

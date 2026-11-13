@@ -20,7 +20,7 @@ describe("local A/B preview isolation", () => {
     expect(createAbTestsDemo(new Date("2026-11-11T23:30:00Z"))).toEqual(demo);
     expect(createAbTestsDemo(new Date("2026-11-12T02:59:59Z"))).toEqual(demo);
     expect(createAbTestsDemo(new Date("2026-11-12T03:00:00Z"))).not.toEqual(demo);
-    expect(demo.experiments).toHaveLength(4);
+    expect(demo.experiments).toHaveLength(5);
     for (const experiment of demo.experiments) {
       expect(experiment.id).toMatch(/^demo-ab-/);
       expect(experiment.publicPath).toBeNull();
@@ -149,5 +149,27 @@ describe("coherent synthetic A/B reports", () => {
     const report = getAbTestsDemoReport(draft, {}, now);
     expect(report.inference.state).toBe("DRAFT");
     expect(report.variants.map(variant => variant.assigned)).toEqual([0, 0]);
+  });
+  it("shows thirty calendar days with repeated participation, exclusive revenue and future gaps", () => {
+    const experiment = demo.experiments[4];
+    const report = getAbTestsDemoReport(experiment, {}, now);
+    expect(experiment.observationUnit).toBe("DAILY_SESSION");
+    expect(experiment.conversionWindowHours).toBe(24);
+    expect(report.periods!.daily).toHaveLength(30);
+    expect(report.periods!.weekly).toHaveLength(5);
+    expect(report.periods!.daily.at(-1)!.state).toBe("UPCOMING");
+    expect(report.periods!.daily.at(-1)!.variants.map(v => v.rate)).toEqual([null, null]);
+    expect(report.inference.state).toBe("OBSERVATIONAL");
+    expect(report.integrity.duplicateIdentities).toBe(0);
+    for (const arm of [0, 1]) {
+      const total = report.periods!.total.variants[arm];
+      expect(total.uniquePeople).toBeGreaterThan(0);
+      expect(total.uniquePeople).toBeLessThan(total.assigned);
+      expect(report.periods!.daily.reduce((n, p) => n + p.variants[arm].revenueCents, 0)).toBe(total.revenueCents);
+      expect(report.periods!.weekly.reduce((n, p) => n + p.variants[arm].sales, 0)).toBe(total.sales);
+    }
+    expect(report.periods!.total.audience!.window).toBe("CALENDAR_PERIOD");
+    expect(report.periods!.total.audience!.A.average).toBeGreaterThan(0);
+    expect(report.periods!.daily.at(-1)!.audience!.A.average).toBeNull();
   });
 });
