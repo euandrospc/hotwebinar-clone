@@ -42,7 +42,9 @@ export function DashboardWebinarPicker({ webinars, selectedId, compact = false }
       {!compact && <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F0F7E9] text-[#527660] dark:bg-[#17382D] dark:text-[#A6DE6B]" aria-hidden="true"><TvMinimalPlay className="h-4 w-4" /></span>}
       {webinars.length > 1 ? (
         <Select name="webinarId" value={selected.id} onValueChange={selectWebinar} disabled={pending}>
-          <SelectTrigger aria-label="Webinar analisado" className={cn("h-9 w-auto min-w-0 max-w-[min(480px,calc(100vw-7rem))] gap-3 rounded-lg border-border/70 bg-card text-sm font-medium", compact && "h-10 max-w-[min(260px,calc(100vw-3rem))] rounded-xl text-xs shadow-none")}><SelectValue /></SelectTrigger>
+          <SelectTrigger aria-label="Trocar webinar analisado" className={cn("h-9 w-auto min-w-0 max-w-[min(480px,calc(100vw-7rem))] gap-3 rounded-lg border-border/70 bg-card text-sm font-medium", compact && "h-10 gap-2 rounded-[10px] border-[#1e241f] bg-[#0f130f] px-3.5 font-semibold text-neutral-100 shadow-none")}>
+            {compact ? <><TvMinimalPlay aria-hidden="true" className="size-4 text-neutral-400" /><span>Trocar webinar</span><span className="sr-only"><SelectValue /></span></> : <SelectValue />}
+          </SelectTrigger>
           <SelectContent className="max-w-[calc(100vw-2rem)] rounded-xl">
             {webinars.map((webinar) => (
               <SelectItem key={webinar.id} value={webinar.id} textValue={webinar.title}>

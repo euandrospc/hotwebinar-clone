@@ -21,7 +21,8 @@ import { DashboardAudienceMap } from "@/components/dashboard/dashboard-audience-
 import { DashboardSupportOverview } from "@/components/dashboard/dashboard-support-overview";
 import { DashboardChatIntelligence } from "@/components/dashboard/dashboard-chat-intelligence";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
-import { DashboardRealtimePreview } from "@/components/dashboard/dashboard-realtime-preview";
+import { DashboardLiveStatus } from "@/components/dashboard/dashboard-live-status";
+import { ArrowUpRight } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
@@ -70,7 +71,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const webinars = demo ? [demo.webinar] : (await prisma.webinar.findMany({
     where: ownerScope(session),
     orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, name: true, status: true }
+    select: { id: true, title: true, name: true, status: true, slug: true }
   })).map((webinar) => ({ ...webinar, title: webinar.title || webinar.name || "Sem título" }));
   const selectedWebinar = demo?.webinar ?? (sp.webinarId
     ? webinars.find((webinar) => webinar.id === sp.webinarId)
@@ -89,16 +90,23 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   };
   const from = displayParts(rangeStart);
   const to = displayParts(rangeEnd);
+  const periodDays = Math.max(1, Math.round((rangeEnd.getTime() - rangeStart.getTime()) / 86_400_000));
+  const periodLabel = `${formatPeriod(rangeStart, rangeEnd)} · comparado ${periodDays === 1 ? "ao dia anterior" : `aos ${periodDays} dias anteriores`}`;
+  const roomSlug = demo ? undefined : (selectedWebinar as { slug?: string | null } | undefined)?.slug;
   const queryParams: Record<string, string> = {};
   if (process.env.NODE_ENV === "development") queryParams.demo = demo ? "1" : "0";
   const realWebinarId = demo ? sp.webinarId : selectedWebinar?.id;
   if (realWebinarId && realWebinarId !== "demo-webinar") queryParams.webinarId = realWebinarId;
 
   return (
-    <div className="dashboard-v2 min-h-full w-full space-y-4 bg-[#F8F9F7] px-4 py-5 dark:bg-background sm:px-5 lg:px-6 2xl:px-8">
-      <header className="flex flex-wrap items-center justify-between gap-3 pb-1 [container-type:inline-size]">
-        <DashboardRealtimePreview webinarId={demo ? undefined : selectedWebinar?.id} demoOnline={demo?.online} demoHistory={demo?.realtime} />
-        <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
+    <div className="dashboard-v2 dark min-h-full w-full space-y-6 bg-[#0a0c0a] [--background:120_9%_4%] [--border:125_9%_13%] [--card:120_9%_5%] [--foreground:120_14%_96%] [--muted-foreground:133_4%_51%] [--muted:125_9%_11%] px-4 py-6 font-palco text-neutral-100 [color-scheme:dark] sm:px-6 lg:px-10 lg:pb-10 lg:pt-8">
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 pb-2">
+        <div className="min-w-0 space-y-2">
+          <DashboardLiveStatus webinarId={demo ? undefined : selectedWebinar?.id} demoOnline={demo?.online} />
+          <h1 className="truncate font-palco-serif text-4xl leading-tight tracking-tight text-neutral-100 sm:text-[44px]">{selectedWebinar?.title ?? "Dashboard"}</h1>
+          <p className="text-sm text-neutral-400">{periodLabel}</p>
+        </div>
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {webinars.length > 1 && <DashboardWebinarPicker webinars={webinars} selectedId={selectedWebinar?.id ?? ""} compact />}
           <DashboardRangePicker
             initialFrom={from.date}
@@ -108,16 +116,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             timeZone={DASHBOARD_TIME_ZONE}
             queryParams={queryParams}
             appearance="v2"
+            className="rounded-[10px] border-[#1e241f] bg-[#0f130f] px-3.5 font-semibold text-neutral-100 hover:bg-[#151a15] [&>span]:text-sm [&_svg]:text-neutral-400"
           />
+          {roomSlug && <a href={`/${roomSlug}`} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-palco px-3.5 text-sm font-semibold text-palco-ink transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-palco">Abrir sala<ArrowUpRight className="size-4" /></a>}
         </div>
       </header>
 
-      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(280px,0.38fr)_minmax(0,1fr)]">
+      <div className="grid items-stretch gap-6 xl:grid-cols-[400px_minmax(0,1fr)]">
         <DashboardMotion className="min-w-0"><DashboardSummary totals={overview.totals} comparison={insights.comparison} /></DashboardMotion>
         <DashboardMotion className="min-w-0" delay={0.04}><DashboardWatchChart watch={insights.watch} /></DashboardMotion>
       </div>
 
-      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]">
+      <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <DashboardMotion className="min-w-0" delay={0.08}><DashboardFunnelOverview stages={overview.funnel} transitions={overview.funnelTransitions} /></DashboardMotion>
         <DashboardMotion className="min-w-0" delay={0.1}><DashboardAudienceMap geography={insights.geography} /></DashboardMotion>
       </div>
@@ -137,11 +147,22 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           }) : undefined}
         />
       </DashboardMotion>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-neutral-500">
         {demo && "Cenário fictício para avaliação do layout. "}
         Horário de Brasília · Vendas e faturamento em reais, pela data de registro.
         {overview.excludedCurrencySales > 0 && ` ${overview.excludedCurrencySales} venda(s) em outras moedas não entram nos totais financeiros.`}
       </p>
     </div>
   );
+}
+
+const dayMonth = new Intl.DateTimeFormat("pt-BR", { timeZone: DASHBOARD_TIME_ZONE, day: "numeric", month: "short" });
+const day = new Intl.DateTimeFormat("pt-BR", { timeZone: DASHBOARD_TIME_ZONE, day: "numeric" });
+const year = new Intl.DateTimeFormat("pt-BR", { timeZone: DASHBOARD_TIME_ZONE, year: "numeric" });
+
+// "7 – 13 nov, 2026"; the month is repeated only when the range crosses months.
+function formatPeriod(start: Date, end: Date): string {
+  const short = (date: Date) => dayMonth.format(date).replace(" de ", " ").replace(".", "");
+  const sameMonth = short(start).split(" ")[1] === short(end).split(" ")[1] && year.format(start) === year.format(end);
+  return `${sameMonth ? day.format(start) : short(start)} – ${short(end)}, ${year.format(end)}`;
 }

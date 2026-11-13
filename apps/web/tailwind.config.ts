@@ -13,6 +13,8 @@ export default {
         "palco-serif": ["var(--palco-serif)", "Georgia", "serif"]
       },
       colors: {
+        // Palco brand green from the login/dashboard design.
+        palco: { DEFAULT: "#2be07a", ink: "#05140c" },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

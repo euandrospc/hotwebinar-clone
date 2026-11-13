@@ -14,6 +14,7 @@ import {
   Dot,
   Label,
   Line,
+  ReferenceLine,
   AreaChart as RechartsAreaChart,
   Legend as RechartsLegend,
   ResponsiveContainer,
@@ -507,6 +508,8 @@ interface AreaChartProps extends React.HTMLAttributes<HTMLDivElement> {
   accessibilityLayer?: boolean
   tooltipPosition?: { x?: number; y?: number }
   tooltipAllowEscapeViewBox?: { x?: boolean; y?: boolean }
+  /** Vertical marker at an index value (e.g. the pitch position), drawn over the areas. */
+  referenceLine?: { x: string; label?: React.ReactElement }
 }
 
 const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
@@ -545,6 +548,7 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
       accessibilityLayer = true,
       tooltipPosition = { y: 0 },
       tooltipAllowEscapeViewBox,
+      referenceLine,
       ...other
     } = props
     const reduceMotion = useReducedMotion()
@@ -992,6 +996,9 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
                   />
                 ))
               : null}
+            {referenceLine ? (
+              <ReferenceLine x={referenceLine.x} stroke="#2be07a" strokeOpacity={0.5} strokeWidth={1} label={referenceLine.label} />
+            ) : null}
           </RechartsAreaChart>
         </ResponsiveContainer>
       </div>

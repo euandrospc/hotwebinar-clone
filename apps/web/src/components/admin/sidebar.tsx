@@ -5,12 +5,11 @@ import { useId, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { Portal as TooltipPortal } from "@radix-ui/react-tooltip";
-import { LayoutDashboard, TvMinimalPlay, Video, Headset, MessageSquare, Gauge, Bolt, PanelLeft, Target } from "@/components/icons";
+import { LayoutDashboard, TvMinimalPlay, Video, Headset, MessageSquare, Gauge, Bolt, PanelLeft, Target, Play } from "@/components/icons";
 import type { AppIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import Logo from "../logo";
 import styles from "./sidebar.module.css";
 
 type NavigationItem = { href: string; label: string; icon: AppIcon };
@@ -52,20 +51,20 @@ export function Sidebar({ collapsed = false, navigationId, onToggle }: { collaps
           onClick={() => setHoveredHref(null)}
           className={cn(
             styles.link,
-            "relative isolate flex h-10 shrink-0 items-center rounded-[10px] px-3 text-[13px] leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#83B94D] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#141B17] md:h-[38px]",
-            active ? "font-medium text-[#064B3C] dark:text-[#D0EBB7]" : "font-normal text-[#6C7771] hover:text-[#244F37] focus-visible:text-[#244F37] dark:text-[#A0ACA3] dark:hover:text-[#D0EBB7] dark:focus-visible:text-[#D0EBB7]"
+            "relative isolate flex h-10 shrink-0 items-center rounded-[10px] px-3 text-sm leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950",
+            active ? "font-semibold text-neutral-100" : "font-medium text-neutral-400 hover:text-neutral-100 focus-visible:text-neutral-100"
           )}>
-          {active && <motion.span aria-hidden="true" layoutId={reduceMotion ? undefined : "active-item"} initial={false} transition={transition} className={cn(styles.activeItem, "pointer-events-none absolute inset-0 -z-10 rounded-[10px]")} />}
+          {active && <motion.span aria-hidden="true" layoutId={reduceMotion ? undefined : "active-item"} initial={false} transition={transition} className="pointer-events-none absolute inset-0 -z-10 rounded-[10px] bg-palco/[0.08]" />}
           <AnimatePresence initial={false}>
-            {inspected && !active && <motion.span aria-hidden="true" layoutId={reduceMotion ? undefined : "hover-item"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition} className={cn(styles.hoverItem, "pointer-events-none absolute inset-0 -z-10 rounded-[10px]")} />}
+            {inspected && !active && <motion.span aria-hidden="true" layoutId={reduceMotion ? undefined : "hover-item"} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={transition} className="pointer-events-none absolute inset-0 -z-10 rounded-[10px] bg-white/[0.04]" />}
           </AnimatePresence>
-          <motion.span aria-hidden="true" initial={false} animate={{ scale: inspected && !reduceMotion ? 1.08 : 1 }} transition={transition} className="flex h-[17px] w-[17px] shrink-0 items-center justify-center">
-            <Icon className={cn("h-[17px] w-[17px]", active && "text-[#578239] dark:text-[#B2D98D]")} />
+          <motion.span aria-hidden="true" initial={false} animate={{ scale: inspected && !reduceMotion ? 1.08 : 1 }} transition={transition} className="flex size-[18px] shrink-0 items-center justify-center">
+            <Icon className={cn("size-[18px]", active ? "text-palco" : "text-neutral-500")} />
           </motion.span>
-          <motion.span aria-hidden={collapsed} initial={false} animate={{ opacity: collapsed ? 0 : 1, x: reduceMotion ? 0 : collapsed ? -4 : inspected ? 2 : 0 }} transition={{ ...transition, duration: reduceMotion ? 0 : 0.16 }} className="pointer-events-none absolute left-[39px] right-2.5 truncate">{label}</motion.span>
+          <motion.span aria-hidden={collapsed} initial={false} animate={{ opacity: collapsed ? 0 : 1, x: reduceMotion ? 0 : collapsed ? -4 : inspected ? 2 : 0 }} transition={{ ...transition, duration: reduceMotion ? 0 : 0.16 }} className="pointer-events-none absolute left-[42px] right-2.5 truncate">{label}</motion.span>
         </Link>
         </TooltipTrigger>
-        {collapsed && <TooltipPortal><TooltipContent side="right" sideOffset={14} className="rounded-lg border-[#E2E9DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#244F37] shadow-[0_4px_16px_-4px_rgba(24,48,33,0.16)] dark:border-[#334533] dark:bg-[#19221B] dark:text-[#D0EBB7]">{label}</TooltipContent></TooltipPortal>}
+        {collapsed && <TooltipPortal><TooltipContent side="right" sideOffset={14} className="rounded-lg border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-neutral-100 shadow-lg">{label}</TooltipContent></TooltipPortal>}
         </Tooltip>
       );
     });
@@ -74,23 +73,23 @@ export function Sidebar({ collapsed = false, navigationId, onToggle }: { collaps
     <LayoutGroup id={layoutId}>
     <TooltipProvider delayDuration={220} skipDelayDuration={80}>
     <aside className="flex min-h-0 w-full flex-1 flex-col">
-      <div className="relative flex h-16 shrink-0 items-center">
+      <div className="relative flex h-[84px] shrink-0 items-center">
         <motion.div initial={false} animate={{ opacity: collapsed ? 0 : 1, x: collapsed && !reduceMotion ? -6 : 0 }} transition={{ ...transition, duration: reduceMotion ? 0 : 0.16 }} className={cn("absolute left-5", collapsed && "pointer-events-none")}>
-        <Link href="/dashboard" aria-label="Bravy Lives — Dashboard" aria-hidden={collapsed} tabIndex={collapsed ? -1 : undefined} className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#83B94D] focus-visible:ring-offset-4 dark:focus-visible:ring-offset-background">
-          <span className="[&_svg]:h-auto [&_svg]:w-[92px] [&_svg]:text-[#064B3C] dark:[&_svg]:text-[#C5E99D]"><Logo /></span>
-          <span className="text-xs tracking-wide text-[#6C7771] dark:text-muted-foreground">lives</span>
+        <Link href="/dashboard" aria-label="Palco — Dashboard" aria-hidden={collapsed} tabIndex={collapsed ? -1 : undefined} className="flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco focus-visible:ring-offset-4 focus-visible:ring-offset-neutral-950">
+          <span className="inline-flex size-8 items-center justify-center rounded-[9px] bg-palco text-palco-ink"><Play className="size-[18px]" /></span>
+          <span className="font-palco-serif text-[28px] leading-none text-white">Palco</span>
         </Link>
         </motion.div>
         {onToggle && <motion.div initial={false} animate={{ x: collapsed ? -5 : 0 }} transition={transition} className="absolute right-2.5">
         <Button variant="ghost" size="icon" onClick={onToggle}
-          className={cn(styles.toggle, "h-8 w-8 shrink-0 rounded-lg text-[#7C8981] hover:bg-[#EDF4E6] hover:text-[#064B3C] focus-visible:ring-[#83B94D] dark:text-[#A0ACA3] dark:hover:bg-[#263824] dark:hover:text-[#D0EBB7]")}
+          className={cn(styles.toggle, "size-8 shrink-0 rounded-lg text-neutral-500 hover:bg-white/5 hover:text-neutral-100 focus-visible:ring-palco")}
           aria-label={collapsed ? "Expandir sidebar" : "Recolher sidebar"} title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
           aria-expanded={!collapsed} aria-controls={navigationId}>
-          <PanelLeft className="h-[17px] w-[17px]" />
+          <PanelLeft className="size-[18px]" />
         </Button>
         </motion.div>}
       </div>
-      <motion.nav layoutScroll id={navigationId} aria-label="Menu principal" className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2.5 pt-1">
+      <motion.nav layoutScroll id={navigationId} aria-label="Menu principal" className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pt-1">
         <div className="shrink-0 space-y-0.5">{items(PRINCIPAL)}{items(OPERATION)}</div>
         <div className="min-h-5 flex-1" />
         <div className="shrink-0 space-y-0.5 pb-2">{items(MANAGEMENT)}</div>

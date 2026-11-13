@@ -11,6 +11,12 @@ export const chartColors = {
     fill: "fill-[#064B3C]",
     text: "text-[#064B3C]",
   },
+  palco: {
+    bg: "bg-palco",
+    stroke: "stroke-palco",
+    fill: "fill-palco",
+    text: "text-palco",
+  },
   chartLime: {
     bg: "bg-[#A6DE6B]",
     stroke: "stroke-[#A6DE6B]",

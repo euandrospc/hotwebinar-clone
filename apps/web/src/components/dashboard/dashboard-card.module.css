@@ -9,7 +9,7 @@
 }
 
 @media (min-width: 640px) {
-  .card { padding: 18px; }
+  .card { padding: 24px; }
 }
 
 /* Keep chart hit targets still while the surface responds to inspection. */
@@ -53,10 +53,11 @@
 
 .segment {
   min-height: 26px;
-  padding: 4px 9px;
+  padding: 5px 10px;
   border-radius: 7px;
   color: #748075;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 16px;
   transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
@@ -71,27 +72,27 @@
 .segment:focus-visible { outline: 2px solid #83b94d; outline-offset: 2px; }
 
 :global(.dark) .card {
-  border-color: rgb(184 214 186 / 12%);
-  background: linear-gradient(145deg, #131a16, #101612);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%), 0 2px 4px rgb(0 0 0 / 10%), 0 14px 30px -22px rgb(0 0 0 / 40%);
+  border-color: #1e241f;
+  background: #0c0e0c;
+  box-shadow: 0 14px 30px -22px rgb(0 0 0 / 60%);
 }
-:global(.dark) .card:hover, :global(.dark) .card:focus-within { border-color: rgb(184 214 186 / 23%); }
+:global(.dark) .card:hover, :global(.dark) .card:focus-within { border-color: #2a332b; }
 :global(.dark) .financial {
-  border-color: rgb(163 206 132 / 22%);
-  background: radial-gradient(ellipse at top left, rgb(183 225 129 / 12%), transparent 70%), linear-gradient(135deg, #124a36, #083e2e 75%, #0b382a);
+  border-color: rgb(43 224 122 / 25%);
+  background: linear-gradient(135deg, #1e6b47, #0e3826);
 }
 :global(.dark) .inset {
-  border-color: rgb(184 214 186 / 5%);
-  background: linear-gradient(135deg, #17271b, #152219);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+  border-color: rgb(255 255 255 / 6%);
+  background: #121512;
+  box-shadow: none;
 }
-:global(.dark) .segmented { background: #1b261e; }
-:global(.dark) .segment { color: #99a69b; }
-:global(.dark) .segment:hover { color: #d0ebb7; }
+:global(.dark) .segmented { background: #070807; box-shadow: inset 0 0 0 1px #1e241f; }
+:global(.dark) .segment { color: #7c867e; }
+:global(.dark) .segment:hover { color: #f5f5f5; }
 :global(.dark) .segment[aria-pressed="true"] {
-  color: #c5e99d;
-  background: #2a3c2c;
-  box-shadow: inset 0 0 0 1px rgb(184 214 186 / 8%), 0 1px 3px rgb(0 0 0 / 12%);
+  color: #2be07a;
+  background: rgb(43 224 122 / 12%);
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

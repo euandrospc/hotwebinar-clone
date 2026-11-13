@@ -28,8 +28,8 @@ export function LiveRoomCount() {
     );
     return () => clearTimeout(timer);
   }, [count, reduce]);
-  return <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-green-400/20 bg-green-400/10 px-2.5 py-1.5 text-xs text-white backdrop-blur-md sm:px-3.5 sm:py-2 sm:text-sm">
-    <span className="size-2 animate-pulse rounded-full bg-green-400 motion-reduce:animate-none" />
+  return <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-palco/20 bg-palco/10 px-2.5 py-1.5 text-xs text-white backdrop-blur-md sm:px-3.5 sm:py-2 sm:text-sm">
+    <span className="size-2 animate-pulse rounded-full bg-palco motion-reduce:animate-none" />
     <span><span className="tabular-nums">{count}</span> salas vendendo agora</span>
   </span>;
 }
@@ -43,7 +43,7 @@ const sales = [
   { buyer: "Rafael T.", product: "Mentoria", price: "R$ 997" }
 ];
 
-const toast = "flex w-full items-center gap-3 rounded-2xl border border-green-400/35 bg-neutral-900/95 p-3.5 shadow-2xl shadow-black/70 backdrop-blur-lg";
+const toast = "flex w-full items-center gap-3 rounded-2xl border border-palco/35 bg-neutral-900/95 p-3.5 shadow-2xl shadow-black/70 backdrop-blur-lg";
 
 /** Purchase toasts that keep arriving over the room preview; the previous one stays stacked behind. */
 export function SaleFeed({ className }: { className?: string }) {
@@ -66,7 +66,7 @@ export function SaleFeed({ className }: { className?: string }) {
         exit={{ opacity: 0, y: 14, scale: 0.94 }}
         transition={{ type: "spring", stiffness: 380, damping: 30 }}
       >
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-green-400 text-neutral-950"><CircleCheck className="size-5" /></span>
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-palco text-neutral-950"><CircleCheck className="size-5" /></span>
         <span className="grid gap-0.5">
           <strong className="text-sm font-bold">Venda confirmada!</strong>
           <small className="text-xs text-neutral-400">{sale.buyer} comprou a {sale.product} · {sale.price}</small>

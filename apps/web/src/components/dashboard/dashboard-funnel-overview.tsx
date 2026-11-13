@@ -124,15 +124,15 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
       <header className="flex flex-wrap items-start justify-between gap-2.5">
         <div>
           <div className="flex items-center gap-1.5">
-            <h2 id={`${id}-title`} className="text-[13px] font-semibold tracking-tight">Funil de conversão</h2>
+            <h2 id={`${id}-title`} className="text-base font-semibold text-neutral-100">Funil de conversão</h2>
             <TooltipProvider delayDuration={150}>
               <Tooltip>
-                <TooltipTrigger asChild><button type="button" aria-label="Como o funil é calculado" className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-[#F1F6EB] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none dark:hover:bg-[#203323]"><Info aria-hidden="true" className="size-3.5" /></button></TooltipTrigger>
+                <TooltipTrigger asChild><button type="button" aria-label="Como o funil é calculado" className="inline-flex size-6 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-white/5 hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none"><Info aria-hidden="true" className="size-3.5" /></button></TooltipTrigger>
                 <TooltipPortal><TooltipContent className="max-w-[min(20rem,calc(100vw-2rem))] rounded-xl border-[#E1E8DA] bg-white/95 leading-relaxed shadow-[0_8px_24px_-8px_rgba(24,48,33,0.2)] backdrop-blur-sm dark:border-[#334533] dark:bg-[#19221B]/95">O fluxo mostra pessoas únicas por etapa, entre os acessos identificados na plataforma. Captação externa não é medida. {hasMeasuredTransitions ? "Entre etapas mostra quem tem registro em ambas no período, sem inferir a ordem das ações. Ausência de registro não comprova abandono. Compras podem ocorrer sem clique na oferta." : "As etapas são contagens independentes; diferenças não comprovam perdas individuais."} As camadas de cor representam a mesma série.</TooltipContent></TooltipPortal>
               </Tooltip>
             </TooltipProvider>
           </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Do acesso à compra · pessoas únicas</p>
+          <p className="mt-1 text-sm text-neutral-500">Do acesso à compra · pessoas únicas</p>
         </div>
         <div role="group" aria-label="Base dos percentuais do funil" className={styles.segmented}>
           {([{ key: "base", label: "Sobre acessos" }, { key: "previous", label: "Entre etapas" }] as const).map((option) => (
@@ -158,7 +158,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                     <linearGradient id={`${id}-middle`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#AFDA84" /><stop offset="100%" stopColor="#3C9070" /></linearGradient>
                     <linearGradient id={`${id}-inner`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#78C18B" /><stop offset="100%" stopColor="#146C52" /></linearGradient>
                     <linearGradient id={`${id}-core`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#44A781" /><stop offset="100%" stopColor="#064E3B" /></linearGradient>
-                    <linearGradient id={`${id}-focus`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#79AC57" stopOpacity="0" /><stop offset="45%" stopColor="#79AC57" stopOpacity="0.1" /><stop offset="100%" stopColor="#79AC57" stopOpacity="0" /></linearGradient>
+                    <linearGradient id={`${id}-focus`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2BE07A" stopOpacity="0" /><stop offset="50%" stopColor="#2BE07A" stopOpacity="0.08" /><stop offset="100%" stopColor="#2BE07A" stopOpacity="0" /></linearGradient>
                     <clipPath id={`${id}-reveal`}><motion.rect y="0" height={chartHeight} initial={reducedMotion ? false : { width: 0 }} animate={{ width: chartWidth }} transition={{ duration: reducedMotion ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }} /></clipPath>
                   </defs>
                   <motion.rect initial={false} animate={{ x: activeX - chartWidth / stages.length / 2 }} transition={{ duration, ease: "easeOut" }} y="0" width={chartWidth / stages.length} height={chartHeight - 4} fill={`url(#${id}-focus)`} rx="12" />
@@ -168,7 +168,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                     ))}
                   </g>
                   {stages.map((stage, index) => (
-                    <line key={stage.label} x1={(index + 0.5) / stages.length * chartWidth} x2={(index + 0.5) / stages.length * chartWidth} y1="12" y2="130" stroke="currentColor" className="text-[#0B5141]/15 dark:text-white/15" strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+                    <line key={stage.label} x1={(index + 0.5) / stages.length * chartWidth} x2={(index + 0.5) / stages.length * chartWidth} y1="12" y2="130" stroke="currentColor" className="text-[#1e241f]" strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
                   ))}
                 </svg>
                 <ol aria-label="Etapas do funil" className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
@@ -189,11 +189,11 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                         className="relative block h-full w-full rounded-xl text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                       >
                         <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: center }}>
-                          <motion.span initial={false} animate={{ scale: !reducedMotion && activeIndex === index ? 1.035 : 1, y: !reducedMotion && activeIndex === index ? -1 : 0 }} transition={{ duration }} className={cn("inline-flex min-w-[44px] items-center justify-center rounded-full border px-2.5 py-1.5 text-xs font-semibold tabular-nums transition-colors motion-reduce:transition-none", activeIndex === index ? "border-[#0B5141] bg-gradient-to-br from-[#17664E] to-[#0B5141] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_3px_10px_rgba(6,62,48,0.14)]" : "border-[#dbe6d7] bg-card text-[#0B5141] shadow-[0_1px_3px_rgba(28,58,36,0.06)] dark:border-[#365036] dark:bg-[#18271D] dark:text-[#B7E779]")}>{number.format(stage.count)}</motion.span>
+                          <motion.span initial={false} animate={{ scale: !reducedMotion && activeIndex === index ? 1.035 : 1, y: !reducedMotion && activeIndex === index ? -1 : 0 }} transition={{ duration }} className={cn("inline-flex min-w-[44px] items-center justify-center rounded-full border px-3 py-[5px] text-[13px] font-bold tabular-nums transition-colors motion-reduce:transition-none", activeIndex === index ? "border-palco bg-[#0c0e0c] text-palco" : "border-palco/35 bg-[#123524] text-neutral-100")}>{number.format(stage.count)}</motion.span>
                         </span>
                         <span className="absolute inset-x-1 bottom-0 flex h-12 flex-col items-center justify-start gap-1">
-                          <span className={cn("text-[11px] font-medium leading-tight", activeIndex === index ? "text-[#07513D] dark:text-[#B7E779]" : "text-muted-foreground")}>{stage.label}</span>
-                          <span className={cn("text-[11px] tabular-nums", activeIndex === index ? "font-semibold text-[#07513D] dark:text-[#B7E779]" : "text-muted-foreground")}>{formatPercent(stagePercent(index))}</span>
+                          <span className={cn("text-[13px] leading-tight", activeIndex === index ? "font-bold text-palco" : "font-medium text-neutral-300")}>{stage.label}</span>
+                          <span className={cn("text-xs tabular-nums", activeIndex === index ? "font-bold text-palco" : "text-neutral-500")}>{formatPercent(stagePercent(index))}</span>
                         </span>
                       </button>
                     </li>
@@ -201,7 +201,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                 </ol>
               </div>
             </div>
-            <div className="mt-1 flex min-h-7 items-center justify-between gap-2 text-[10px] text-muted-foreground [@container(min-width:500px)]:min-h-[15px]">
+            <div className="mt-2 flex min-h-7 items-center justify-between gap-2 text-xs text-neutral-500 [@container(min-width:500px)]:min-h-[15px]">
               <span>{mode === "base" ? "% do total de acessos" : hasMeasuredTransitions ? "% da etapa anterior com registro nas duas" : "Razão entre as contagens das etapas"}</span>
               <span className="hidden shrink-0 [@container(min-width:500px)]:inline">Passe o mouse · clique para fixar</span>
               <span className="shrink-0 [@container(min-width:500px)]:hidden">Deslize e toque</span>
@@ -210,26 +210,26 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
 
           {/* Reserve room for the longest stage details at each width so inspection does not move the chart or neighboring cards. */}
           {active && (
-            <div id={`${id}-details`} role="region" aria-label="Detalhes da etapa" aria-live="polite" aria-atomic="true" className="mt-auto min-h-[192px] border-t border-border/60 pt-2.5 [@container(min-width:300px)]:min-h-[164px] [@container(min-width:500px)]:min-h-[128px]">
+            <div id={`${id}-details`} role="region" aria-label="Detalhes da etapa" aria-live="polite" aria-atomic="true" className="mt-auto min-h-[192px] border-t border-[#1e241f] pt-3.5 [@container(min-width:300px)]:min-h-[164px] [@container(min-width:500px)]:min-h-[128px]">
               <motion.div key={activeIndex} initial={reducedMotion ? false : { opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="flex items-center gap-1.5 text-xs font-medium"><span className="text-muted-foreground">{previous ? shortLabels[activeIndex - 1] ?? previous.label : "01"}</span><ArrowRight aria-hidden="true" className="size-3 text-muted-foreground" />{active.label}</p>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">{formatPercent(baseRatio)} dos acessos</span>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-neutral-100"><span className="font-normal text-neutral-400">{previous ? shortLabels[activeIndex - 1] ?? previous.label : "01"}</span><ArrowRight aria-hidden="true" className="size-3.5 text-neutral-500" />{active.label}</p>
+                  <span className="text-xs tabular-nums text-neutral-500">{formatPercent(baseRatio)} dos acessos</span>
                 </div>
                 {transition ? (
                   <>
-                    <dl className="mt-2 grid grid-cols-3 gap-2">
-                      <div><dt className="min-h-7 text-[10px] text-muted-foreground [@container(min-width:500px)]:min-h-0">Nas duas etapas</dt><dd className="mt-0.5 text-lg font-semibold leading-tight tracking-tight tabular-nums text-[#0B5141] dark:text-[#B7E779]">{formatPercent(transition.overlapRate)}</dd></div>
-                      <div className="border-l border-border/60 pl-2 sm:pl-3"><dt className="min-h-7 text-[10px] text-muted-foreground [@container(min-width:500px)]:min-h-0">Pessoas em comum</dt><dd className="mt-0.5 text-lg font-medium leading-tight tracking-tight tabular-nums">{number.format(transition.overlapCount)}</dd></div>
-                      <div className="border-l border-border/60 pl-2 sm:pl-3"><dt className="min-h-7 text-[10px] text-muted-foreground [@container(min-width:500px)]:min-h-0">{missingLabels[activeIndex] ?? "Só na etapa anterior"}</dt><dd className="mt-0.5 text-lg font-medium leading-tight tracking-tight tabular-nums">{number.format(transition.previousOnlyCount)}</dd></div>
+                    <dl className="mt-3 grid grid-cols-3">
+                      <div><dt className="min-h-7 text-xs text-neutral-500 [@container(min-width:500px)]:min-h-0">Nas duas etapas</dt><dd className="mt-1 text-[22px] font-bold leading-tight tabular-nums text-palco">{formatPercent(transition.overlapRate)}</dd></div>
+                      <div className="border-l border-[#1e241f] px-2 sm:px-4"><dt className="min-h-7 text-xs text-neutral-500 [@container(min-width:500px)]:min-h-0">Pessoas em comum</dt><dd className="mt-1 text-[22px] font-bold leading-tight tabular-nums text-neutral-100">{number.format(transition.overlapCount)}</dd></div>
+                      <div className="border-l border-[#1e241f] px-2 sm:px-4"><dt className="min-h-7 text-xs text-neutral-500 [@container(min-width:500px)]:min-h-0">{missingLabels[activeIndex] ?? "Só na etapa anterior"}</dt><dd className="mt-1 text-[22px] font-bold leading-tight tabular-nums text-neutral-100">{number.format(transition.previousOnlyCount)}</dd></div>
                     </dl>
-                    <div className="mt-2 flex h-[3px] overflow-hidden rounded-full bg-[#e9eee6] dark:bg-muted" aria-hidden="true"><motion.div initial={false} animate={{ width: `${transition.overlapRate ?? 0}%` }} transition={{ duration }} className="h-full rounded-full bg-[#79ad5e]" /></div>
-                    <p className="mt-1.5 min-h-7 text-[10px] leading-relaxed text-muted-foreground">{transition.currentOnlyCount > 0 ? <>{number.format(transition.currentOnlyCount)} {additionalLabels[activeIndex] || "nesta etapa sem registro na anterior"}. </> : null}{transition.fromCount === 0 ? "Etapa anterior sem registros; percentual indisponível." : `${number.format(transition.overlapCount)} de ${number.format(transition.fromCount)} pessoas aparecem nas duas etapas no período.`}</p>
+                    <div className="mt-3 flex h-1 overflow-hidden rounded-full bg-[#1a1f1b]" aria-hidden="true"><motion.div initial={false} animate={{ width: `${transition.overlapRate ?? 0}%` }} transition={{ duration }} className="h-full rounded-full bg-palco" /></div>
+                    <p className="mt-2 min-h-7 text-xs leading-relaxed text-neutral-500">{transition.currentOnlyCount > 0 ? <>{number.format(transition.currentOnlyCount)} {additionalLabels[activeIndex] || "nesta etapa sem registro na anterior"}. </> : null}{transition.fromCount === 0 ? "Etapa anterior sem registros; percentual indisponível." : `${number.format(transition.overlapCount)} de ${number.format(transition.fromCount)} pessoas aparecem nas duas etapas no período.`}</p>
                   </>
                 ) : (
                   <div className="mt-2 flex min-h-[72px] items-start justify-between gap-3">
-                    <div><p className="max-w-sm text-[11px] leading-relaxed text-muted-foreground">{stageDescriptions[activeIndex] ?? "Pessoas com registro nesta etapa no período."}</p><p className="mt-1.5 text-[11px] text-muted-foreground">{!previous ? `${number.format(active.count)} pessoas compõem a base deste funil.` : delta === 0 ? "Mesma quantidade da etapa anterior." : `${number.format(Math.abs(delta))} ${delta < 0 ? "a menos" : "a mais"} que a etapa anterior.`}{previous && ratio === null && " Etapa anterior sem registros; comparação percentual indisponível."}</p></div>
-                    <div className="shrink-0 text-right"><strong className="text-lg font-semibold leading-tight tabular-nums text-[#07513D] dark:text-[#B7E779]">{previous ? formatPercent(ratio) : number.format(active.count)}</strong><p className="mt-1 text-[10px] text-muted-foreground">{previous ? "da quantidade anterior" : "acessos identificados"}</p></div>
+                    <div><p className="max-w-sm text-xs leading-relaxed text-neutral-500">{stageDescriptions[activeIndex] ?? "Pessoas com registro nesta etapa no período."}</p><p className="mt-1.5 text-xs text-neutral-500">{!previous ? `${number.format(active.count)} pessoas compõem a base deste funil.` : delta === 0 ? "Mesma quantidade da etapa anterior." : `${number.format(Math.abs(delta))} ${delta < 0 ? "a menos" : "a mais"} que a etapa anterior.`}{previous && ratio === null && " Etapa anterior sem registros; comparação percentual indisponível."}</p></div>
+                    <div className="shrink-0 text-right"><strong className="text-[22px] font-bold leading-tight tabular-nums text-palco">{previous ? formatPercent(ratio) : number.format(active.count)}</strong><p className="mt-1 text-[10px] text-muted-foreground">{previous ? "da quantidade anterior" : "acessos identificados"}</p></div>
                   </div>
                 )}
               </motion.div>

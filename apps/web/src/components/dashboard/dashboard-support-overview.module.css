@@ -68,20 +68,40 @@
 .tableFooter button:not(:disabled):hover { background: #edf3e8; }
 .emptyChart { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 156px; font-size: 11px; color: #657268; }
 .emptyTable { display: grid; place-items: center; min-height: 145px; padding: 24px; text-align: center; color: #657268; font-size: 11px; }
-:global(.dark) .titleIcon, :global(.dark) .avatar { background: #203425; color: #bfdba7; box-shadow: none; }
-:global(.dark) .aiAvatar { background: #2d4425; color: #b7e779; }
-:global(.dark) .help:hover, :global(.dark) .conversationsLink:hover, :global(.dark) .tableFooter button:not(:disabled):hover { background: #233524; color: #c5e99d; }
-:global(.dark) .conversationsLink { color: #c5e99d; border-color: #304330; }
-:global(.dark) .metrics, :global(.dark) .metric, :global(.dark) .performance, :global(.dark) .table tbody tr { border-color: rgb(184 214 186 / 10%); }
-:global(.dark) .metric dd, :global(.dark) .channel strong, :global(.dark) .sortButton:hover { color: #c5e99d; }
-:global(.dark) .attention dd { color: #e3bd7c; }
-:global(.dark) .metric dt, :global(.dark) .channel p { color: #adb8ae; }
-:global(.dark) .metric .metricNote, :global(.dark) .personKind, :global(.dark) .channel p span, :global(.dark) .tableToolbar > p, :global(.dark) .tableFooter, :global(.dark) .emptyChart, :global(.dark) .emptyTable { color: #92a095; }
-:global(.dark) .channels, :global(.dark) .table thead { background: #1b281e; color: #a5b4a8; }
-:global(.dark) .search, :global(.dark) .tableFooter button { border-color: #304031; }
-:global(.dark) .search { color: #bac5bb; }
-:global(.dark) .channelBar, :global(.dark) .share > div { background: #2b3a2b; }
-:global(.dark) .chartTooltip { border-color: #304330; background: rgb(23 33 25 / 97%); }
+:global(.dark) .titleIcon { display: none; }
+:global(.dark) .avatar { border-color: transparent; background: #1a1f1b; color: #c9d1ca; box-shadow: none; }
+:global(.dark) .aiAvatar { background: rgb(43 224 122 / 12%); color: #2be07a; }
+:global(.dark) .help { color: #6e776f; }
+:global(.dark) .help:hover, :global(.dark) .tableFooter button:not(:disabled):hover { background: rgb(255 255 255 / 5%); color: #f2f5f2; }
+:global(.dark) .conversationsLink { height: 34px; padding: 0 12px; border-color: #1e241f; border-radius: 9px; color: #f2f5f2; font-size: 13px; font-weight: 600; }
+:global(.dark) .conversationsLink svg { color: #9aa39c; }
+:global(.dark) .conversationsLink:hover { background: rgb(255 255 255 / 4%); }
+:global(.dark) .metrics { margin-top: 22px; padding: 0; border: 0; }
+:global(.dark) .metric, :global(.dark) .performance, :global(.dark) .table tbody tr { border-color: #1e241f; }
+:global(.dark) .metric dt { gap: 4px; min-height: 18px; font-size: 12px; color: #7c867e; }
+:global(.dark) .metric dt > svg { display: none; }
+:global(.dark) .metric dd { margin-top: 6px; font-size: 26px; font-weight: 700; line-height: 32px; letter-spacing: normal; color: #f2f5f2; }
+:global(.dark) .metric .metricNote { margin-top: 6px; font-size: 12px; font-weight: 400; line-height: 16px; color: #7c867e; }
+:global(.dark) .attention dd, :global(.dark) .attention .metricNote { color: #f5b742; }
+:global(.dark) .attention .metricNote { color: rgb(245 183 66 / 70%); }
+:global(.dark) .body { margin-top: 22px; border-top: 1px solid #1e241f; padding-top: 22px; }
+:global(.dark) .sectionTitle { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: #7c867e; }
+:global(.dark) .channel strong, :global(.dark) .sortButton:hover { color: #2be07a; }
+:global(.dark) .channel p { color: #9aa39c; }
+:global(.dark) .personKind, :global(.dark) .channel p span, :global(.dark) .tableToolbar > p, :global(.dark) .tableFooter, :global(.dark) .emptyChart, :global(.dark) .emptyTable { color: #7c867e; }
+:global(.dark) .personName { font-size: 13px; font-weight: 600; color: #f2f5f2; }
+:global(.dark) .table { font-size: 13px; }
+:global(.dark) .table tbody td { color: #9aa39c; }
+:global(.dark) .channels { background: #070807; box-shadow: inset 0 0 0 1px #1a1f1b; }
+:global(.dark) .table thead { background: transparent; color: #7c867e; border-bottom: 1px solid #1e241f; }
+:global(.dark) .table thead th { font-size: 11px; }
+:global(.dark) .search, :global(.dark) .tableFooter button { border-color: #1e241f; }
+:global(.dark) .search { color: #9aa39c; }
+:global(.dark) .humanDot, :global(.dark) .humanBar { background: #2be07a; }
+:global(.dark) .aiDot, :global(.dark) .aiBar { background: #a6d69a; }
+:global(.dark) .channelBar, :global(.dark) .share > div { background: #1a1f1b; }
+:global(.dark) .chartTooltip { border-color: rgb(255 255 255 / 10%); background: rgb(23 23 23 / 95%); }
+:global(.dark) .help:focus-visible, :global(.dark) .sortButton:focus-visible, :global(.dark) .sample:focus-visible, :global(.dark) .tableFooter button:focus-visible, :global(.dark) .conversationsLink:focus-visible, :global(.dark) .tableViewport:focus-visible, :global(.dark) .search:focus-within { outline-color: #2be07a; }
 @container (max-width: 1050px) {
   .body { grid-template-columns: minmax(0,0.34fr) minmax(0,0.66fr); gap: 16px; }
   .performance { padding-left: 16px; }
