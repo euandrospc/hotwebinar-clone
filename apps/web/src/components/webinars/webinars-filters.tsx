@@ -62,12 +62,12 @@ export function WebinarsFilters({ counts }: { counts: PhaseCounts }) {
         />
       </label>
 
-      <div role="group" aria-label="Filtrar por situação" className="flex max-w-full shrink-0 overflow-x-auto rounded-[10px] border border-[#1E241F] bg-[#070807] p-[3px]">
+      <div role="group" aria-label="Filtrar por situação" className="flex max-w-full shrink-0 snap-x overflow-x-auto overscroll-x-contain rounded-[10px] border border-[#1E241F] bg-[#070807] p-[3px] [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] [&::-webkit-scrollbar]:hidden">
         {PHASES.map((p) => {
           const active = phase === p.value;
           return (
-            <button key={p.value} type="button" aria-pressed={active} onClick={() => onChange("fase", p.value)}
-              className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-[7px] px-3 py-[7px] text-[13px] font-semibold leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none",
+            <button key={p.value} type="button" aria-pressed={active} onClick={(e) => { e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); onChange("fase", p.value); }}
+              className={cn("flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-[7px] px-3 py-[7px] text-[13px] font-semibold leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none",
                 active ? "bg-palco/[0.12] text-palco" : "text-neutral-400 hover:text-neutral-100")}>
               {p.label}
               <span className={cn("text-xs font-normal", active ? "text-palco/70" : "text-[#6E776F]")}>{counts[p.value]}</span>
