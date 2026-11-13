@@ -1,5 +1,4 @@
 "use client";
-import styles from "./wizard.module.css";
 import { OfferTitleEditor } from "./offer-title-editor";
 import { useTransition } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
@@ -8,20 +7,34 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { step5Schema, type Step5Input } from "@/lib/validations/webinar";
 import { updateWebinarStep5 } from "@/server/actions/webinar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SecondsInput } from "@/components/ui/seconds-input";
-import { ColorPickerField } from "@/components/wizard/color-picker-field";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { Globe, Pipette } from "@/components/icons";
 import { ImageUploadField } from "@/components/wizard/image-upload-field";
 import { OfferPreviewDesktop, OfferPreviewMobile } from "@/components/wizard/offer-preview";
 import { WizardNav } from "@/components/wizard/wizard-nav";
+import { palcoCard, palcoError, palcoField, palcoInput, palcoLabel, palcoSwitch, palcoTime, palcoTitle } from "./palco-fields";
 
 export interface Step5FormProps {
   webinarId: string;
   initial: Step5Input;
 }
+
+const timeFields = [
+  { name: "pitchAtSec", label: "Início do pitch", nullable: true },
+  { name: "offerShowAtSec", label: "Início da oferta", nullable: false },
+  { name: "offerHideAtSec", label: "Fim da oferta", nullable: true }
+] as const;
+
+const toggles = [
+  ["offerPassUtms", "Repassar UTMs para o link da oferta"],
+  ["offerDisabled", "Desabilitar oferta"],
+  ["offerSameWindow", "Abrir o link na mesma janela do webinar"],
+  ["offerRaffleEnabled", "Habilitar sorteio"]
+] as const;
 
 export function Step5Form({ webinarId, initial }: Step5FormProps) {
   const router = useRouter();
@@ -45,81 +58,90 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
     });
   }
 
+  const previewProps = {
+    offerTitle: watched.offerTitle ?? "",
+    offerTitleStyle: watched.offerTitleStyle,
+    offerPriceOriginal: watched.offerPriceOriginal ?? null,
+    offerPriceFinal: watched.offerPriceFinal ?? null,
+    offerButtonText: watched.offerButtonText ?? "",
+    offerButtonColor: watched.offerButtonColor ?? "#dc2626",
+    offerImageDesktopUrl: watched.offerImageDesktopUrl ?? null,
+    offerImageMobileUrl: watched.offerImageMobileUrl ?? null,
+    offerRaffleEnabled: Boolean(watched.offerRaffleEnabled)
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
-      <div className={styles.formPanel}>
-        <h2 className={styles.title}>Oferta</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className={palcoCard}>
+        <h2 className={palcoTitle}>Oferta</h2>
 
-        <section className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="offerName">Nome da oferta *</Label>
-            <Input id="offerName" {...register("offerName")} />
-            {errors.offerName && <p className="text-xs text-destructive">{errors.offerName.message}</p>}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="offerTitle">Título da oferta *</Label>
-            <Controller control={control} name="offerTitle" render={({ field }) => (
-              <OfferTitleEditor value={field.value} format={watched.offerTitleStyle}
-                onChange={field.onChange}
-                onFormat={value => form.setValue("offerTitleStyle", value, { shouldDirty: true, shouldValidate: true })} />
-            )} />
-            {errors.offerTitle && <p className="text-xs text-destructive">{errors.offerTitle.message}</p>}
-            {errors.offerTitleStyle && <p className="text-xs text-destructive">{errors.offerTitleStyle.message}</p>}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="offerPriceOriginal">Preço original</Label>
-              <Input id="offerPriceOriginal" placeholder="R$2.997" {...register("offerPriceOriginal")} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="offerPriceFinal">Preço da oferta</Label>
-              <Input id="offerPriceFinal" placeholder="12x de R$153.44" {...register("offerPriceFinal")} />
-            </div>
-          </div>
-        </section>
+        <div className={palcoField}>
+          <Label htmlFor="offerName" className={palcoLabel}>Nome da oferta *</Label>
+          <Input id="offerName" className={palcoInput} {...register("offerName")} />
+          {errors.offerName && <p className={palcoError}>{errors.offerName.message}</p>}
+        </div>
 
-        <section className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="offerButtonText">Texto do botão *</Label>
-            <Input id="offerButtonText" {...register("offerButtonText")} />
-            {errors.offerButtonText && <p className="text-xs text-destructive">{errors.offerButtonText.message}</p>}
+        <div className={palcoField}>
+          <Label htmlFor="offerTitle" className={palcoLabel}>Título da oferta *</Label>
+          <Controller control={control} name="offerTitle" render={({ field }) => (
+            <OfferTitleEditor value={field.value} format={watched.offerTitleStyle}
+              onChange={field.onChange}
+              onFormat={value => form.setValue("offerTitleStyle", value, { shouldDirty: true, shouldValidate: true })} />
+          )} />
+          {errors.offerTitle && <p className={palcoError}>{errors.offerTitle.message}</p>}
+          {errors.offerTitleStyle && <p className={palcoError}>{errors.offerTitleStyle.message}</p>}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className={palcoField}>
+            <Label htmlFor="offerPriceOriginal" className={palcoLabel}>Preço original</Label>
+            <Input id="offerPriceOriginal" className={palcoInput} placeholder="R$ 2.997" {...register("offerPriceOriginal")} />
           </div>
-          <div className="space-y-1">
-            <Label>Cor do botão</Label>
+          <div className={palcoField}>
+            <Label htmlFor="offerPriceFinal" className={palcoLabel}>Preço da oferta</Label>
+            <Input id="offerPriceFinal" className={palcoInput} placeholder="12x de R$ 153,44" {...register("offerPriceFinal")} />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className={`${palcoField} flex-1`}>
+            <Label htmlFor="offerButtonText" className={palcoLabel}>Texto do botão *</Label>
+            <Input id="offerButtonText" className={palcoInput} {...register("offerButtonText")} />
+            {errors.offerButtonText && <p className={palcoError}>{errors.offerButtonText.message}</p>}
+          </div>
+          <div className={palcoField}>
+            <Label htmlFor="offerButtonColor" className={palcoLabel}>Cor do botão</Label>
             <Controller
               control={control}
               name="offerButtonColor"
               render={({ field }) => (
-                <ColorPickerField
-                  id="offerButtonColor"
-                  aria-label="Cor do botão"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
+                <ColorPicker value={field.value} onChange={field.onChange}>
+                  <button id="offerButtonColor" type="button" aria-label="Cor do botão"
+                    className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-[#1E241F] bg-[#070807] px-3 text-xs text-[#C9D1CA] transition-colors hover:border-[#2E3630] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/60 motion-reduce:transition-none">
+                    <span className="h-[18px] w-[18px] shrink-0 rounded-full border border-white/15" style={{ backgroundColor: field.value }} aria-hidden />
+                    <span className="min-w-[52px] text-left">{field.value}</span>
+                    <Pipette className="h-3.5 w-3.5 text-[#7C867E]" aria-hidden />
+                  </button>
+                </ColorPicker>
               )}
             />
-            {errors.offerButtonColor && <p className="text-xs text-destructive">{errors.offerButtonColor.message}</p>}
+            {errors.offerButtonColor && <p className={palcoError}>{errors.offerButtonColor.message}</p>}
           </div>
-        </section>
+        </div>
 
-        <section className="space-y-4">
-          <div className="space-y-1">
-            <Label>Imagem da oferta para desktop</Label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className={palcoField}>
+            <Label className={palcoLabel}>Imagem da oferta para desktop</Label>
             <Controller
               control={control}
               name="offerImageDesktopUrl"
               render={({ field }) => (
-                <ImageUploadField
-                  webinarId={webinarId}
-                  kind="desktop"
-                  value={field.value ?? null}
-                  onChange={field.onChange}
-                />
+                <ImageUploadField webinarId={webinarId} kind="desktop" value={field.value ?? null} onChange={field.onChange} />
               )}
             />
           </div>
-          <div className="space-y-1">
-            <Label>Imagem da oferta para mobile</Label>
+          <div className={palcoField}>
+            <Label className={palcoLabel}>Imagem da oferta para mobile</Label>
             <Controller
               control={control}
               name="offerImageMobileUrl"
@@ -134,139 +156,86 @@ export function Step5Form({ webinarId, initial }: Step5FormProps) {
               )}
             />
           </div>
-        </section>
+        </div>
 
-        <section className="grid gap-4 sm:grid-cols-3 sm:items-end">
-          <div className="space-y-1">
-            <Label>Início da pitch</Label>
-            <Controller
-              control={control}
-              name="pitchAtSec"
-              render={({ field }) => (
-                <SecondsInput
-                  value={field.value ?? 0}
-                  onChange={(v) => field.onChange(v === 0 ? null : v)}
-                  aria-label="Início da pitch"
-                />
-              )}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Tempo início da oferta</Label>
-            <Controller
-              control={control}
-              name="offerShowAtSec"
-              render={({ field }) => (
-                <SecondsInput
-                  value={field.value ?? 0}
-                  onChange={(v) => field.onChange(v)}
-                  aria-label="Tempo início da oferta"
-                />
-              )}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Tempo do fim da oferta</Label>
-            <Controller
-              control={control}
-              name="offerHideAtSec"
-              render={({ field }) => (
-                <SecondsInput
-                  value={field.value ?? 0}
-                  onChange={(v) => field.onChange(v === 0 ? null : v)}
-                  aria-label="Tempo do fim da oferta"
-                />
-              )}
-            />
-            {errors.offerHideAtSec && <p className="text-xs text-destructive">{errors.offerHideAtSec.message}</p>}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="offerLink">Link da oferta</Label>
-            <Input id="offerLink" {...register("offerLink")} placeholder="https://" />
-            {errors.offerLink && <p className="text-xs text-destructive">{errors.offerLink.message}</p>}
-          </div>
-
-          {(["offerPassUtms","offerDisabled","offerSameWindow","offerRaffleEnabled"] as const).map((key) => {
-            const labels: Record<typeof key, string> = {
-              offerPassUtms: "Repassar UTM's pro link da oferta",
-              offerDisabled: "Desabilitar oferta",
-              offerSameWindow: "Abrir o link na mesma janela do webinar",
-              offerRaffleEnabled: "Habilitar sorteio"
-            };
-            return (
+        <div className="grid gap-x-6 gap-y-[18px] sm:grid-cols-3">
+          {timeFields.map(({ name, label, nullable }) => (
+            <div key={name} className={palcoField}>
+              <Label className={palcoLabel}>{label}</Label>
               <Controller
-                key={key}
                 control={control}
-                name={key}
+                name={name}
                 render={({ field }) => (
-                  <label className="flex items-center gap-3">
-                    <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} aria-label={labels[key]} />
-                    <span className="text-sm">{labels[key]}</span>
-                  </label>
+                  <SecondsInput
+                    value={field.value ?? 0}
+                    onChange={(v) => field.onChange(nullable && v === 0 ? null : v)}
+                    aria-label={label}
+                    className={palcoTime}
+                  />
                 )}
               />
-            );
-          })}
-
-          {watched.offerRaffleEnabled && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label>Hora de início do sorteio</Label>
-                <Controller
-                  control={control}
-                  name="offerRaffleAtSec"
-                  render={({ field }) => (
-                    <SecondsInput
-                      value={field.value ?? 0}
-                      onChange={(v) => field.onChange(v === 0 ? null : v)}
-                      aria-label="Hora de início do sorteio"
-                    />
-                  )}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="offerRaffleNumber">Escolha o número do sorteio</Label>
-                <Input
-                  id="offerRaffleNumber"
-                  {...register("offerRaffleNumber")}
-                  placeholder=""
-                />
-                {errors.offerRaffleNumber && <p className="text-xs text-destructive">{errors.offerRaffleNumber.message}</p>}
-              </div>
+              {name === "offerHideAtSec" && errors.offerHideAtSec && <p className={palcoError}>{errors.offerHideAtSec.message}</p>}
             </div>
-          )}
-        </section>
+          ))}
+        </div>
+
+        <div className={palcoField}>
+          <Label htmlFor="offerLink" className={palcoLabel}>Link da oferta</Label>
+          <div className="relative">
+            <Globe className="pointer-events-none absolute left-3.5 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-[#7C867E]" aria-hidden />
+            <Input id="offerLink" className={`${palcoInput} pl-10 text-[13px]`} {...register("offerLink")} placeholder="https://" />
+          </div>
+          {errors.offerLink && <p className={palcoError}>{errors.offerLink.message}</p>}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {toggles.map(([key, label]) => (
+            <Controller
+              key={key}
+              control={control}
+              name={key}
+              render={({ field }) => (
+                <label className="flex w-fit cursor-pointer items-center gap-2.5">
+                  <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} aria-label={label} className={palcoSwitch} />
+                  <span className="text-sm text-[#E4E9E5]">{label}</span>
+                </label>
+              )}
+            />
+          ))}
+        </div>
+
+        {watched.offerRaffleEnabled && (
+          <div className="grid gap-4 rounded-xl border border-[#1E241F] bg-[#0F120F] p-4 sm:grid-cols-2">
+            <div className={palcoField}>
+              <Label className={palcoLabel}>Hora de início do sorteio</Label>
+              <Controller
+                control={control}
+                name="offerRaffleAtSec"
+                render={({ field }) => (
+                  <SecondsInput
+                    value={field.value ?? 0}
+                    onChange={(v) => field.onChange(v === 0 ? null : v)}
+                    aria-label="Hora de início do sorteio"
+                    className={palcoTime}
+                  />
+                )}
+              />
+            </div>
+            <div className={palcoField}>
+              <Label htmlFor="offerRaffleNumber" className={palcoLabel}>Escolha o número do sorteio</Label>
+              <Input id="offerRaffleNumber" className={palcoInput} {...register("offerRaffleNumber")} />
+              {errors.offerRaffleNumber && <p className={palcoError}>{errors.offerRaffleNumber.message}</p>}
+            </div>
+          </div>
+        )}
 
         <WizardNav webinarId={webinarId} step={5} submitting={pending} />
       </div>
 
-      <aside className={`${styles.previewPanel} space-y-4`}>
-        <h3 className={styles.previewTitle}>Prévia da oferta</h3>
-        <OfferPreviewDesktop
-          offerTitle={watched.offerTitle ?? ""}
-          offerTitleStyle={watched.offerTitleStyle}
-          offerPriceOriginal={watched.offerPriceOriginal ?? null}
-          offerPriceFinal={watched.offerPriceFinal ?? null}
-          offerButtonText={watched.offerButtonText ?? ""}
-          offerButtonColor={watched.offerButtonColor ?? "#dc2626"}
-          offerImageDesktopUrl={watched.offerImageDesktopUrl ?? null}
-          offerImageMobileUrl={watched.offerImageMobileUrl ?? null}
-          offerRaffleEnabled={Boolean(watched.offerRaffleEnabled)}
-        />
-        <OfferPreviewMobile
-          offerTitle={watched.offerTitle ?? ""}
-          offerTitleStyle={watched.offerTitleStyle}
-          offerPriceOriginal={watched.offerPriceOriginal ?? null}
-          offerPriceFinal={watched.offerPriceFinal ?? null}
-          offerButtonText={watched.offerButtonText ?? ""}
-          offerButtonColor={watched.offerButtonColor ?? "#dc2626"}
-          offerImageDesktopUrl={watched.offerImageDesktopUrl ?? null}
-          offerImageMobileUrl={watched.offerImageMobileUrl ?? null}
-          offerRaffleEnabled={Boolean(watched.offerRaffleEnabled)}
-        />
+      <aside className="flex min-w-0 flex-col gap-3.5 rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-5 font-palco xl:sticky xl:top-[76px]">
+        <h3 className="text-xs font-semibold text-[#7C867E]">Prévia da oferta</h3>
+        <OfferPreviewDesktop {...previewProps} />
+        <OfferPreviewMobile {...previewProps} />
       </aside>
     </form>
   );

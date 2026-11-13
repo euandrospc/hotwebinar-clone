@@ -20,12 +20,17 @@ describe("compact attendance messages", () => {
       message("5", "lead", "2026-11-07T22:42:00Z"),
     ];
     const { container } = render(<ConversationMessages messages={messages} leadName="Ana" />);
-    expect(screen.getAllByText("Público · Ana")).toHaveLength(2);
-    expect(screen.getAllByText("Equipe · Maria")).toHaveLength(1);
-    expect(screen.getByRole("group", { name: "Mensagem de Público · Ana, 07/11/2026 às 19:39" })).toHaveAttribute("data-message-sender", "lead");
-    expect(screen.getByRole("group", { name: "Mensagem de Equipe · Maria, 07/11/2026 às 19:41" })).toHaveAttribute("data-message-sender", "team");
+    expect(screen.getAllByText("Ana")).toHaveLength(2);
+    expect(screen.getAllByText("Maria")).toHaveLength(1);
+    expect(screen.getByRole("group", { name: "Mensagem de Ana, 07/11/2026 às 19:39" })).toHaveAttribute("data-message-sender", "lead");
+    expect(screen.getByRole("group", { name: "Mensagem de Maria, 07/11/2026 às 19:41" })).toHaveAttribute("data-message-sender", "team");
     expect(container.querySelectorAll("time")).toHaveLength(5);
     expect(container.querySelectorAll('[data-message-group-start="true"]')).toHaveLength(3);
+  });
+
+  it("labels AI replies with the agent name", () => {
+    render(<ConversationMessages messages={[message("1", "team", "2026-11-07T22:40:00Z", "IA · Sofia")]} leadName="Ana" />);
+    expect(screen.getByRole("group", { name: "Mensagem de Sofia, 07/11/2026 às 19:40" })).toBeInTheDocument();
   });
 
   it("starts a new group when the teammate or Brasília day changes", () => {
@@ -38,10 +43,9 @@ describe("compact attendance messages", () => {
       message("6", "team", "2026-11-08T03:02:00Z", "Equipe"),
     ];
     const { container } = render(<ConversationMessages messages={messages} leadName="Ana" />);
-    expect(screen.getAllByText("Equipe · João")).toHaveLength(2);
+    expect(screen.getAllByText("João")).toHaveLength(2);
     expect(screen.getAllByText("Equipe")).toHaveLength(1);
-    expect(screen.queryByText("Equipe · Equipe")).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-message-group-start="true"]')).toHaveLength(4);
-    expect(screen.getByRole("group", { name: "Mensagem de Equipe · João, 08/11/2026 às 00:00" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Mensagem de João, 08/11/2026 às 00:00" })).toBeInTheDocument();
   });
 });

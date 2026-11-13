@@ -38,11 +38,11 @@
   --input: 125 9% 15%;
   --ring: 147 75% 52%;
 }
-.page { display: flex; flex-direction: column; gap: 24px; min-width: 0; min-height: 100%; padding: 32px 40px 40px; font-family: var(--palco-sans), ui-sans-serif, system-ui, sans-serif; }
+.page { display: flex; flex-direction: column; gap: 28px; min-width: 0; min-height: 100%; padding: 32px 40px 40px; font-family: var(--palco-sans), ui-sans-serif, system-ui, sans-serif; }
 @media (min-width: 768px) {
   .page:has(> [data-webinar-navigation]:first-child) { padding-top: 12px; }
 }
-.header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; padding: 2px 0 4px; }
+.header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; min-width: 0; padding: 2px 0 4px; }
 .heading { min-width: 0; flex: 1 1 220px; }
 .title { color: hsl(var(--foreground)); font-family: var(--palco-serif), Georgia, serif; font-size: 44px; line-height: 1.1; font-weight: 400; letter-spacing: -.5px; overflow-wrap: anywhere; }
 .description { margin-top: 8px; max-width: 720px; font-size: 14px; line-height: 1.6; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }

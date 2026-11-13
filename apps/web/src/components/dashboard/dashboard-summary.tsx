@@ -45,7 +45,8 @@ export function DashboardSummary({ totals, comparison }: { totals: SummaryTotals
             <><span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${change < 0 ? "bg-white/15 text-white" : "bg-palco text-palco-ink"}`}><ChangeIcon aria-hidden="true" className="size-3" />{change > 0 ? "+" : ""}{percent.format(change)}%</span><span className="text-white/70">vs. período anterior</span></>
           )}
         </div>
-        <dl className="mt-auto grid grid-cols-3 gap-4 border-t border-white/15 pt-4 [&>div]:pt-0">
+        <div aria-hidden="true" className="min-h-7 flex-1" />
+        <dl className="grid grid-cols-3 gap-4 border-t border-white/15 pt-4 [&>div]:pt-0">
           <div><dt className="text-xs text-white/70">Vendas</dt><dd className="mt-1 text-lg font-bold tabular-nums sm:text-xl">{number.format(totals.sales)}</dd></div>
           <div>
             <dt className="flex items-center gap-1 text-xs text-white/70">Conversão<Tooltip><TooltipTrigger asChild><button type="button" aria-label="Sobre a conversão" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco"><Info className="size-3" /></button></TooltipTrigger><TooltipContent className="max-w-64">{number.format(totals.convertedLeads)} compradores entre {number.format(totals.registrations)} acessos identificados no webinar. Captação externa não entra no cálculo.</TooltipContent></Tooltip></dt>

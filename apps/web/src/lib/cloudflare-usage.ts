@@ -32,6 +32,9 @@ export interface R2Usage {
   classA: number;
   classB: number;
   egressBytes: number;
+  /** Class B reads per UTC day, oldest first, one entry per day from `from` to `to`. */
+  daily: Array<{ date: string; classB: number }>;
+  daysInMonth: number;
   costUsd: { storage: number; classA: number; classB: number; total: number };
 }
 
@@ -53,23 +56,40 @@ const QUERY = `query($account: String!, $bucket: String!, $from: Date!, $to: Dat
       max { objectCount payloadSize metadataSize }
       dimensions { date }
     }
-    ops: r2OperationsAdaptiveGroups(limit: 1000,
+    ops: r2OperationsAdaptiveGroups(limit: 10000,
       filter: { bucketName: $bucket, date_geq: $from, date_leq: $to }) {
       sum { requests responseObjectSize }
-      dimensions { actionType }
+      dimensions { actionType date }
     }
   } }
 }`;
 
-/** null when the env is not configured; throws on API errors. */
-export async function getR2Usage(now = new Date()): Promise<R2Usage | null> {
+/** Linear month-end projection from the average daily pace so far. */
+export function projectR2Month(u: Pick<R2Usage, "from" | "to" | "storageBytes" | "classA" | "classB" | "daysInMonth">) {
+  const elapsed = Math.round((Date.parse(u.to) - Date.parse(u.from)) / 86_400_000) + 1;
+  const factor = u.daysInMonth / elapsed;
+  const classB = u.classB * factor;
+  const perDay = u.classB / elapsed;
+  // Day of the month when reads cross the free tier at this pace; null when they won't (or already did).
+  const classBLimitDay = u.classB < R2_PRICING.freeClassB && classB > R2_PRICING.freeClassB
+    ? Math.ceil(R2_PRICING.freeClassB / perDay) : null;
+  return { elapsed, complete: elapsed >= u.daysInMonth, classA: u.classA * factor, classB, classBLimitDay,
+    costUsd: estimateR2Cost(u.storageBytes, u.classA * factor, classB) };
+}
+
+/** `month` is "YYYY-MM" (defaults to the current UTC month). null when the env is not configured; throws on API errors. */
+export async function getR2Usage(now = new Date(), month?: string): Promise<R2Usage | null> {
   const token = process.env.CLOUDFLARE_API_TOKEN;
   const account = process.env.CLOUDFLARE_ACCOUNT_ID;
   const bucket = process.env.R2_BUCKET ?? "hotwebinar-hls";
   if (!token || !account) return null;
 
-  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
-  const to = now.toISOString().slice(0, 10);
+  const [y, m] = month ? month.split("-").map(Number) : [now.getUTCFullYear(), now.getUTCMonth() + 1];
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10);
+  const monthEnd = new Date(Date.UTC(y, m - 1, daysInMonth)).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+  const to = monthEnd < today ? monthEnd : today;
   const res = await fetch("https://api.cloudflare.com/client/v4/graphql", {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -79,7 +99,7 @@ export async function getR2Usage(now = new Date()): Promise<R2Usage | null> {
   const json = (await res.json()) as {
     data?: { viewer: { accounts: Array<{
       storage: Array<{ max: { objectCount: number; payloadSize: number; metadataSize: number } }>;
-      ops: Array<{ sum: { requests: number; responseObjectSize: number }; dimensions: { actionType: string } }>;
+      ops: Array<{ sum: { requests: number; responseObjectSize: number }; dimensions: { actionType: string; date: string } }>;
     }> } };
     errors?: Array<{ message: string }>;
   };
@@ -89,14 +109,20 @@ export async function getR2Usage(now = new Date()): Promise<R2Usage | null> {
 
   const s = acc.storage[0]?.max;
   let classA = 0, classB = 0, egressBytes = 0;
+  const byDay = new Map<string, number>();
+  for (let d = Date.parse(from); d <= Date.parse(to); d += 86_400_000) byDay.set(new Date(d).toISOString().slice(0, 10), 0);
   for (const o of acc.ops) {
     if (CLASS_A.has(o.dimensions.actionType)) classA += o.sum.requests;
-    else if (CLASS_B.has(o.dimensions.actionType)) classB += o.sum.requests;
+    else if (CLASS_B.has(o.dimensions.actionType)) {
+      classB += o.sum.requests;
+      byDay.set(o.dimensions.date, (byDay.get(o.dimensions.date) ?? 0) + o.sum.requests);
+    }
     egressBytes += o.sum.responseObjectSize;
   }
   const storageBytes = s ? s.payloadSize + s.metadataSize : 0;
   return {
     bucket, from, to, storageBytes, objectCount: s?.objectCount ?? 0, classA, classB, egressBytes,
+    daily: [...byDay].map(([date, classB]) => ({ date, classB })), daysInMonth,
     costUsd: estimateR2Cost(storageBytes, classA, classB)
   };
 }

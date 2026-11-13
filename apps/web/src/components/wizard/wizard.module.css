@@ -1,58 +1,98 @@
-.shell { min-width: 0; }
-.steps { position: sticky; top: 12px; z-index: 20; overflow-x: auto; padding: 5px; margin-bottom: 0; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card) / .96); box-shadow: 0 3px 12px -8px rgb(19 48 28 / 20%); backdrop-filter: blur(16px); scrollbar-width: thin; }
+/* Palco editor shell. Values mirror pen frames RJ9Z2 / ui8Gs / BuX2O. */
+div.shell { min-width: 0; gap: 28px; }
+.shell > header h1 { font-size: 36px; }
+.shell > header { padding: 0; }
+.shell > header a { gap: 6px; margin-bottom: 8px; padding-block: 0; font-size: 13px; color: #7c867e; }
+.shell > header h1 + div { margin-top: 12px; line-height: 1.3; color: #9aa39c; }
+.shell > header a > svg { width: 14px; height: 14px; }
+.steps { position: sticky; top: 12px; z-index: 20; overflow-x: auto; padding: 6px; border: 1px solid #1e241f; border-radius: 12px; background: #0c0e0c; scrollbar-width: thin; }
 .stepList { display: flex; gap: 4px; min-width: max-content; }
-.step { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 7px 11px; border: 1px solid transparent; border-radius: 8px; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); transition: background-color 160ms, border-color 160ms, color 160ms; white-space: nowrap; }
-.step svg { width: 14px; height: 14px; }
-.stepNumber { font-size: 9px; opacity: .65; font-variant-numeric: tabular-nums; }
-.step:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
-.step[aria-current="step"] { background: #eef5e8; border-color: #dfebd5; color: #064b3c; }
-:global(.dark) .step[aria-current="step"] { background: #1b3527; border-color: #304937; color: #c5e99d; }
-.content { min-width: 0; }
-.title { margin: 0 0 4px; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: -.025em; color: hsl(var(--foreground)); }
-.description { margin: 0 0 20px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.6; }
-.singleForm, .formPanel, .previewPanel { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); padding: 18px; box-shadow: 0 3px 10px -6px rgb(27 56 34 / 9%); }
-.singleForm { width: 100%; max-width: 800px; }
-.singleForm > * + *, .formPanel > * + * { margin-top: 16px; }
-.formColumns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.step { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #9aa39c; transition: background-color 160ms, border-color 160ms, color 160ms; white-space: nowrap; }
+.step svg { width: 14px; height: 14px; color: #7c867e; }
+.stepNumber { font-size: 10px; font-weight: 400; color: #5a635c; font-variant-numeric: tabular-nums; }
+.step:hover { background: #121512; color: #f2f5f2; }
+.step:focus-visible { outline: 2px solid #2be07a; outline-offset: 1px; }
+.step[aria-current="step"] { background: rgb(43 224 122 / 8%); border-color: rgb(43 224 122 / 25%); color: #f2f5f2; }
+.step[aria-current="step"] svg, .step[aria-current="step"] .stepNumber { color: #2be07a; }
+
+/* Local tokens so shadcn inputs/selects/tabs render with the design neutrals. */
+.content { min-width: 0; --background: 120 7% 3%; --input: 130 9% 13%; --border: 130 9% 13%; --card: 120 8% 5%; --muted: 120 9% 7%; --muted-foreground: 133 5% 62%; --foreground: 120 14% 96%; }
+.title { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.35; color: #f2f5f2; }
+.description { margin: -10px 0 0; color: #9aa39c; font-size: 13px; line-height: 1.6; }
+.singleForm, .formPanel, .previewPanel { display: flex; flex-direction: column; gap: 18px; min-width: 0; border: 1px solid #1e241f; border-radius: 16px; background: #0c0e0c; padding: 24px; }
+.singleForm { width: 100%; max-width: 760px; }
+.formColumns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
 .form { min-width: 0; }
-.form > * + * { margin-top: 16px; }
+.form > * + * { margin-top: 18px; }
 .formPanel { align-self: start; }
-.formSection { padding: 14px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .25); }
-.previewPanel { align-self: start; }
-.previewTitle { margin-bottom: 12px; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); }
-.navFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 16px; margin-top: 22px !important; border-top: 1px solid hsl(var(--border) / .65); }
-.navFooter button, .navFooter a { min-height: 34px; height: auto; font-size: 12px; border-radius: 8px; }
-.toggle { padding: 13px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .2); }
-.toggleHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.toggleHeading h3 { font-size: 12px; font-weight: 500; }
-.toggleHeading p { margin-top: 4px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; }
-.toggleInfo { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.6; }
-.toggleInfo svg { flex-shrink: 0; width: 12px; height: 12px; margin-top: 3px; }
-.singleForm :global(label), .formPanel :global(label) { font-size: 12px; }
-.singleForm :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])), .formPanel :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])) { min-height: 34px; height: 34px; border-radius: 8px; font-size: 12px; }
-.singleForm :global([role="combobox"]), .formPanel :global([role="combobox"]) { min-height: 34px; border-radius: 8px; font-size: 12px; }
-.singleForm :global([role="tablist"]), .formPanel :global([role="tablist"]) { display: flex; flex-wrap: wrap; max-width: 100%; height: auto; min-height: 36px; gap: 3px; padding: 3px; border-radius: 9px; }
-.singleForm :global([role="tab"]), .formPanel :global([role="tab"]) { padding: 6px 12px; border-radius: 7px; font-size: 12px; }
-.singleForm :global(fieldset), .formPanel :global(fieldset) { border-radius: 10px; }
-.singleForm :global(legend), .formPanel :global(legend) { font-size: 12px; }
-.sectionAccordion { overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--muted) / .15); }
-.sectionAccordion :global(button[data-state]) { padding: 12px 14px; font-size: 12px; }
+.formSection { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid #1e241f; border-radius: 12px; background: #0f120f; }
+.sectionTitle { font-size: 14px; font-weight: 600; color: #f2f5f2; }
+.hint { font-size: 12px; line-height: 1.5; color: #7c867e; }
+.previewPanel { align-self: start; gap: 14px; padding: 20px; }
+.previewTitle { font-size: 12px; font-weight: 600; letter-spacing: .4px; color: #7c867e; }
+.navFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 18px; border-top: 1px solid #1a1f1b; }
+.navFooter a, .navFooter button { height: 38px; gap: 8px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+.navFooter a { border-color: #1e241f; background: transparent; color: #f2f5f2; }
+.navFooter a svg { color: #c9d1ca; }
+.navFooter a:hover { background: #121512; }
+.navFooter button[type="submit"] { background: #2be07a; color: #05140c; }
+.navFooter button[type="submit"]:hover { background: #4ae890; }
+.navFooter svg { width: 15px; height: 15px; }
+.toggle { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid #1e241f; border-radius: 12px; background: #0f120f; }
+.toggleHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.toggleHeading h3 { font-size: 14px; font-weight: 600; color: #f2f5f2; }
+.toggleHeading p { font-size: 12px; line-height: 1.5; color: #9aa39c; }
+.toggleInfo { display: flex; align-items: center; gap: 8px; padding-top: 4px; color: #7c867e; font-size: 12px; line-height: 1.5; }
+.toggleInfo svg { flex-shrink: 0; width: 13px; height: 13px; color: #6e776f; }
+.switchRow { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #e4e9e5; cursor: pointer; }
+
+/* Design form controls inside editor cards. */
+.singleForm :global(label), .formPanel :global(label) { font-size: 13px; font-weight: 600; color: #c9d1ca; }
+.singleForm :global(label).switchRow, .formPanel :global(label).switchRow { font-size: 14px; font-weight: 400; color: #e4e9e5; }
+.singleForm :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])), .formPanel :global(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"])),
+.singleForm :global(button[role="combobox"]), .formPanel :global(button[role="combobox"]) { height: 42px; min-height: 42px; padding-inline: 14px; border-color: #1e241f; border-radius: 10px; background: #070807; font-size: 14px; color: #f2f5f2; }
+.singleForm :global(textarea), .formPanel :global(textarea) { border-color: #1e241f; border-radius: 10px; background: #070807; font-size: 14px; }
+.singleForm :global(input::placeholder), .formPanel :global(input::placeholder), .singleForm :global(textarea::placeholder), .formPanel :global(textarea::placeholder) { color: #6e776f; }
+.singleForm :global(button[role="switch"]), .formPanel :global(button[role="switch"]) { width: 34px; height: 20px; }
+.singleForm :global(button[role="switch"][data-state="unchecked"]), .formPanel :global(button[role="switch"][data-state="unchecked"]) { background: #1e241f; }
+.singleForm :global(button[role="switch"] > span), .formPanel :global(button[role="switch"] > span) { width: 14px; height: 14px; }
+.singleForm :global(button[role="switch"][data-state="unchecked"] > span), .formPanel :global(button[role="switch"][data-state="unchecked"] > span) { background: #7c867e; transform: translateX(1px); }
+.singleForm :global(button[role="switch"][data-state="checked"] > span), .formPanel :global(button[role="switch"][data-state="checked"] > span) { background: #05140c; transform: translateX(15px); }
+.singleForm :global([role="tablist"]), .formPanel :global([role="tablist"]) { display: flex; width: 100%; height: auto; min-height: 44px; gap: 4px; padding: 4px; border: 1px solid #1e241f; border-radius: 10px; background: #070807; }
+.singleForm :global([role="tab"]), .formPanel :global([role="tab"]) { flex: 1; height: 34px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #7c867e; }
+.singleForm :global([role="tab"][data-state="active"]), .formPanel :global([role="tab"][data-state="active"]) { background: #1a1f1b; color: #f2f5f2; box-shadow: none; }
+.singleForm :global(fieldset), .formPanel :global(fieldset) { border-radius: 12px; }
+.singleForm :global(legend), .formPanel :global(legend) { font-size: 14px; }
+
+.sectionAccordion { overflow: hidden; border: 1px solid #1e241f; border-radius: 12px; background: #0f120f; }
+.sectionAccordion :global(button[data-state]) { padding: 14px 16px; font-size: 14px; font-weight: 600; color: #f2f5f2; }
 .previewToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .previewToolbar > * { flex: 1; }
-.previewButton { height: 32px; border-radius: 8px; font-size: 11px; }
-.previewList { max-height: 440px; overflow-y: auto; border: 1px solid hsl(var(--border)); border-radius: 9px; scrollbar-width: thin; }
-.previewList > * + * { border-top: 1px solid hsl(var(--border) / .7); }
-.salesEntry { min-width: 0; flex: 1; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 9px 30px 9px 10px; background: hsl(var(--muted) / .25); color: hsl(var(--foreground)); font-size: 12px; }
-.salesEntry textarea { color: inherit; font-size: 12px; }
-.salesRemove { position: absolute; top: 6px; right: 5px; display: flex; align-items: center; justify-content: center; width: 23px; height: 23px; border-radius: 6px; color: hsl(var(--muted-foreground)); }
-.salesRemove:hover { background: hsl(var(--destructive) / .08); color: hsl(var(--destructive)); }
-@media (min-width: 1280px) { .formColumns { grid-template-columns: minmax(0, 1fr) minmax(320px, 38%); } .previewPanel { position: sticky; top: 76px; } }
-@media (max-width: 639px) { .singleForm, .formPanel, .previewPanel { padding: 14px; } .steps { top: 6px; } .step { padding-inline: 9px; } .singleForm :global(input), .formPanel :global(input) { font-size: 16px; } }
-@media (prefers-reduced-motion: reduce) { .shell *, .step { transition: none !important; animation: none !important; } }
+.previewButton { height: 34px; border-radius: 10px; font-size: 12px; }
+.previewList { max-height: 440px; overflow-y: auto; border: 1px solid #1e241f; border-radius: 12px; background: #070807; scrollbar-width: thin; }
+.previewList > * + * { border-top: 1px solid #1a1f1b; }
+.salesEntry { min-width: 0; flex: 1; border: 1px solid #1e241f; border-radius: 10px; padding: 9px 30px 9px 12px; background: #070807; color: #f2f5f2; font-size: 13px; }
+.salesEntry textarea { color: inherit; font-size: 13px; }
+.salesRemove { position: absolute; top: 6px; right: 5px; display: flex; align-items: center; justify-content: center; width: 23px; height: 23px; border-radius: 6px; color: #7c867e; }
+.salesRemove:hover { background: hsl(var(--destructive) / .12); color: hsl(var(--destructive)); }
 
 .fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.iconInput { position: relative; min-width: 0; }
+.iconInput > svg { position: absolute; left: 14px; top: 13.5px; z-index: 1; width: 15px; height: 15px; color: #7c867e; pointer-events: none; }
+.singleForm .iconInput :global(input), .formPanel .iconInput :global(input), .singleForm .iconInput :global(button[role="combobox"]), .formPanel .iconInput :global(button[role="combobox"]) { padding-left: 39px !important; }
 .dateTimeField { min-width: 0; }
 .dateTimeField > div { align-items: center; min-width: 0; }
-.dateTimeField :global(button[aria-haspopup="dialog"]) { flex: 1; min-width: 0; width: auto; height: 34px; border-radius: 8px; padding-inline: 12px; font-size: 12px; }
-.dateTimeField :global(input[type="time"]) { flex-shrink: 0; width: 96px; }
-@media (max-width: 639px) { .fieldGrid { grid-template-columns: minmax(0, 1fr); } }
+.dateTimeField :global(button[aria-haspopup="dialog"]) { flex: 1; min-width: 0; width: auto; height: 42px; justify-content: flex-start; gap: 10px; border-color: #1e241f; border-radius: 10px; background: #070807; padding-inline: 14px; font-size: 14px; font-weight: 400; color: #f2f5f2; }
+.dateTimeField :global(input[type="time"]) { flex-shrink: 0; width: 110px; }
+
+@media (min-width: 1280px) { .formColumns { grid-template-columns: minmax(0, 1fr) 400px; } .previewPanel { position: sticky; top: 76px; } }
+/* Keeps the last controls clear of the fixed mobile menu button (bottom-left, 44px + safe area). */
+@media (max-width: 767px) { .shell > header h1 { font-size: 30px; } div.shell { padding-bottom: calc(96px + env(safe-area-inset-bottom)); } }
+@media (max-width: 639px) {
+  .singleForm, .formPanel, .previewPanel { padding: 16px; }
+  .steps { top: 6px; }
+  .fieldGrid { grid-template-columns: minmax(0, 1fr); }
+  .singleForm :global(input), .formPanel :global(input) { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .shell *, .step { transition: none !important; animation: none !important; } }

@@ -79,7 +79,7 @@ describe("instant attendant inbox", () => {
     let oldSignal: AbortSignal | undefined;
     vi.mocked(fetch).mockImplementation(async (url, init) => {
       if (String(url).includes("conversations")) return response({ conversations, onlineTotal: 2 });
-      if (String(url).includes("leadId=ana")) {
+      if (String(url).includes("/thread") && String(url).includes("leadId=ana")) {
         oldSignal = init?.signal as AbortSignal;
         return new Promise((resolve) => { resolveAna = resolve; });
       }
@@ -190,12 +190,13 @@ describe("instant attendant inbox", () => {
       firstSignal = init!.signal as AbortSignal;
       firstSignal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
     })).mockResolvedValueOnce(response({ conversations, onlineTotal: 2 }));
+    const listCalls = () => vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes("conversations")).length;
     render(<Inbox attendantName="Equipe" />);
     act(() => channel.onResync());
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(listCalls()).toBe(1);
     await act(async () => vi.advanceTimersByTimeAsync(10_000));
     expect(firstSignal.aborted).toBe(true);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(listCalls()).toBe(2);
     expect(screen.getByText("Conversa da Ana")).toBeInTheDocument();
   });
 });
@@ -208,10 +209,9 @@ it("moves a closed conversation to Finalizados and offers reopening", async () =
     return response({ messages: [] });
   });
   await openInbox();
-  const actions = await openConversationActions();
-  fireEvent.click(actions.getByRole("menuitem", { name: "Encerrar atendimento" }));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Finalizar" })); });
   await screen.findByRole("button", { name: "Reabrir e assumir" });
-  expect(screen.getByRole("tab", { name: "Finalizados 1" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("tab", { name: "1 Finalizadas" })).toHaveAttribute("aria-selected", "true");
   expect(screen.queryByPlaceholderText("Escreva uma resposta...")).not.toBeInTheDocument();
 });
 
@@ -232,7 +232,7 @@ it("selects another employee and submits the transfer", async () => {
   expect(dialog.getByRole("button", { name: "Confirmar transferência" })).toBeDisabled();
   fireEvent.change(dialog.getByLabelText("Novo responsável"), { target: { value: "other" } });
   fireEvent.click(dialog.getByRole("button", { name: "Confirmar transferência" }));
-  await screen.findByText("Atendido por Maria");
+  expect(await screen.findByText("Maria", { selector: "dd" })).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
@@ -256,4 +256,27 @@ it("copies only the selected conversation and disables duplicate captures while 
   expect(screenshot).toHaveBeenCalledTimes(1);
   await act(async () => finish());
   expect(busyActions.getByRole("menuitem", { name: "Copiar print" })).not.toHaveAttribute("aria-disabled", "true");
+});
+
+it("searches by name, phone or message and keeps tab counts in sync", async () => {
+  render(<Inbox attendantName="Equipe" />);
+  await screen.findByText("Conversa da Ana");
+  fireEvent.change(screen.getByRole("searchbox", { name: /Buscar conversas/ }), { target: { value: "bruno" } });
+  expect(screen.queryByText("Conversa da Ana")).not.toBeInTheDocument();
+  expect(screen.getByText("Conversa do Bruno")).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "1 Todas" })).toBeInTheDocument();
+});
+
+it("offers an AI draft for a conversation waiting for a human and inserts it on Usar", async () => {
+  vi.mocked(fetch).mockImplementation(async (url) => {
+    if (String(url).includes("conversations")) return response({ conversations: conversations.map(c => ({ ...c, aiEnabled: true, aiPaused: true, aiName: "Sofia" })), onlineTotal: 2 });
+    if (String(url).includes("/suggest")) return response({ text: "Consegue sim!" });
+    if (String(url).includes("/thread")) return response({ messages: [message("q", "No desktop consigo voltar?")] });
+    return response({});
+  });
+  await openInbox();
+  await screen.findByText(/Consegue sim!/);
+  expect(screen.getByText(/Aguardando resposta humana/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Usar sugestão da IA" }));
+  expect(composer()).toHaveValue("Consegue sim!");
 });

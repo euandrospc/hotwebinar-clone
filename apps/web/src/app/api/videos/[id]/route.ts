@@ -6,7 +6,8 @@ import { canAccessVideo } from "@/lib/webinar-access";
 import { prisma } from "db";
 
 const patchSchema = z.object({
-  customThumbUrl: z.string().url().optional().or(z.null())
+  customThumbUrl: z.string().url().optional().or(z.null()),
+  name: z.string().trim().min(1).max(255).optional()
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   await prisma.video.update({
     where: { id },
-    data: { customThumbUrl: parsed.data.customThumbUrl ?? null }
+    // Rename-only requests must not clear the thumbnail.
+    data: parsed.data.name !== undefined && parsed.data.customThumbUrl === undefined
+      ? { name: parsed.data.name }
+      : { customThumbUrl: parsed.data.customThumbUrl ?? null, ...(parsed.data.name !== undefined && { name: parsed.data.name }) }
   });
 
   return NextResponse.json({ ok: true });

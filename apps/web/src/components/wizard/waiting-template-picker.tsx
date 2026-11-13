@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { Check } from "@/components/icons";
+import { CheckCircle2 } from "@/components/icons";
 import { WAITING_TEMPLATES, type WaitingTemplateId } from "@/lib/waiting-templates";
 
 export interface WaitingTemplatePickerProps {
@@ -10,7 +10,7 @@ export interface WaitingTemplatePickerProps {
 
 export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePickerProps) {
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
       {WAITING_TEMPLATES.map((t) => {
         const selected = t.id === value;
         return (
@@ -20,14 +20,14 @@ export function WaitingTemplatePicker({ value, onChange }: WaitingTemplatePicker
             onClick={() => onChange(t.id)}
             aria-pressed={selected}
             className={cn(
-              "relative rounded-lg border bg-card px-3 py-3 pr-7 text-left transition-colors motion-reduce:transition-none",
-              selected ? "border-primary/30 bg-primary/5" : "hover:border-primary/50"
+              "relative flex min-h-[84px] flex-col items-start justify-start rounded-xl border p-3.5 pr-9 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none",
+              selected ? "border-palco/45 bg-palco/[0.06]" : "border-[#1E241F] hover:border-palco/40"
             )}
           >
-            <p className="text-xs font-medium">{t.label}</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t.description}</p>
+            <p className="text-[13px] font-semibold text-[#F2F5F2]">{t.label}</p>
+            <p className="mt-1.5 text-xs leading-normal text-[#7C867E]">{t.description}</p>
             {selected ? (
-              <Check className="absolute right-2 top-2 h-4 w-4 text-primary" />
+              <CheckCircle2 aria-hidden="true" className="absolute right-3.5 top-3.5 h-[15px] w-[15px] text-palco" />
             ) : null}
           </button>
         );

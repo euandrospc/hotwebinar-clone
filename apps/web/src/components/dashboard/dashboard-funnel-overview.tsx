@@ -12,7 +12,9 @@ import styles from "./dashboard-card.module.css";
 
 const number = new Intl.NumberFormat("pt-BR");
 const percentage = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+const stagePercentage = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const formatPercent = (value: number | null) => value === null ? "—" : `${percentage.format(value)}%`;
+const formatStagePercent = (value: number | null) => value === null ? "—" : `${stagePercentage.format(value)}%`;
 const chartWidth = 1000;
 const chartHeight = 180;
 const center = 72;
@@ -168,7 +170,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                     ))}
                   </g>
                   {stages.map((stage, index) => (
-                    <line key={stage.label} x1={(index + 0.5) / stages.length * chartWidth} x2={(index + 0.5) / stages.length * chartWidth} y1="12" y2="130" stroke="currentColor" className="text-[#1e241f]" strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+                    <line key={stage.label} x1={(index + 0.5) / stages.length * chartWidth} x2={(index + 0.5) / stages.length * chartWidth} y1="0" y2="132" stroke="currentColor" className="text-[#1e241f]" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                   ))}
                 </svg>
                 <ol aria-label="Etapas do funil" className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0, 1fr))` }}>
@@ -193,7 +195,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
                         </span>
                         <span className="absolute inset-x-1 bottom-0 flex h-12 flex-col items-center justify-start gap-1">
                           <span className={cn("text-[13px] leading-tight", activeIndex === index ? "font-bold text-palco" : "font-medium text-neutral-300")}>{stage.label}</span>
-                          <span className={cn("text-xs tabular-nums", activeIndex === index ? "font-bold text-palco" : "text-neutral-500")}>{formatPercent(stagePercent(index))}</span>
+                          <span className={cn("text-xs tabular-nums", activeIndex === index ? "font-bold text-palco" : "text-neutral-500")}>{formatStagePercent(stagePercent(index))}</span>
                         </span>
                       </button>
                     </li>
@@ -214,7 +216,7 @@ export function DashboardFunnelOverview({ stages, transitions = [] }: Props) {
               <motion.div key={activeIndex} initial={reducedMotion ? false : { opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="flex items-center gap-2 text-sm font-semibold text-neutral-100"><span className="font-normal text-neutral-400">{previous ? shortLabels[activeIndex - 1] ?? previous.label : "01"}</span><ArrowRight aria-hidden="true" className="size-3.5 text-neutral-500" />{active.label}</p>
-                  <span className="text-xs tabular-nums text-neutral-500">{formatPercent(baseRatio)} dos acessos</span>
+                  <span className="text-xs tabular-nums text-neutral-500">{formatStagePercent(baseRatio)} dos acessos</span>
                 </div>
                 {transition ? (
                   <>

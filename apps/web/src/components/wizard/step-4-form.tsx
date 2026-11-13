@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -12,6 +13,8 @@ import {
 import { updateWebinarStep4 } from "@/server/actions/webinar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { palcoCard, palcoError, palcoInput, palcoLabel, palcoTime, palcoTitle } from "./palco-fields";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SecondsInput } from "@/components/ui/seconds-input";
 import { WizardNav } from "@/components/wizard/wizard-nav";
@@ -95,31 +98,34 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
   }
 
   return (
-    <form onSubmit={onFormSubmit} className={styles.singleForm}>
-      <h2 className={styles.title}>Vídeo</h2>
+    <form onSubmit={onFormSubmit} className={`${palcoCard} w-full max-w-[760px]`}>
+      <h2 className={palcoTitle}>Vídeo</h2>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Mode)}>
-        <TabsList>
-          <TabsTrigger value="external">URL externa</TabsTrigger>
-          <TabsTrigger value="upload">Enviar novo</TabsTrigger>
-          <TabsTrigger value="library">Biblioteca</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-[10px] border border-[#1E241F] bg-[#070807] p-1">
+          {([["external", "URL externa"], ["upload", "Enviar novo"], ["library", "Biblioteca"]] as const).map(([value, label]) => (
+            <TabsTrigger key={value} value={value}
+              className="h-[34px] rounded-lg text-[13px] font-semibold text-[#7C867E] hover:text-neutral-100 focus-visible:ring-palco/60 focus-visible:ring-offset-0 data-[state=active]:bg-[#1A1F1B] data-[state=active]:text-neutral-100 data-[state=active]:shadow-none motion-reduce:transition-none">
+              {label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="external" className="mt-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="videoExternalUrl">URL do vídeo (mp4 / m3u8)</Label>
-            <Input id="videoExternalUrl" {...externalForm.register("videoExternalUrl")} placeholder="https://cdn.example.com/v.mp4" />
+        <TabsContent value="external" className="mt-[18px]">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="videoExternalUrl" className={palcoLabel}>URL do vídeo (mp4 / m3u8)</Label>
+            <Input id="videoExternalUrl" className={palcoInput} {...externalForm.register("videoExternalUrl")} placeholder="https://cdn.example.com/v.mp4" />
             {externalForm.formState.errors.videoExternalUrl && (
-              <p className="text-sm text-destructive">{externalForm.formState.errors.videoExternalUrl.message}</p>
+              <p className={palcoError}>{externalForm.formState.errors.videoExternalUrl.message}</p>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="upload" className="mt-4 space-y-4">
+        <TabsContent value="upload" className="mt-[18px]">
           <UploadDropzone onReady={onUploadReady} />
         </TabsContent>
 
-        <TabsContent value="library" className="mt-4 space-y-4">
+        <TabsContent value="library" className="mt-[18px]">
           <LibraryPicker
             videos={libraryVideos}
             selectedId={selectedVideoId}
@@ -129,32 +135,30 @@ export function Step4Form({ webinarId, initial, libraryVideos }: Step4FormProps)
       </Tabs>
 
       <div className="flex flex-col items-start gap-2">
-        <Label>Momento "chegou no pitch"</Label>
+        <Label className={palcoLabel}>Momento “chegou no pitch”</Label>
         <Controller
           control={externalForm.control}
           name="pitchAtSec"
           render={({ field }) => (
-            <SecondsInput value={field.value} onChange={field.onChange} aria-label="pitchAtSec" />
+            <SecondsInput value={field.value} onChange={field.onChange} aria-label="pitchAtSec" className={palcoTime} />
           )}
         />
+        <p className="text-xs text-[#7C867E]">Horas · minutos · segundos do vídeo</p>
       </div>
 
       {tab === "external" && <WizardNav webinarId={webinarId} step={4} submitting={pending} />}
       {tab === "library" && (
         <div className={styles.navFooter}>
-          <a href={`/dashboard/webinars/${webinarId}/step-3`} className="inline-flex items-center gap-1 rounded-md border px-4 py-2 text-sm"><ArrowLeft className="h-4 w-4" /> Voltar</a>
-          <button
-            type="button"
-            onClick={onLibraryContinue}
-            disabled={pending || !selectedVideoId}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
+          <Button asChild variant="outline" type="button">
+            <Link href={`/dashboard/webinars/${webinarId}/step-3`}><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+          </Button>
+          <Button type="button" onClick={onLibraryContinue} disabled={pending || !selectedVideoId} className="bg-palco text-palco-ink hover:bg-palco/90">
             {pending ? "Salvando..." : (<>Continuar <ArrowRight className="h-4 w-4" /></>)}
-          </button>
+          </Button>
         </div>
       )}
       {tab === "upload" && (
-        <p className="text-xs text-muted-foreground">Após o vídeo ficar pronto, ele será selecionado automaticamente para este webinar.</p>
+        <p className="text-xs text-[#7C867E]">Após o vídeo ficar pronto, ele será selecionado automaticamente para este webinar.</p>
       )}
     </form>
   );

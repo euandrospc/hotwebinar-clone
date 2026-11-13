@@ -1,0 +1,12 @@
+// Palco design tokens shared by the Vídeo, Oferta and Chat step forms.
+export const palcoCard = "flex min-w-0 flex-col gap-[18px] self-start rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-6 font-palco text-neutral-100 max-sm:p-4";
+export const palcoTitle = "text-lg font-semibold text-neutral-100";
+export const palcoLabel = "text-[13px] font-semibold leading-tight text-[#C9D1CA]";
+export const palcoField = "flex min-w-0 flex-col gap-2";
+export const palcoInput = "h-[42px] rounded-[10px] border-[#1E241F] bg-[#070807] px-3.5 text-sm text-neutral-100 placeholder:text-[#6E776F] focus-visible:ring-palco/60 focus-visible:ring-offset-0 max-sm:text-base";
+export const palcoTime = "[&_input]:h-10 [&_input]:w-[52px] [&_input]:rounded-[10px] [&_input]:border-[#1E241F] [&_input]:bg-[#070807] [&_input]:text-sm [&_input]:font-semibold [&_input]:text-neutral-100 [&_input]:placeholder:text-[#6E776F] [&_input:focus-visible]:ring-palco/60 [&_input:focus-visible]:ring-offset-0";
+export const palcoSwitch = "h-5 w-[34px] border-[3px] data-[state=checked]:bg-palco data-[state=unchecked]:bg-[#1E241F] [&>span]:shadow-none [&>span[data-state=checked]]:bg-palco-ink [&>span[data-state=unchecked]]:bg-[#7C867E] focus-visible:ring-palco/60 focus-visible:ring-offset-[#0C0E0C]";
+export const palcoError = "text-xs text-[#F87171]";
+export const palcoButtonOutline = "inline-flex h-[38px] items-center justify-center gap-2 rounded-[10px] border border-[#1E241F] px-3.5 text-[13px] font-bold text-neutral-100 transition-colors hover:bg-[#121512] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/60 disabled:opacity-50 motion-reduce:transition-none [&_svg]:h-[15px] [&_svg]:w-[15px]";
+export const palcoButtonPrimary = "inline-flex h-[38px] items-center justify-center gap-2 rounded-[10px] bg-palco px-3.5 text-[13px] font-bold text-palco-ink transition-colors hover:bg-palco/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0C0E0C] disabled:opacity-50 motion-reduce:transition-none [&_svg]:h-[15px] [&_svg]:w-[15px]";
+export const palcoButtonDanger = "inline-flex h-[38px] items-center justify-center gap-2 rounded-[10px] border border-[#DC2626]/35 px-3.5 text-[13px] font-bold text-[#F87171] transition-colors hover:bg-[#DC2626]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F87171]/60 disabled:opacity-50 motion-reduce:transition-none [&_svg]:h-[15px] [&_svg]:w-[15px]";

@@ -30,6 +30,8 @@ model User {
 
   @@map("user")
   assignedConversations Lead[] @relation("ConversationAssignee")
+  leadNotes        LeadNote[]
+  quickReplies     QuickReply[]
 
 }
 
@@ -169,6 +171,8 @@ model Video {
   status         VideoStatus @default(QUEUED)
   progress       Int         @default(0)
   durationSec    Int?
+  /// Source video height in px (probed at transcode); null for videos processed before it existed.
+  sourceHeight   Int?
   bytes          BigInt?
   errorMessage   String?
   createdAt      DateTime    @default(now())
@@ -344,6 +348,7 @@ model Lead {
   webhookDeliveries WebhookDelivery[]
   sales             Sale[]
   abAssignments     AbAssignment[]
+  notes             LeadNote[]
 
   @@unique([webinarId, email])
   @@index([webinarId, sessionStart])
@@ -510,6 +515,33 @@ model LeadChatMessage {
   @@index([leadId, createdAt])
   @@unique([leadId, clientMessageId])
   @@map("lead_chat_message")
+}
+
+/// Internal attendant note about a lead; never shown to the public.
+model LeadNote {
+  id           String   @id @default(cuid())
+  leadId       String
+  authorUserId String?
+  text         String
+  createdAt    DateTime @default(now())
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorUser   User?    @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@map("lead_note")
+}
+
+/// Saved reply template shared by the attendance team; inserted with "/" in the inbox composer.
+model QuickReply {
+  id              String   @id @default(cuid())
+  title           String   @unique
+  text            String
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       User?    @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@map("quick_reply")
 }
 
 model LeadChatMessageAnalysis {

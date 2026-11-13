@@ -14,6 +14,7 @@ import {
   Dot,
   Label,
   Line,
+  ReferenceDot,
   ReferenceLine,
   AreaChart as RechartsAreaChart,
   Legend as RechartsLegend,
@@ -509,7 +510,9 @@ interface AreaChartProps extends React.HTMLAttributes<HTMLDivElement> {
   tooltipPosition?: { x?: number; y?: number }
   tooltipAllowEscapeViewBox?: { x?: boolean; y?: boolean }
   /** Vertical marker at an index value (e.g. the pitch position), drawn over the areas. */
-  referenceLine?: { x: string; label?: React.ReactElement }
+  referenceLine?: { x: string; y?: number; label?: React.ReactElement }
+  /** Explicit y-axis tick values (e.g. [0, 50, 100]). */
+  yTicks?: number[]
 }
 
 const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
@@ -549,6 +552,7 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
       tooltipPosition = { y: 0 },
       tooltipAllowEscapeViewBox,
       referenceLine,
+      yTicks,
       ...other
     } = props
     const reduceMotion = useReducedMotion()
@@ -733,6 +737,7 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
               tickLine={false}
               type="number"
               domain={yAxisDomain as AxisDomain}
+              ticks={yTicks}
               tick={{ transform: "translate(-3, 0)", fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
               fill=""
               stroke=""
@@ -998,6 +1003,9 @@ const AreaChart = React.forwardRef<HTMLDivElement, AreaChartProps>(
               : null}
             {referenceLine ? (
               <ReferenceLine x={referenceLine.x} stroke="#2be07a" strokeOpacity={0.5} strokeWidth={1} label={referenceLine.label} />
+            ) : null}
+            {referenceLine?.y !== undefined ? (
+              <ReferenceDot x={referenceLine.x} y={referenceLine.y} r={5} fill="#0c0e0c" stroke="#2be07a" strokeWidth={1.5} />
             ) : null}
           </RechartsAreaChart>
         </ResponsiveContainer>

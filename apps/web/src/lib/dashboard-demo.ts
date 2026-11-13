@@ -1,5 +1,6 @@
 import { BRAZIL_REGIONS, type DashboardInsights } from "@/lib/dashboard-insights";
 import { DASHBOARD_TIME_ZONE, type DashboardOverview, type DashboardOverviewDailyPoint } from "@/lib/dashboard-overview";
+import type { DashboardSupportQueue } from "@/server/dashboard/support-queue";
 
 const DAY_MS = 86_400_000;
 const TICKET_CENTS = 49_700;
@@ -254,5 +255,24 @@ export function createDashboardDemo(rangeStart: Date, rangeEnd: Date): Dashboard
         revenueChangePct: previousRevenueCents ? Math.round((revenueCents / previousRevenueCents - 1) * 10_000) / 100 : null
       }
     }
+  };
+}
+
+const DEMO_QUEUE = [
+  { name: "Juliana Prado", text: "O bônus da mentoria vale pra quem parcelar em 12x?", minutes: 6 },
+  { name: "Marcos Lima", text: "Não recebi o acesso depois do Pix, pode verificar?", minutes: 14 },
+  { name: "Ana Ribeiro", text: "Tem certificado no final do curso?", minutes: 32 }
+];
+
+/** Fictional current queue for the local preview; times are relative to `now`, never persisted. */
+export function createSupportQueueDemo(support: DashboardInsights["support"], now: Date): DashboardSupportQueue {
+  const waitingTotal = Math.min(support.awaitingReplyConversations, 14);
+  return {
+    waitingTotal,
+    waiting: DEMO_QUEUE.slice(0, waitingTotal).map((item, index) => ({
+      leadId: `demo-lead-${index + 1}`, leadName: item.name, text: item.text,
+      createdAt: new Date(now.getTime() - item.minutes * 60_000).toISOString()
+    })),
+    previousConversations: Math.round(support.uniqueConversations / 1.18)
   };
 }

@@ -97,3 +97,15 @@ export function zonedToUtc(y: number, mo: number, d: number, h: number, mi: numb
   }
   return new Date(t);
 }
+
+/** "São Paulo (BRT)" -> "São Paulo (BRT, UTC−3)", using the zone's current offset. */
+export function timezoneLabel(value: string, label: string) {
+  try {
+    const name = new Intl.DateTimeFormat("en-US", { timeZone: value, timeZoneName: "shortOffset" })
+      .formatToParts(new Date()).find(p => p.type === "timeZoneName")?.value ?? "";
+    const offset = name.replace("GMT", "UTC").replace("-", "−") || "UTC";
+    return label.endsWith(")") ? `${label.slice(0, -1)}, ${offset})` : `${label} (${offset})`;
+  } catch {
+    return label;
+  }
+}

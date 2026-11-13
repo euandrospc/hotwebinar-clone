@@ -30,8 +30,11 @@ function compactRangeLabel(selection: RangePickerSelection): string {
     return fullDay ? date : `${date} · ${selection.fromTime} – ${selection.toTime}`;
   }
   if (!fullDay) return `${from.dayMonth}, ${from.year} · ${selection.fromTime} – ${to.dayMonth}, ${to.year} · ${selection.toTime}`;
+  // Design trigger reads "7 – 13 nov": month once, year only outside the current year.
+  const sameMonth = from.year === to.year && selection.from.slice(0, 7) === selection.to.slice(0, 7);
+  const yearSuffix = to.year === String(new Date().getFullYear()) ? "" : `, ${to.year}`;
   return from.year === to.year
-    ? `${from.dayMonth} – ${to.dayMonth}, ${to.year}`
+    ? `${sameMonth ? from.dayMonth.split(" ")[0] : from.dayMonth} – ${to.dayMonth}${yearSuffix}`
     : `${from.dayMonth}, ${from.year} – ${to.dayMonth}, ${to.year}`;
 }
 
@@ -71,9 +74,11 @@ interface Props {
   timeZone?: string;
   className?: string;
   appearance?: "default" | "v2";
+  /** Replaces the computed trigger text (e.g. "Hoje, 13 nov"); the full range stays in the title/aria-label. */
+  label?: string;
 }
 
-export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime, allowAll = false, queryParams = {}, onApply, timeZone, className, appearance = "default" }: Props) {
+export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, initialToTime, allowAll = false, queryParams = {}, onApply, timeZone, className, appearance = "default", label: labelOverride }: Props) {
   const reducedMotion = useReducedMotion();
   const v2 = appearance === "v2";
   const router = useRouter();
@@ -158,7 +163,7 @@ export function DashboardRangePicker({ initialFrom, initialTo, initialFromTime, 
   const label = applied.from && applied.to
     ? `${formatDate(applied.from)} ${applied.fromTime} ~ ${formatDate(applied.to)} ${applied.toTime}`
     : allowAll ? "Todo o período" : "Selecione o período";
-  const triggerLabel = v2 && applied.from && applied.to ? compactRangeLabel(applied) : label;
+  const triggerLabel = labelOverride ?? (v2 && applied.from && applied.to ? compactRangeLabel(applied) : label);
   const invalidRange = !range?.from || !range?.to || !fromTime || !toTime ||
     `${toIsoDate(range.from)}T${fromTime}` > `${toIsoDate(range.to)}T${toTime}`;
 

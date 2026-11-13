@@ -31,6 +31,11 @@ ${instructions}`,
   return text.slice(0, 500);
 }
 
+type AiWebinar = { chatAiInstructions: string; title: string; offerTitle: string; offerPriceFinal: string | null; offerDisabled: boolean; offerLink: string | null };
+export function webinarAiInstructions(w: AiWebinar) {
+  return `${w.chatAiInstructions}\nWebinar: ${w.title}\nOferta: ${w.offerTitle}\nPreço: ${w.offerPriceFinal ?? "não informado"}\nLink da oferta: ${w.offerDisabled ? "desativado" : w.offerLink ?? "não informado"}`;
+}
+
 export async function processAiConversation(leadId: string) {
   const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { webinar: true } });
   if (!lead || !lead.aiPendingMessageId || lead.aiPaused || !lead.webinar.chatAiEnabled || !process.env.OPENAI_API_KEY) return;
@@ -57,7 +62,7 @@ export async function processAiConversation(leadId: string) {
     }
     const text = await generateAnswer(
       lead.webinar.chatAiModel,
-      `${lead.webinar.chatAiInstructions}\nWebinar: ${lead.webinar.title}\nOferta: ${lead.webinar.offerTitle}\nPreço: ${lead.webinar.offerPriceFinal ?? "não informado"}\nLink da oferta: ${lead.webinar.offerDisabled ? "desativado" : lead.webinar.offerLink ?? "não informado"}`,
+      webinarAiInstructions(lead.webinar),
       history.reverse()
     );
     const row = await prisma.$transaction(async tx => {

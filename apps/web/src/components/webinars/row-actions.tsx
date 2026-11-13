@@ -49,7 +49,7 @@ export function RowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" aria-label={`Ações do webinar ${title || "Sem título"}`}><MoreHorizontal className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="size-[34px] rounded-lg border border-[#1E241F] text-neutral-400 hover:bg-white/5 hover:text-neutral-100" aria-label={`Ações do webinar ${title || "Sem título"}`}><MoreHorizontal className="h-4 w-4" /></Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className={adminStyles.portal}>
         <DropdownMenuItem onClick={() => router.push(`/dashboard/webinars/${id}/step-1`)}>

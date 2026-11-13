@@ -78,7 +78,7 @@
 :global(.dark) .conversationsLink:hover { background: rgb(255 255 255 / 4%); }
 :global(.dark) .metrics { margin-top: 22px; padding: 0; border: 0; }
 :global(.dark) .metric, :global(.dark) .performance, :global(.dark) .table tbody tr { border-color: #1e241f; }
-:global(.dark) .metric dt { gap: 4px; min-height: 18px; font-size: 12px; color: #7c867e; }
+:global(.dark) .metric dt { gap: 4px; min-height: 22px; font-size: 12px; color: #7c867e; }
 :global(.dark) .metric dt > svg { display: none; }
 :global(.dark) .metric dd { margin-top: 6px; font-size: 26px; font-weight: 700; line-height: 32px; letter-spacing: normal; color: #f2f5f2; }
 :global(.dark) .metric .metricNote { margin-top: 6px; font-size: 12px; font-weight: 400; line-height: 16px; color: #7c867e; }

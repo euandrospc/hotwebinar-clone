@@ -1,57 +1,39 @@
 "use client";
-import Link from "next/link";
 
 import { useEffect, useState } from "react";
-import styles from "./webinars.module.css";
+// Same cadence as ONLINE_REFRESH_MS in lib/online (server-only module).
+const ONLINE_REFRESH_MS = 15_000;
 
+// One shared poll of /api/dashboard/online for every row and the live banner.
 const counts = new Map<string, number>();
 const subscribers = new Set<() => void>();
-let started = false;
-
-function notify() {
-  for (const fn of subscribers) fn();
-}
+let polled = false;
+let timer: ReturnType<typeof setInterval> | null = null;
 
 async function poll() {
   try {
     const res = await fetch("/api/dashboard/online", { cache: "no-store" });
     if (!res.ok) return;
     const data = (await res.json()) as { byWebinar: Array<{ webinarId: string; online: number }> };
+    // The endpoint only lists webinars with viewers, so an absent webinar means nobody is watching.
     counts.clear();
     for (const w of data.byWebinar) counts.set(w.webinarId, w.online);
-    notify();
-  } catch {}
+    polled = true;
+    for (const fn of subscribers) fn();
+  } catch { /* Keep the last reading. */ }
 }
 
-function ensureStarted() {
-  if (started) return;
-  started = true;
-  poll();
-  setInterval(poll, 15000);
-}
-
-export function WebinarOnlineBadge({ webinarId }: { webinarId: string }) {
+/** Live "online now" count for a webinar; `initial` is the server snapshot until the first poll lands. */
+export function useOnlineCount(webinarId: string, initial: number) {
   const [, force] = useState(0);
-
   useEffect(() => {
-    ensureStarted();
     const fn = () => force((n) => n + 1);
     subscribers.add(fn);
+    if (!timer) timer = setInterval(poll, ONLINE_REFRESH_MS);
     return () => {
       subscribers.delete(fn);
+      if (!subscribers.size && timer) { clearInterval(timer); timer = null; }
     };
   }, []);
-
-  const online = counts.get(webinarId) ?? 0;
-  if (online === 0) return <span className="text-xs text-muted-foreground/60">—</span>;
-
-  return (
-    <Link
-      href={`/dashboard/webinars/${webinarId}/realtime`}
-      className={styles.online}
-    >
-      <span className={styles.onlineDot} aria-hidden="true" />
-      {online} online
-    </Link>
-  );
+  return polled ? counts.get(webinarId) ?? 0 : initial;
 }

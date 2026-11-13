@@ -9,13 +9,14 @@ export function AdminPage({ children, className }: { children: ReactNode; classN
   return <div data-admin-page="v2" className={cn(styles.page, className)}>{children}</div>;
 }
 
-export function AdminPageHeader({ title, description, actions, back }: {
+export function AdminPageHeader({ title, description, actions, back, className }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   back?: { href: string; label: string };
+  className?: string;
 }) {
-  return <header className={styles.header}>
+  return <header className={cn(styles.header, className)}>
     <div className={styles.heading}>
       {back && <Link href={back.href} className={styles.back}><ArrowLeft aria-hidden="true" />{back.label}</Link>}
       <h1 className={styles.title}>{title}</h1>

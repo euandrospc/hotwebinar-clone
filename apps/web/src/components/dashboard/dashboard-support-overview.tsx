@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUpRight, ChevronRight, Clock, Headset, Info, MessageCir
 import { AreaChart, type TooltipProps } from "@/components/tremor/area-chart";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DashboardInsights } from "@/lib/dashboard-insights";
+import type { DashboardSupportQueue } from "@/server/dashboard/support-queue";
 import card from "./dashboard-card.module.css";
 import styles from "./dashboard-support-overview.module.css";
 
@@ -20,9 +21,9 @@ const PAGE_SIZE = 5;
 function replyTime(seconds: number | null) {
   if (seconds === null) return "—";
   const value = Math.max(0, Math.round(seconds));
-  if (value < 60) return `${value} s`;
-  if (value < 3600) return `${Math.floor(value / 60)} min ${value % 60} s`;
-  return `${Math.floor(value / 3600)} h ${Math.floor(value % 3600 / 60)} min`;
+  if (value < 60) return `${value}s`;
+  if (value < 3600) return `${Math.floor(value / 60)}m ${value % 60}s`;
+  return `${Math.floor(value / 3600)}h ${Math.floor(value % 3600 / 60)}min`;
 }
 
 function Help({ label, children }: { label: string; children: React.ReactNode }) {
@@ -38,7 +39,7 @@ function ActivityTooltip({ active, payload }: TooltipProps) {
   </div>;
 }
 
-export function DashboardSupportOverview({ support, demo = false }: { support: DashboardSupportData; webinarId?: string; demo?: boolean }) {
+export function DashboardSupportOverview({ support, queue, demo = false }: { support: DashboardSupportData; queue?: DashboardSupportQueue; webinarId?: string; demo?: boolean }) {
   const titleId = useId();
   const reducedMotion = useReducedMotion();
   const [kind, setKind] = useState<"all" | "human" | "ai">("all");
@@ -47,6 +48,7 @@ export function DashboardSupportOverview({ support, demo = false }: { support: D
   const [page, setPage] = useState(0);
   const [chartMode, setChartMode] = useState<"replies" | "incoming">("replies");
   const totalReplies = support.human.replies + support.ai.replies;
+  const conversationChange = queue?.previousConversations ? (support.uniqueConversations / queue.previousConversations - 1) * 100 : null;
   const humanShare = totalReplies ? support.human.replies / totalReplies * 100 : 0;
   const aiShare = totalReplies ? support.ai.replies / totalReplies * 100 : 0;
   const agents = useMemo(() => support.agents.filter((agent) =>
@@ -83,11 +85,13 @@ export function DashboardSupportOverview({ support, demo = false }: { support: D
       </header>
 
       <dl className={styles.metrics}>
-        <div className={styles.metric}><dt><MessageCircle aria-hidden="true" />Conversas no período</dt><dd>{number.format(support.uniqueConversations)}</dd><dd className={styles.metricNote}>{number.format(support.repliedConversations)} com resposta da equipe ou IA</dd></div>
-        <div className={styles.metric}><dt><Send aria-hidden="true" />Respostas enviadas</dt><dd>{number.format(totalReplies)}</dd><dd className={styles.metricNote}>{number.format(support.incomingMessages)} mensagens recebidas</dd></div>
+        <div className={styles.metric}><dt><MessageCircle aria-hidden="true" />Conversas</dt><dd>{number.format(support.uniqueConversations)}</dd><dd className={styles.metricNote}>{conversationChange === null ? `${number.format(support.repliedConversations)} com resposta da equipe ou IA` : `${conversationChange >= 0 ? "+" : ""}${Math.round(conversationChange)}% vs. anterior`}</dd></div>
+        <div className={styles.metric}><dt><Send aria-hidden="true" />Respostas enviadas</dt><dd>{number.format(totalReplies)}</dd><dd className={styles.metricNote}>{support.uniqueConversations ? `${percent.format(totalReplies / support.uniqueConversations)} por conversa` : `${number.format(support.incomingMessages)} mensagens recebidas`}</dd></div>
         <div className={styles.metric}><dt><Clock aria-hidden="true" />1ª resposta média<Help label="Como a primeira resposta é calculada">Tempo entre a primeira mensagem do público observada e a primeira resposta posterior, ambas dentro do período. A amostra é atribuída somente a quem deu essa primeira resposta. Inclui equipe e IA; não representa tempo de resolução.</Help></dt><dd>{replyTime(support.averageFirstReplySeconds)}</dd><dd className={styles.metricNote}>{support.firstReplySamples ? `${number.format(support.firstReplySamples)} primeiras respostas observadas` : "Sem amostras neste período"}</dd></div>
-        <div className={`${styles.metric} ${support.awaitingReplyConversations > 0 ? styles.attention : ""}`}><dt><MessageCircle aria-hidden="true" />Sem retorno no recorte<Help label="Como as conversas sem retorno são contadas">Conversas cuja última mensagem dentro do período é do público. É uma leitura histórica do recorte selecionado, não a fila atual: respostas posteriores e encerramentos não são considerados.</Help></dt><dd>{number.format(support.awaitingReplyConversations)}</dd><dd className={styles.metricNote}>Última mensagem do público no período</dd></div>
+        <div className={`${styles.metric} ${support.awaitingReplyConversations > 0 ? styles.attention : ""}`}><dt><MessageCircle aria-hidden="true" />Sem retorno<Help label="Como as conversas sem retorno são contadas">Conversas cuja última mensagem dentro do período é do público. É uma leitura histórica do recorte selecionado, não a fila atual: respostas posteriores e encerramentos não são considerados.</Help></dt><dd>{number.format(support.awaitingReplyConversations)}</dd><dd className={styles.metricNote}>sem resposta no recorte</dd></div>
       </dl>
+
+      {queue && <SupportQueue queue={queue} demo={demo} />}
 
       <div className={styles.body}>
         <div className={styles.activity}>
@@ -129,4 +133,32 @@ function AgentRow({ agent, totalReplies }: { agent: Agent; totalReplies: number 
     <th scope="row"><div className={styles.person}><span aria-hidden="true" className={`${styles.avatar} ${agent.kind === "ai" ? styles.aiAvatar : ""}`}>{agent.kind === "ai" ? <Sparkles className="size-3.5" /> : initials}</span><span className="min-w-0"><span className={styles.personName}>{agent.name}</span><span className={styles.personKind}>{agent.kind === "ai" ? "Agente de IA" : agent.kind === "unattributed" ? "Autoria não registrada" : "Equipe humana"}</span></span></div></th>
     <td>{number.format(agent.conversations)}</td><td className="font-semibold">{number.format(agent.replies)}</td><td><Tooltip><TooltipTrigger asChild><button type="button" className={styles.sample} aria-label={`${agent.name}: primeira resposta ${replyTime(agent.averageFirstReplySeconds)}, ${agent.firstReplySamples} amostras`}>{replyTime(agent.averageFirstReplySeconds)}</button></TooltipTrigger><TooltipContent>{agent.firstReplySamples ? `${number.format(agent.firstReplySamples)} primeiras respostas atribuídas a este atendente no período.` : "Este atendente não deu a primeira resposta em nenhuma amostra do período."}</TooltipContent></Tooltip></td><td><div className={styles.share}><span>{totalReplies ? `${percent.format(share)}%` : "—"}</span><div aria-hidden="true"><i className={agent.kind === "ai" ? styles.aiBar : styles.humanBar} style={{ width: `${share}%` }} /></div></div></td>
   </tr>;
+}
+
+function waitingFor(iso: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 1440) return `há ${Math.floor(minutes / 60)} h`;
+  return `há ${Math.floor(minutes / 1440)} d`;
+}
+
+function SupportQueue({ queue, demo }: { queue: DashboardSupportQueue; demo: boolean }) {
+  const titleId = useId();
+  return <section aria-labelledby={titleId} className="mt-[22px]">
+    <div className="flex items-center justify-between pb-2.5">
+      <h3 id={titleId} className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-[1.4px] text-[#7c867e]">Aguardando resposta<Help label="Quais conversas aguardam resposta">Conversas abertas agora cuja última mensagem é do público, entre as que tiveram mensagens no período. Mesmo critério da caixa de Atendimento.</Help></h3>
+      <span className={`text-[11px] font-bold tabular-nums ${queue.waitingTotal ? "text-[#f5b742]" : "text-[#7c867e]"}`}>{number.format(queue.waitingTotal)}</span>
+    </div>
+    {queue.waiting.length ? <ul className="border-t border-[#1a1f1b]">{queue.waiting.map((item) => {
+      const content = <>
+        <span aria-hidden="true" className="grid size-[30px] shrink-0 place-items-center rounded-full bg-[#1a1f1b] text-xs font-bold text-[#c9d1ca]">{item.leadName.trim().charAt(0).toLocaleUpperCase("pt-BR") || "?"}</span>
+        <span className="w-[120px] shrink-0 truncate text-[13px] font-semibold text-neutral-100">{item.leadName.trim() || "Sem nome"}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] text-neutral-400">{item.text}</span>
+        <time dateTime={item.createdAt} suppressHydrationWarning className="shrink-0 text-xs tabular-nums text-[#6e776f]">{waitingFor(item.createdAt)}</time>
+      </>;
+      const row = "flex items-center gap-3 py-3";
+      return <li key={item.leadId} className="border-b border-[#1a1f1b] last:border-b-0">{demo ? <div className={row}>{content}</div> : <Link href={`/atendimento?leadId=${encodeURIComponent(item.leadId)}`} className={`${row} rounded-md transition-colors hover:bg-white/[0.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-palco motion-reduce:transition-none`}>{content}</Link>}</li>;
+    })}</ul> : <p className="border-t border-[#1a1f1b] py-4 text-[13px] text-[#7c867e]">Nenhuma conversa aguardando resposta agora.</p>}
+  </section>;
 }

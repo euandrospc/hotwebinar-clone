@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronRight, Info, LoaderCircle, MessageCircle, MessageSquare, RefreshCw, Sparkles } from "@/components/icons";
+import { ArrowUpRight, ChevronRight, Info, LoaderCircle, MessageCircle, MessageSquare, RefreshCw, Sparkles, Zap } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ChatIntelligenceBatchResult, ChatIntelligenceReport } from "@/lib/dashboard-chat-intelligence";
@@ -218,7 +218,7 @@ function ChatIntelligenceView({ webinarId, from, to, demoReport }: Props) {
     <section id="dashboard-chat-intelligence" aria-labelledby={titleId} className={styles.root}>
       <header className={styles.toolbar}>
         <div className={styles.toolbarHeading}>
-          <span className={styles.toolbarIcon}><Sparkles aria-hidden="true" className="size-4" /></span>
+          <span className={styles.toolbarIcon}><Zap aria-hidden="true" className="size-4" /></span>
           <div>
             <h2 id={titleId}>Objeções e dúvidas do público</h2>
             <p>Entenda as barreiras de compra e os pontos que precisam de mais clareza.</p>

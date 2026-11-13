@@ -28,8 +28,9 @@ const ALIGN_CLASS: Record<LoginPreviewProps["loginLogoAlign"], string> = {
   RIGHT: "justify-end"
 };
 
+/** Mirrors the public capture page (app/[slug]/_components/capture-form.tsx) with the editor's live values. */
 export function LoginPreview(props: LoginPreviewProps) {
-  const pct = props.progressStartPct;
+  const pct = Math.max(0, Math.min(100, props.progressStartPct || 0));
 
   const fieldsByKey: Record<"name" | "email" | "phone", { enabled: boolean; placeholder: string }> = {
     name: { enabled: props.nameEnabled, placeholder: props.namePlaceholder },
@@ -37,46 +38,44 @@ export function LoginPreview(props: LoginPreviewProps) {
     phone: { enabled: props.phoneEnabled, placeholder: props.phonePlaceholder }
   };
 
-  const progressMessage = props.progressText.replace(/\{pct\}/g, String(pct));
+  const progressMessage = props.progressText.replace(/\{pct\}/g, String(props.progressStartPct));
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">Prévia</p>
-      <div className={cn("flex w-full", ALIGN_CLASS[props.loginLogoAlign])}>
-        {props.logoUrl ? <img src={props.logoUrl} alt="" className="h-auto object-contain" /> : <div className="h-12" />}
-      </div>
+    <div className="flex flex-col gap-3 rounded-xl border border-[#1E241F] bg-[#070807] p-4">
+      {props.logoUrl ? (
+        <div className={cn("flex w-full", ALIGN_CLASS[props.loginLogoAlign])}>
+          <img src={props.logoUrl} alt="" className="h-auto max-h-56 max-w-full rounded-lg object-contain" />
+        </div>
+      ) : (
+        <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-[#1E241F] text-xs text-[#6E776F]">Sem logo</div>
+      )}
       {props.progressEnabled ? (
-        <div className="relative flex h-8 rounded-full border border-zinc-300 bg-zinc-100 p-1">
-          <div
-            className="flex rounded-full px-5 py-1 text-xs font-medium"
-            style={{ width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: props.progressBarColor, color: props.progressTextColor }}
-          />
-          <p className="absolute left-5 top-[7px] text-xs" style={{ color: props.progressTextColor }}>
+        <div className="relative flex h-6 rounded-full bg-[#F2F5F2] p-0.5">
+          <div className="rounded-full" style={{ width: `${pct}%`, backgroundColor: props.progressBarColor }} />
+          <p className="absolute inset-y-0 left-3 flex items-center text-[11px] font-semibold" style={{ color: props.progressTextColor }}>
             {progressMessage}
           </p>
         </div>
       ) : null}
-      <p className="text-base font-semibold">{props.title}</p>
-      <div className="space-y-2">
-        {props.formFieldOrder.map((key) => {
-          const f = fieldsByKey[key];
-          if (!f.enabled) return null;
-          return (
-            <div key={key}>
-              <input
-                type={key === "email" ? "email" : "text"}
-                placeholder={f.placeholder}
-                disabled
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              />
-            </div>
-          );
-        })}
-      </div>
+      <p className="text-base font-bold text-[#F2F5F2]">{props.title}</p>
+      {props.formFieldOrder.map((key) => {
+        const f = fieldsByKey[key];
+        if (!f.enabled) return null;
+        return (
+          <input
+            key={key}
+            type={key === "email" ? "email" : "text"}
+            placeholder={f.placeholder}
+            aria-label={f.placeholder}
+            disabled
+            className="h-[42px] w-full rounded-[10px] border border-[#1E241F] bg-[#070807] px-3.5 text-sm placeholder:text-[#6E776F]"
+          />
+        );
+      })}
       <button
         type="button"
         disabled
-        className="w-full rounded-md py-2 text-sm font-semibold text-white"
+        className="h-[42px] w-full rounded-[10px] text-[13px] font-bold text-[#F2F5F2]"
         style={{ backgroundColor: props.loginButtonColor }}
       >
         {props.loginButtonText}

@@ -22,6 +22,7 @@ export default async function Step6Page({ params }: { params: Promise<{ id: stri
     <Step6Form
       webinarId={id}
       slug={w.slug}
+      aiReady={Boolean(process.env.OPENAI_API_KEY)}
       initial={{
         messages: w.chatMessages.map((m) => ({
           id: m.id,

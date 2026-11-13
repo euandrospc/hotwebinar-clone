@@ -6,11 +6,12 @@ import { auth } from "@/lib/auth";
 import { ownerScope } from "@/lib/webinar-access";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { DASHBOARD_TIME_ZONE } from "@/lib/dashboard-overview";
-import { createDashboardDemo, isDashboardDemoEnabled } from "@/lib/dashboard-demo";
+import { createDashboardDemo, createSupportQueueDemo, isDashboardDemoEnabled } from "@/lib/dashboard-demo";
 import { createChatIntelligenceDemo } from "@/lib/dashboard-chat-intelligence-demo";
 import { zonedParts, zonedToUtc } from "@/lib/timezones";
 import { getDashboardOverview } from "@/server/dashboard/overview";
 import { getDashboardInsights } from "@/server/dashboard/insights";
+import { getDashboardSupportQueue } from "@/server/dashboard/support-queue";
 import { getAdminBrandName } from "@/server/admin-brand";
 import { DashboardSummary } from "@/components/dashboard/dashboard-summary";
 import { DashboardFunnelOverview } from "@/components/dashboard/dashboard-funnel-overview";
@@ -77,9 +78,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     ? webinars.find((webinar) => webinar.id === sp.webinarId)
     : webinars.find((webinar) => webinar.status === "ACTIVE") ?? webinars[0]);
   if (sp.webinarId && !selectedWebinar) notFound();
-  const [overview, insights] = demo ? [demo.overview, demo.insights] : await Promise.all([
+  const [overview, insights, supportQueue] = demo ? [demo.overview, demo.insights, createSupportQueueDemo(demo.insights.support, new Date())] : await Promise.all([
     getDashboardOverview(session.user, rangeStart, rangeEnd, selectedWebinar?.id),
-    getDashboardInsights(session.user, rangeStart, rangeEnd, selectedWebinar?.id)
+    getDashboardInsights(session.user, rangeStart, rangeEnd, selectedWebinar?.id),
+    getDashboardSupportQueue(session.user, rangeStart, rangeEnd, selectedWebinar?.id)
   ]);
   const displayParts = (date: Date) => {
     const p = zonedParts(date, DASHBOARD_TIME_ZONE);
@@ -132,7 +134,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <DashboardMotion className="min-w-0" delay={0.1}><DashboardAudienceMap geography={insights.geography} /></DashboardMotion>
       </div>
 
-      <DashboardMotion className="min-w-0" delay={0.12}><DashboardSupportOverview support={insights.support} webinarId={selectedWebinar?.id} demo={Boolean(demo)} /></DashboardMotion>
+      <DashboardMotion className="min-w-0" delay={0.12}><DashboardSupportOverview support={insights.support} queue={supportQueue} webinarId={selectedWebinar?.id} demo={Boolean(demo)} /></DashboardMotion>
       <DashboardMotion className="min-w-0" delay={0.14}>
         <DashboardChatIntelligence
           webinarId={selectedWebinar?.id}

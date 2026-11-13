@@ -30,16 +30,16 @@ function clock(seconds: number) {
   return hours ? `${hours}:${minutes}:${remaining}` : `${minutes}:${remaining}`;
 }
 
-// Pill drawn at the top of the pitch line, to its left so it stays inside the plot near the end of the video.
-function PitchLabel({ text, viewBox }: { text: string; viewBox?: { x: number; y: number } }) {
+// Pill drawn at the top of the pitch line, to its right as in the design; flipped left near the end of the video.
+function PitchLabel({ text, flip, viewBox }: { text: string; flip: boolean; viewBox?: { x: number; y: number } }) {
   if (!viewBox) return null;
   const width = text.length * 6.1 + 30;
-  // Flip to the right when the pill would cover the y-axis labels (narrow cards, early pitch).
-  const x = viewBox.x - width - 6 < 52 ? viewBox.x + 6 : viewBox.x - width - 6;
+  const x = flip ? viewBox.x - width - 8 : viewBox.x + 8;
+  const y = viewBox.y + 2;
   return <g aria-hidden="true">
-    <rect x={x} y={viewBox.y} width={width} height={20} rx={10} className="fill-palco" />
-    <text x={x + 22} y={viewBox.y + 14} className="fill-palco-ink text-[11px] font-bold">{text}</text>
-    <path d={`M${x + 9} ${viewBox.y + 5.5}v9M${x + 9} ${viewBox.y + 6}h6l-1.5 2.2 1.5 2.3h-6`} className="fill-none stroke-palco-ink" strokeWidth={1.4} strokeLinejoin="round" />
+    <rect x={x} y={y} width={width} height={20} rx={10} className="fill-palco" />
+    <text x={x + 22} y={y + 14} className="fill-palco-ink text-[11px] font-bold">{text}</text>
+    <path d={`M${x + 9} ${y + 5.5}v9M${x + 9} ${y + 6}h6l-1.5 2.2 1.5 2.3h-6`} className="fill-none stroke-palco-ink" strokeWidth={1.4} strokeLinejoin="round" />
   </g>;
 }
 
@@ -97,7 +97,12 @@ export function DashboardWatchChart({ watch }: { watch: DashboardWatchData }) {
           colors={["palco"]}
           curveType="monotone"
           className="mt-5 h-40 min-h-40 flex-1"
-          referenceLine={pitchPoint ? { x: clock(pitchPoint.positionSeconds), label: <PitchLabel text={`Pitch ${clock(watch.pitchAtSeconds!)} · ${percent.format(pitchPoint.percentage)}%`} /> } : undefined}
+          referenceLine={pitchPoint ? {
+            x: clock(pitchPoint.positionSeconds),
+            y: pitchPoint[mode],
+            label: <PitchLabel text={`Pitch ${clock(watch.pitchAtSeconds!)} · ${percent.format(pitchPoint.percentage)}%`} flip={watch.retention.indexOf(pitchPoint) > watch.retention.length * 0.78} />
+          } : undefined}
+          yTicks={mode === "percentage" ? [0, 50, 100] : undefined}
           showLegend={false}
           allowDecimals={false}
           minValue={0}

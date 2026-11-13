@@ -16,6 +16,7 @@ import { RecurringScheduleFields } from "@/components/wizard/recurring-schedule-
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { TimezoneSelect } from "@/components/wizard/timezone-select";
 import { WaitingTemplatePicker } from "@/components/wizard/waiting-template-picker";
+import { ArrowUpRight, Globe } from "@/components/icons";
 
 // Index = JS getDay() (0 = domingo).
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
@@ -73,10 +74,10 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               <TabsTrigger value="UNICO">Webinar agendado</TabsTrigger>
               <TabsTrigger value="JIT">Just in time</TabsTrigger>
             </TabsList>
-            <TabsContent value="UNICO" className="mt-4 text-sm text-muted-foreground">
+            <TabsContent value="UNICO" className="mt-[18px] text-[13px] text-[#9AA39C]">
               Um evento com horário definido, único ou recorrente nos dias escolhidos.
             </TabsContent>
-            <TabsContent value="JIT" className="mt-4 text-sm text-muted-foreground">
+            <TabsContent value="JIT" className="mt-[18px] text-[13px] text-[#9AA39C]">
               Vídeo passa em tempo real desde o horário de início. Quem chega depois vê o offset correspondente.
             </TabsContent>
           </Tabs>
@@ -84,21 +85,21 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
       />
 
       {mode === "UNICO" ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Controller
             control={control}
             name="recurring"
             render={({ field }) => (
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2.5">
                 <Checkbox
                   id="recurring"
                   checked={field.value}
                   onCheckedChange={(v) => field.onChange(v === true)}
-                  className="mt-0.5"
+                  className="mt-px h-[18px] w-[18px] rounded-[5px] border-[#2E362F] data-[state=checked]:border-palco data-[state=checked]:bg-palco data-[state=checked]:text-palco-ink [&_svg]:h-3 [&_svg]:w-3"
                 />
-                <div className="space-y-1">
-                  <Label htmlFor="recurring">Webinar recorrente</Label>
-                  <p className="text-xs text-muted-foreground">
+                <div className="space-y-1.5">
+                  <Label htmlFor="recurring" className="!text-sm !text-[#F2F5F2]">Webinar recorrente</Label>
+                  <p className="text-xs text-[#9AA39C]">
                     Repete no mesmo horário nos dias da semana escolhidos, a partir da data de início.
                   </p>
                 </div>
@@ -110,7 +111,7 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               control={control}
               name="recurringDays"
               render={({ field }) => (
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Dias da semana">
+                <div className="flex flex-wrap gap-2 pl-7 pt-1.5" role="group" aria-label="Dias da semana">
                   {WEEKDAYS.map((label, day) => {
                     const on = field.value.includes(day);
                     return (
@@ -121,8 +122,8 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
                         onClick={() =>
                           field.onChange(on ? field.value.filter((d) => d !== day) : [...field.value, day].sort())
                         }
-                        className={`h-9 min-w-12 rounded-md border px-3 text-sm font-medium transition-colors ${
-                          on ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-accent"
+                        className={`h-[34px] min-w-12 rounded-lg border px-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none ${
+                          on ? "border-palco/35 bg-palco/[0.12] text-palco" : "border-[#1E241F] text-[#7C867E] hover:text-[#C9D1CA]"
                         }`}
                       >
                         {label}
@@ -133,7 +134,7 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               )}
             />
           ) : null}
-          {errors.recurringDays && <p className="text-sm text-destructive">{errors.recurringDays.message}</p>}
+          {errors.recurringDays && <p className="pl-7 text-xs text-destructive">{errors.recurringDays.message}</p>}
         </div>
       ) : null}
 
@@ -148,12 +149,12 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
               setValue("endDate", schedule.endDate, { shouldDirty: true, shouldValidate: true });
             }}
           />
-          {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
-          {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+          {errors.startDate && <p className="text-xs text-destructive">{errors.startDate.message}</p>}
+          {errors.endDate && <p className="text-xs text-destructive">{errors.endDate.message}</p>}
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
+        <div className={styles.fieldGrid}>
+          <div className={styles.field}>
             <Label>Data e hora de início</Label>
             <Controller
               control={control}
@@ -164,9 +165,9 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
                 </div>
               )}
             />
-            {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+            {errors.startDate && <p className="text-xs text-destructive">{errors.startDate.message}</p>}
           </div>
-          <div className="space-y-2">
+          <div className={styles.field}>
             <Label>Data e hora de finalização</Label>
             <Controller
               control={control}
@@ -177,33 +178,38 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
                 </div>
               )}
             />
-            {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+            {errors.endDate && <p className="text-xs text-destructive">{errors.endDate.message}</p>}
           </div>
         </div>
       )}
 
-      <div className="space-y-2">
+      <div className={styles.field}>
         <Label>Fuso horário</Label>
-        <Controller
-          control={control}
-          name="timezone"
-          render={({ field }) => (
-            <TimezoneSelect value={field.value} onChange={field.onChange} />
-          )}
-        />
-        {errors.timezone && <p className="text-sm text-destructive">{errors.timezone.message}</p>}
+        <div className={styles.iconInput}>
+          <Globe aria-hidden="true" />
+          <Controller
+            control={control}
+            name="timezone"
+            render={({ field }) => (
+              <TimezoneSelect value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </div>
+        {errors.timezone && <p className="text-xs text-destructive">{errors.timezone.message}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="waitingTitle">Título da sala de espera</Label>
-        <Input id="waitingTitle" {...register("waitingTitle")} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="waitingSubtitle">Subtítulo da sala de espera</Label>
-        <Input id="waitingSubtitle" {...register("waitingSubtitle")} />
+      <div className={styles.fieldGrid}>
+        <div className={styles.field}>
+          <Label htmlFor="waitingTitle">Título da sala de espera</Label>
+          <Input id="waitingTitle" {...register("waitingTitle")} />
+        </div>
+        <div className={styles.field}>
+          <Label htmlFor="waitingSubtitle">Subtítulo da sala de espera</Label>
+          <Input id="waitingSubtitle" {...register("waitingSubtitle")} />
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2.5">
         <Label>Modelo da página de espera</Label>
         <Controller
           control={control}
@@ -214,10 +220,13 @@ export function Step2Form({ webinarId, initial }: Step2FormProps) {
         />
       </div>
 
-      <div className="space-y-2">
+      <div className={styles.field}>
         <Label htmlFor="closedGroupUrl">Link do grupo (exibido após o encerramento)</Label>
-        <Input id="closedGroupUrl" placeholder="https://chat.whatsapp.com/..." {...register("closedGroupUrl")} />
-        <p className="text-xs text-muted-foreground">
+        <div className={styles.iconInput}>
+          <ArrowUpRight aria-hidden="true" />
+          <Input id="closedGroupUrl" placeholder="https://chat.whatsapp.com/…" {...register("closedGroupUrl")} />
+        </div>
+        <p className={styles.hint}>
           Aparece na página de webinar encerrado com um botão para entrar no grupo.
         </p>
       </div>

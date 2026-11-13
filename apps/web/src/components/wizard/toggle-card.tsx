@@ -16,15 +16,13 @@ export function ToggleCard({ title, description, info, checked, onCheckedChange,
   return (
     <div className={styles.toggle}>
       <div className={styles.toggleHeading}>
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold">{title}</h3>
-          {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-        </div>
+        <h3>{title}</h3>
         <Switch aria-label={title} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
       </div>
+      {description ? <p className="text-xs text-[#9AA39C]">{description}</p> : null}
       {info ? (
         <div className={styles.toggleInfo}>
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <Info aria-hidden="true" />
           <p>{info}</p>
         </div>
       ) : null}

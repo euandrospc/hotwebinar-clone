@@ -1,5 +1,4 @@
 "use client";
-import styles from "./wizard.module.css";
 import { useRef, useState, useTransition } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,11 +7,11 @@ import { toast } from "sonner";
 import { Plus, Upload } from "@/components/icons";
 import { step6Schema, type Step6Input } from "@/lib/validations/webinar";
 import { updateWebinarStep6 } from "@/server/actions/webinar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AiStubSection } from "@/components/wizard/ai-stub-section";
-import { WizardSectionAccordion } from "@/components/wizard/wizard-section-accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { palcoButtonOutline, palcoCard, palcoInput, palcoLabel, palcoTitle } from "./palco-fields";
 import { ChatPreviewAside } from "@/components/wizard/chat-preview-aside";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 
@@ -20,12 +19,14 @@ export interface Step6FormProps {
   webinarId: string;
   slug: string | null;
   initial: Step6Input;
+  aiReady: boolean;
 }
 
-export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
+export function Step6Form({ webinarId, slug, initial, aiReady }: Step6FormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [xlsxUploading, setXlsxUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const { handleSubmit, control, setValue, register } = useForm<Step6Input>({
     resolver: zodResolver(step6Schema),
@@ -66,6 +67,25 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
     }
   }
 
+  async function generateWithAi() {
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/webinars/${webinarId}/messages/generate`, { method: "POST" });
+      const body = (await res.json().catch(() => ({}))) as { messages?: Array<{ authorName: string; text: string; showAtSec: number; isOwner: boolean }>; message?: string };
+      if (!res.ok || !body.messages) {
+        toast.error(body.message ?? "Falha ao gerar chat com IA");
+        return;
+      }
+      // Appended for review only: nothing is saved until "Continuar".
+      append(body.messages);
+      toast.success(`${body.messages.length} mensagens geradas. Revise e clique em Continuar para salvar.`);
+    } catch {
+      toast.error("Falha ao gerar chat com IA");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function updateRow(idx: number, patch: Partial<{ authorName: string; text: string; showAtSec: number; isOwner: boolean }>) {
     if (patch.authorName !== undefined) setValue(`messages.${idx}.authorName`, patch.authorName, { shouldDirty: true });
     if (patch.text !== undefined) setValue(`messages.${idx}.text`, patch.text, { shouldDirty: true });
@@ -73,66 +93,70 @@ export function Step6Form({ webinarId, slug, initial }: Step6FormProps) {
     if (patch.isOwner !== undefined) setValue(`messages.${idx}.isOwner`, patch.isOwner, { shouldDirty: true });
   }
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
-      <div className={styles.formPanel}>
-        <h2 className={styles.title}>Chat scriptado</h2>
+  const trigger = "h-[52px] px-4 py-0 text-sm font-semibold text-neutral-100 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-palco/60 [&>svg]:text-[#7C867E] motion-reduce:[&>svg]:transition-none";
 
-        <div className="space-y-2">
-          <Label htmlFor="teamChatName">Nome exibido nas respostas do time</Label>
-          <Input id="teamChatName" placeholder="Suporte" {...register("teamChatName")} />
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_440px]">
+      <div className={palcoCard}>
+        <h2 className={palcoTitle}>Chat scriptado</h2>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="teamChatName" className={palcoLabel}>Nome exibido nas respostas do time</Label>
+          <Input id="teamChatName" className={palcoInput} placeholder="Suporte" {...register("teamChatName")} />
         </div>
 
-        <WizardSectionAccordion
-          ai={
-            <AiStubSection
-              badge="Novidade"
-              title="Automação Inteligente de Chat"
-              description="Use IA para gerar mensagens automáticas e simular engajamento no chat do seu webinar."
-              cta="Gerar Chat com IA"
-            />
-          }
-          fileTitle="Crie o chat via arquivo"
-          fileSection={
-            <div className="flex flex-col items-center gap-2 py-2 text-sm">
-              <input
-                ref={xlsxInputRef}
-                type="file"
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onXlsxFile(f);
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={xlsxUploading}
-                onClick={() => xlsxInputRef.current?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {xlsxUploading ? "Importando..." : "Importar planilha XLSX"}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Colunas: Hora | Minuto | Segundo | Nome | Texto | Suporte
-              </p>
-            </div>
-          }
-          individualTitle="Crie o chat individualmente"
-          individualSection={
-            <div className="space-y-2 py-2">
-              <p className="text-xs text-muted-foreground">{fields.length} mensagens. Edite na prévia ao lado.</p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => append({ authorName: "", text: "", showAtSec: 0, isOwner: false })}
-              >
-                <Plus className="mr-2 h-4 w-4" /> Adicionar mensagem
-              </Button>
-            </div>
-          }
+        <AiStubSection
+          badge="Novidade"
+          title="Automação inteligente de chat"
+          description="Use IA para gerar mensagens automáticas e simular engajamento no chat do seu webinar."
+          cta="Gerar chat com IA"
+          onGenerate={aiReady ? generateWithAi : undefined}
+          generating={generating}
+          generatingLabel="Gerando chat..."
+          disabledReason="Configure a integração de IA"
         />
+
+        <Accordion type="single" collapsible className="overflow-hidden rounded-xl border border-[#1E241F]">
+          <AccordionItem value="file" className="border-[#1E241F]">
+            <AccordionTrigger className={trigger}>Criar o chat via arquivo</AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="flex flex-col items-center gap-2 py-2">
+                <input
+                  ref={xlsxInputRef}
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onXlsxFile(f);
+                  }}
+                />
+                <button type="button" className={palcoButtonOutline} disabled={xlsxUploading} onClick={() => xlsxInputRef.current?.click()}>
+                  <Upload aria-hidden />
+                  {xlsxUploading ? "Importando..." : "Importar planilha XLSX"}
+                </button>
+                <p className="text-xs text-[#7C867E]">
+                  Colunas: Hora | Minuto | Segundo | Nome | Texto | Suporte
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="individual" className="border-b-0">
+            <AccordionTrigger className={trigger}>Criar o chat individualmente</AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="flex flex-col items-start gap-2 py-2">
+                <p className="text-xs text-[#7C867E]">{fields.length} {fields.length === 1 ? "mensagem" : "mensagens"}. Edite na prévia ao lado.</p>
+                <button
+                  type="button"
+                  className={palcoButtonOutline}
+                  onClick={() => append({ authorName: "", text: "", showAtSec: 0, isOwner: false })}
+                >
+                  <Plus aria-hidden /> Adicionar mensagem
+                </button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <WizardNav webinarId={webinarId} step={6} submitting={pending} />
       </div>

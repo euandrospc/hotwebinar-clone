@@ -13,7 +13,7 @@ import {
   MessageCircle,
   DollarSign,
   Eye,
-  Plug2,
+  Webhook,
   type AppIcon
 } from "@/components/icons";
 
@@ -34,7 +34,7 @@ const STEPS: ReadonlyArray<StepDef> = [
   { num: 6, label: "Chat", Icon: MessageCircle, href: (id) => `/dashboard/webinars/${id}/step-6`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-6` },
   { num: 7, label: "Vendas", Icon: DollarSign, href: (id) => `/dashboard/webinars/${id}/step-7`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-7` },
   { num: 8, label: "Audiência", Icon: Eye, href: (id) => `/dashboard/webinars/${id}/step-8`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/step-8` },
-  { num: 9, label: "Integrações", Icon: Plug2, href: (id) => `/dashboard/webinars/${id}/integrations`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/integrations` }
+  { num: 9, label: "Integrações", Icon: Webhook, href: (id) => `/dashboard/webinars/${id}/integrations`, matchPath: (p, id) => p === `/dashboard/webinars/${id}/integrations` }
 ];
 
 export interface WizardShellProps {

@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import styles from "@/components/wizard/wizard.module.css";
 import { toast } from "sonner";
-import { Copy, RefreshCw, Webhook } from "@/components/icons";
+import { ChevronDown, Copy, RefreshCw, Webhook } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { regenerateWebinarSalesWebhookSecret } from "@/server/actions/settings";
 
@@ -10,6 +9,10 @@ interface Props {
   webinarId: string;
   initialSecret: string | null;
 }
+
+const box = "flex min-h-[42px] min-w-0 flex-1 items-center rounded-[10px] border border-[#1E241F] bg-[#070807] px-3.5 py-2 font-mono text-xs text-neutral-100";
+const outline = "h-[42px] shrink-0 rounded-[10px] border-[#1E241F] bg-transparent text-[13px] font-bold text-neutral-100 hover:bg-white/5 hover:text-neutral-100";
+const label = "text-[13px] font-semibold text-[#C9D1CA]";
 
 export function SalesWebhookCard({ webinarId, initialSecret }: Props) {
   const [origin, setOrigin] = useState("");
@@ -37,59 +40,61 @@ export function SalesWebhookCard({ webinarId, initialSecret }: Props) {
     });
   }
 
-  const masked = secret ? `${secret.slice(0, 8)}${"•".repeat(20)}${secret.slice(-4)}` : "";
+  const masked = secret ? `${secret.slice(0, 8)}${"•".repeat(16)}${secret.slice(-4)}` : "";
 
   return (
-    <section className={`${styles.singleForm} space-y-4`}>
+    <section className="flex min-w-0 flex-col gap-4 rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-[22px] font-palco">
       <header className="flex items-start gap-3">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/5 text-primary">
-          <Webhook className="h-4 w-4" />
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#1A1F1B] text-palco">
+          <Webhook className="h-[17px] w-[17px]" />
         </span>
-        <div>
-          <h2 className="text-[13px] font-semibold">Webhook de vendas</h2>
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            Gateway externo POSTa vendas aqui. Faturamento + total no dashboard atualizam automaticamente.
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-semibold text-neutral-100">Webhook de vendas</h2>
+          <p className="text-xs leading-relaxed text-neutral-400">
+            O gateway externo envia vendas para cá. Faturamento e total no dashboard atualizam automaticamente.
           </p>
         </div>
       </header>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium">URL</label>
-        <div className="flex min-w-0 flex-wrap gap-2">
-          <code className="min-w-0 flex-1 truncate rounded-lg border bg-muted/30 px-2.5 py-2 font-mono text-[11px]">{url}</code>
-          <Button type="button" variant="outline" size="sm" aria-label="Copiar URL do webhook" className="h-[34px] rounded-lg" onClick={() => copy(url, "URL")}>
-            <Copy className="h-3.5 w-3.5" />
+      <div className="flex flex-col gap-2">
+        <span className={label}>URL</span>
+        <div className="flex min-w-0 gap-2">
+          <code className={`${box} break-all`}>{url}</code>
+          <Button type="button" variant="outline" aria-label="Copiar URL do webhook" className={`${outline} w-[42px] px-0`} onClick={() => copy(url, "URL")}>
+            <Copy className="h-[15px] w-[15px]" />
           </Button>
         </div>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium">Chave secreta (header <code>x-webhook-secret</code>)</label>
+      <div className="flex flex-col gap-2">
+        <span className={label}>Chave secreta (header x-webhook-secret)</span>
         {secret ? (
-          <div className="flex min-w-0 flex-wrap gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-lg border bg-muted/30 px-2.5 py-2 font-mono text-[11px]">
-              {showSecret ? secret : masked}
-            </code>
-            <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-lg text-xs" onClick={() => setShowSecret((v) => !v)}>
+          <div className="flex min-w-0 gap-2">
+            <code className={`${box} truncate`}>{showSecret ? secret : masked}</code>
+            <Button type="button" variant="outline" className={`${outline} px-3.5`} onClick={() => setShowSecret((v) => !v)}>
               {showSecret ? "Ocultar" : "Ver"}
             </Button>
-            <Button type="button" variant="outline" size="sm" aria-label="Copiar chave secreta" className="h-[34px] rounded-lg" onClick={() => copy(secret, "Chave")}>
-              <Copy className="h-3.5 w-3.5" />
+            <Button type="button" variant="outline" aria-label="Copiar chave secreta" className={`${outline} w-[42px] px-0`} onClick={() => copy(secret, "Chave")}>
+              <Copy className="h-[15px] w-[15px]" />
             </Button>
           </div>
         ) : (
-          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Nenhuma chave gerada ainda.</p>
+          <p className="text-xs text-[#7C867E]">Nenhuma chave gerada ainda.</p>
         )}
       </div>
 
-      <Button type="button" variant="outline" className="h-[34px] rounded-lg text-xs" onClick={regen} disabled={pending}>
-        <RefreshCw className="mr-2 h-3.5 w-3.5" />
+      <Button type="button" variant="outline" className={`${outline} h-[38px] self-start px-3.5`} onClick={regen} disabled={pending}>
+        <RefreshCw className="h-[15px] w-[15px]" />
         {pending ? "Gerando..." : secret ? "Gerar nova chave" : "Gerar chave"}
       </Button>
 
-      <details className="rounded-lg border border-border/70 bg-muted/20 p-3 text-[11px]">
-        <summary className="cursor-pointer font-medium">Exemplo de payload</summary>
-        <pre className="mt-2 overflow-x-auto rounded bg-background p-2 font-mono text-[10px]">{`POST ${url}
+      <details open className="group overflow-hidden rounded-xl border border-[#1E241F] bg-[#070807]">
+        <summary className="flex cursor-pointer list-none items-center gap-2 border-[#1A1F1B] px-3.5 py-3 text-[13px] font-semibold text-neutral-100 group-open:border-b focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-palco/60 [&::-webkit-details-marker]:hidden">
+          <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 -rotate-90 text-neutral-400 transition-transform group-open:rotate-0 motion-reduce:transition-none" />
+          Exemplo de payload
+        </summary>
+        <div className="p-3.5">
+          <pre className="overflow-x-auto font-mono text-xs leading-[1.6] text-neutral-400">{`POST ${url}
 x-webhook-secret: <chave>
 content-type: application/json
 
@@ -102,10 +107,11 @@ content-type: application/json
   "productName": "Curso A",
   "source": "kirvano"
 }`}</pre>
-        <p className="mt-2 text-muted-foreground">
-          <strong>amount</strong> em centavos. <strong>externalId</strong> idempotente — mesmo id retorna 409.
-          Cada webinar tem URL própria — vendas ficam atribuídas automaticamente.
-        </p>
+          <p className="mt-3 text-[11px] leading-relaxed text-[#7C867E]">
+            <strong className="text-neutral-400">amount</strong> em centavos. <strong className="text-neutral-400">externalId</strong> idempotente — mesmo id retorna 409.
+            Cada webinar tem URL própria — vendas ficam atribuídas automaticamente.
+          </p>
+        </div>
       </details>
     </section>
   );

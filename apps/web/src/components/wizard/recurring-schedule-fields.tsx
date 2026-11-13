@@ -3,6 +3,7 @@
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Clock } from "@/components/icons";
 import { AUTO_TIMEZONE_VALUE, zonedParts, zonedToUtc } from "@/lib/timezones";
 import styles from "./wizard.module.css";
 
@@ -10,6 +11,9 @@ interface Schedule {
   startDate: Date;
   endDate: Date;
 }
+
+// Native picker stays clickable at the right edge; the visible clock sits on the left like the design.
+const timeInput = "[&::-webkit-calendar-picker-indicator]:ml-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0";
 
 export function RecurringScheduleFields({ startDate, endDate, timezone, onChange }: Schedule & {
   timezone: string;
@@ -37,8 +41,8 @@ export function RecurringScheduleFields({ startDate, endDate, timezone, onChange
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <>
+      <div className={styles.field}>
         <Label>Começar a partir de</Label>
         <div className={styles.dateTimeField}>
           <DateTimePicker
@@ -48,21 +52,27 @@ export function RecurringScheduleFields({ startDate, endDate, timezone, onChange
             showTime={false}
           />
         </div>
-        <p className="text-xs text-muted-foreground">A primeira sessão será em um dos dias selecionados, a partir desta data.</p>
+        <p className={styles.hint}>A primeira sessão será em um dos dias selecionados, a partir desta data.</p>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
+      <div className={styles.fieldGrid}>
+        <div className={styles.field}>
           <Label htmlFor="recurring-start-time">Horário de início</Label>
-          <Input id="recurring-start-time" type="time" required value={startTime}
+          <div className={styles.iconInput}>
+            <Clock aria-hidden="true" />
+            <Input id="recurring-start-time" type="time" className={timeInput} required value={startTime}
             onChange={(e) => update(firstDate, e.target.value, endTime)} />
+          </div>
         </div>
-        <div className="space-y-2">
+        <div className={styles.field}>
           <Label htmlFor="recurring-end-time">Horário de finalização</Label>
-          <Input id="recurring-end-time" type="time" required value={endTime}
+          <div className={styles.iconInput}>
+            <Clock aria-hidden="true" />
+            <Input id="recurring-end-time" type="time" className={timeInput} required value={endTime}
             onChange={(e) => update(firstDate, startTime, e.target.value)} />
-          {endTime < startTime && <p className="text-xs text-muted-foreground">Termina no dia seguinte.</p>}
+          </div>
+          {endTime < startTime && <p className={styles.hint}>Termina no dia seguinte.</p>}
         </div>
       </div>
-    </div>
+    </>
   );
 }

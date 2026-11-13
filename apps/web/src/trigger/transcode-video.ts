@@ -181,6 +181,7 @@ export const transcodeVideoTask = task({
           thumbUrl: publicUrl(`${videoId}/thumb.jpg`),
           encKey: keyHex,
           durationSec: Math.round(probe.durationSec),
+          sourceHeight: probe.height,
           progress: 100,
           errorMessage: null
         }

@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { DashboardRangePicker } from "@/components/dashboard/dashboard-range-picker";
 import { attendanceToday, ATTENDANCE_TIMEZONE } from "@/lib/attendance-range";
-import { Send, ArrowLeft, ArrowRight, Clock, MessageSquare, ChevronDown, Phone, Copy, CheckCircle2, Sparkles, UserCheck, Users, Filter, MoreHorizontal, Image as ImageIcon } from "@/components/icons";
+import { Send, ArrowLeft, ArrowRight, Check, Clock, MessageSquare, ChevronDown, Phone, Copy, CheckCircle2, Sparkles, UserCheck, Users, Filter, MoreHorizontal, Image as ImageIcon, Search, Info, X } from "@/components/icons";
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
@@ -17,12 +17,14 @@ import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
 import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
 
 import { ConversationMessages } from "./conversation-messages";
-import { WorkspaceHeader } from "./workspace-header";
-import styles from "./inbox.module.css";
+import { WorkspaceHeader, type InboxMetrics } from "./workspace-header";
+import { ContactPanel, type LeadDetails } from "./contact-panel";
+import { QuickReplies, type QuickRepliesHandle } from "./quick-replies";
 
 interface Conversation {
   closedAt: string | null;
   aiEnabled: boolean;
+  aiUnavailable?: boolean;
   aiPaused: boolean;
   aiName: string;
   aiError: string | null;
@@ -58,6 +60,26 @@ interface ReplyAttempt {
 
 function initialOf(name: string): string {
   return (name.trim()[0] ?? "?").toUpperCase();
+}
+
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+}
+
+const listTime = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: ATTENDANCE_TIMEZONE });
+const listDay = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: ATTENDANCE_TIMEZONE });
+function relativeTime(iso: string | null, nowMs: number) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (nowMs - date.getTime() < 60_000) return "agora";
+  return attendanceToday(date) === attendanceToday(new Date(nowMs)) ? listTime.format(date) : listDay.format(date).replace(/\.$/, "").replace(" de ", " ");
+}
+
+function whatsappUrl(phone: string | null) {
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  if (digits.length < 10) return null;
+  // Brazilian numbers are often stored without the country code.
+  return `https://wa.me/${digits.length <= 11 ? `55${digits}` : digits}`;
 }
 
 function formatCountdown(startIso: string | null, nowMs: number): string {
@@ -104,6 +126,14 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [loggingOut, setLoggingOut] = useState(false);
   const [onlineTotal, setOnlineTotal] = useState(0);
+  const [search, setSearch] = useState("");
+  const [metrics, setMetrics] = useState<InboxMetrics | null>(null);
+  const [details, setDetails] = useState<Record<string, LeadDetails>>({});
+  const [suggestions, setSuggestions] = useState<Record<string, { status: "loading" | "ready" | "error"; text?: string }>>({});
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const quickRepliesRef = useRef<QuickRepliesHandle>(null);
   const selectedRef = useRef<string | null>(selectedLeadId);
   selectedRef.current = selectedLeadId;
   const alive = useRef(true);
@@ -135,6 +165,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
       threadController.current?.abort();
       for (const controller of sendControllers.current.values()) controller.abort();
       if (eventRefreshTimer.current) clearTimeout(eventRefreshTimer.current);
+      if (detailsTimer.current) clearTimeout(detailsTimer.current);
     };
   }, []);
 
@@ -206,6 +237,50 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     finally { clearTimeout(timeout); }
   }, [receive]);
 
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/attendant/metrics", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) return;
+      const data = await res.json() as Partial<InboxMetrics>;
+      if (alive.current && typeof data.pending === "number" && typeof data.answeredToday === "number") {
+        setMetrics({ pending: data.pending, answeredToday: data.answeredToday, averageFirstReplySeconds: data.averageFirstReplySeconds ?? null });
+      }
+    } catch { /* The next poll retries. */ }
+  }, []);
+
+  const fetchDetails = useCallback(async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/attendant/lead?${new URLSearchParams({ leadId })}`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) return;
+      const data = await res.json() as LeadDetails;
+      if (alive.current && data?.journey) setDetails(previous => ({ ...previous, [leadId]: data }));
+    } catch { /* Keeps the last known details. */ }
+  }, []);
+
+  // Journey and AI counters change with chat activity; refresh the open contact at most every 2s.
+  const refreshDetailsSoon = useCallback(() => {
+    if (detailsTimer.current) return;
+    detailsTimer.current = setTimeout(() => {
+      detailsTimer.current = null;
+      if (selectedRef.current) void fetchDetails(selectedRef.current);
+    }, 2_000);
+  }, [fetchDetails]);
+
+  async function addNote(text: string) {
+    const leadId = selectedRef.current;
+    if (!leadId) return false;
+    try {
+      const res = await fetch("/api/attendant/notes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ leadId, text }) });
+      if (!res.ok) throw new Error();
+      const note = await res.json() as LeadDetails["notes"][number];
+      setDetails(previous => previous[leadId] ? { ...previous, [leadId]: { ...previous[leadId], notes: [note, ...previous[leadId].notes] } } : previous);
+      return true;
+    } catch {
+      toast.error("Não foi possível salvar a nota. Tente novamente.");
+      return false;
+    }
+  }
+
   // Chat events already patch the list locally; the refetch only picks up new conversations
   // and status changes. At a live's peak events arrive constantly, so coalesce them.
   const refreshConversationsSoon = useCallback(() => {
@@ -221,12 +296,15 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     (event) => {
       if (event.type === "chat") {
         if (event.message.clientMessageId) confirmedRequests.current.add(event.message.clientMessageId);
-        if (event.leadId === selectedRef.current) receive(event.leadId, [event.message]);
+        if (event.leadId === selectedRef.current) { receive(event.leadId, [event.message]); refreshDetailsSoon(); }
         setConversations((previous) => previous.map((conversation) => conversation.leadId === event.leadId
           ? { ...conversation, lastText: event.message.text, lastAt: event.message.createdAt, pending: event.message.sender === "lead" }
           : conversation).sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")));
         refreshConversationsSoon();
-      } else if (event.type === "presence" || event.type === "conversation") refreshConversationsSoon();
+      } else if (event.type === "presence" || event.type === "conversation") {
+        refreshConversationsSoon();
+        if (event.type === "conversation" && event.leadId === selectedRef.current) refreshDetailsSoon();
+      }
     },
     () => {
       void fetchConversations();
@@ -251,6 +329,16 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   }, [fetchConversations, fetchThread, status]);
 
   useEffect(() => {
+    void fetchMetrics();
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      void fetchMetrics();
+      if (selectedRef.current) void fetchDetails(selectedRef.current);
+    }, 30_000);
+    return () => clearInterval(timer);
+  }, [fetchMetrics, fetchDetails]);
+
+  useEffect(() => {
     selectedRef.current = urlLeadId;
     setSelectedLeadId(urlLeadId);
     setLinkedConversation(null);
@@ -263,9 +351,9 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
 
   useEffect(() => {
     stickToBottom.current = true;
-    if (selectedLeadId) void fetchThread(selectedLeadId);
+    if (selectedLeadId) { void fetchThread(selectedLeadId); void fetchDetails(selectedLeadId); }
     return () => threadController.current?.abort();
-  }, [selectedLeadId, fetchThread]);
+  }, [selectedLeadId, fetchThread, fetchDetails]);
 
   useEffect(() => {
     const element = threadScrollRef.current;
@@ -324,6 +412,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
       receive(leadId, [created]);
       retryAttempts.current.delete(leadId);
       refreshConversationsSoon();
+      void fetchMetrics();
     } catch {
       if (!alive.current) return;
       setThreads((previous) => ({ ...previous, [leadId]: (previous[leadId] ?? []).filter((message) => message.id !== optimistic.id) }));
@@ -357,6 +446,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     setLinkError("");
     setControlError("");
     setTransferOpen(false);
+    setDetailsOpen(false);
     const url = new URL(window.location.href);
     url.searchParams.set("leadId", leadId);
     window.history.replaceState(null, "", url);
@@ -410,7 +500,13 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
     if (value === "all") return true;
     return !c.closedAt && (value === "pending" ? c.pending : !c.pending);
   }
-  const filteredConversations = scopedConversations.filter(c => matchesTab(c, tab));
+  const query = normalize(search.trim());
+  const queryDigits = query.replace(/\D/g, "");
+  const searchedConversations = query
+    ? scopedConversations.filter(c => [c.leadName, c.leadPhone ?? "", c.lastText, c.webinarTitle].some(value => normalize(value).includes(query))
+      || (!!c.leadPhone && queryDigits.length > 2 && c.leadPhone.replace(/\D/g, "").includes(queryDigits)))
+    : scopedConversations;
+  const filteredConversations = searchedConversations.filter(c => matchesTab(c, tab));
 
   async function changeControl(action: "takeover" | "resume" | "close" | "reopen" | "transfer", targetId?: string) {
     const leadId = selectedRef.current;
@@ -423,6 +519,8 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
       if (!response.ok) throw new Error();
       await fetchConversations();
       await fetchLinkedConversation(leadId);
+      void fetchMetrics();
+      void fetchDetails(leadId);
       if (selectedRef.current === leadId) {
         setTransferOpen(false);
         if (action === "close") setTab("closed");
@@ -436,167 +534,295 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
 
   const selectedConversation = conversations.find((c) => c.leadId === selectedLeadId) ?? (linkedConversation?.leadId === selectedLeadId ? linkedConversation : null);
 
+  const lastMessage = thread.at(-1);
+  // A human is expected to answer: AI is off, paused or failed for this conversation.
+  const awaitingHuman = !!selectedConversation && !selectedConversation.closedAt && selectedConversation.pending
+    && (!selectedConversation.aiEnabled || selectedConversation.aiPaused || !!selectedConversation.aiError);
+  const suggestionKey = awaitingHuman && selectedConversation?.aiEnabled && lastMessage?.sender === "lead"
+    ? `${selectedConversation.leadId}:${lastMessage.id}` : null;
+  const suggestion = suggestionKey ? suggestions[suggestionKey] : undefined;
+  const suggestionUnavailable = awaitingHuman && !!selectedConversation?.aiUnavailable && lastMessage?.sender === "lead";
+
+  useEffect(() => {
+    if (!suggestionKey || suggestions[suggestionKey]) return;
+    const leadId = suggestionKey.slice(0, suggestionKey.indexOf(":"));
+    setSuggestions(previous => ({ ...previous, [suggestionKey]: { status: "loading" } }));
+    void (async () => {
+      try {
+        const res = await fetch("/api/attendant/suggest", {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ leadId }), signal: AbortSignal.timeout(40_000)
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json() as { text?: string };
+        if (!data.text) throw new Error();
+        if (alive.current) setSuggestions(previous => ({ ...previous, [suggestionKey]: { status: "ready", text: data.text } }));
+      } catch {
+        if (alive.current) setSuggestions(previous => ({ ...previous, [suggestionKey]: { status: "error" } }));
+      }
+    })();
+  }, [suggestionKey, suggestions]);
+
+  const waitingSince = awaitingHuman && lastMessage?.sender === "lead" ? new Date(lastMessage.createdAt).getTime() : null;
+  const waitingMinutes = waitingSince === null ? 0 : Math.max(0, Math.floor((nowMs - waitingSince) / 60_000));
+  const waitingLabel = waitingMinutes < 1 ? "menos de 1 min" : waitingMinutes < 60 ? `${waitingMinutes} min`
+    : waitingMinutes < 1440 ? `${Math.floor(waitingMinutes / 60)}h ${waitingMinutes % 60}min` : `${Math.floor(waitingMinutes / 1440)} ${waitingMinutes < 2880 ? "dia" : "dias"}`;
+  const aiActive = !!selectedConversation && selectedConversation.aiEnabled && !selectedConversation.aiPaused;
+  const whatsapp = whatsappUrl(selectedConversation?.leadPhone ?? null);
+  const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/50";
+  const outlineButton = `inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[9px] border border-[#1E241F] px-3 text-xs font-semibold text-[#C9D1CA] transition-colors hover:bg-[#121512] hover:text-neutral-100 disabled:opacity-50 [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:text-neutral-400 ${focusRing}`;
+  const primaryButton = `inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[9px] bg-palco px-3 text-xs font-semibold text-palco-ink transition-colors hover:bg-[#45e88c] disabled:opacity-50 [&_svg]:h-3.5 [&_svg]:w-3.5 ${focusRing}`;
+  const iconButton = `relative grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] border border-[#1E241F] text-neutral-400 transition-colors hover:bg-[#121512] hover:text-neutral-100 [&_svg]:h-4 [&_svg]:w-4 ${focusRing}`;
+  const menuItem = "gap-2 rounded-md px-2.5 py-2 text-[13px] text-neutral-300 focus:bg-[#151915] focus:text-neutral-100 [&_svg]:h-4 [&_svg]:w-4";
+  const surface = "rounded-xl border-[#1E241F] bg-[#0C0E0C] font-palco text-neutral-100";
+  const selectClass = "h-9 w-full appearance-none rounded-lg border border-[#1E241F] bg-[#070807] pl-2.5 pr-8 text-xs text-neutral-100 focus:border-palco/40 focus:outline-none";
+  const tabs = [["pending", "Pendentes"], ["answered", "Respondidas"], ["closed", "Finalizadas"], ["all", "Todas"]] as const;
+  const filtersActive = filter !== "all" || attendant !== "all";
+  const todayLabel = from === to && from === attendanceToday(new Date(nowMs)) && fromTime === "00:00" && toTime === "23:59"
+    ? `Hoje, ${listDay.format(new Date(nowMs)).replace(/\.$/, "").replace(" de ", " ")}` : undefined;
+
   return (
-    <div className={styles.workspace}>
-      <WorkspaceHeader attendantName={attendantName} isAdmin={isAdmin} status={status} onlineTotal={onlineTotal}
+    <div className="flex h-dvh flex-col overflow-hidden bg-[#0A0C0A] font-palco text-neutral-100">
+      <WorkspaceHeader attendantName={attendantName} isAdmin={isAdmin} status={status} onlineTotal={onlineTotal} metrics={metrics}
         drawerOpen={drawerOpen} onToggleConversations={() => setDrawerOpen(value => !value)}
         onLogout={handleLogout} loggingOut={loggingOut} />
 
-      <div className={styles.layout}>
+      <div className="relative grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[360px_minmax(0,1fr)_300px]">
         <button type="button" aria-label="Fechar conversas" aria-hidden={!drawerOpen} tabIndex={-1}
-          data-ui-motion="drawer-overlay" data-state={drawerOpen ? "open" : "closed"}
-          onClick={() => setDrawerOpen(false)} className="absolute inset-0 z-20 rounded-2xl bg-black/25 backdrop-blur-[2px] lg:hidden" />
-        <aside id="attendant-conversations" aria-label="Conversas" data-ui-motion="drawer" data-state={drawerOpen ? "open" : "closed"}
-          className={`${styles.panel} ${styles.list} ${drawerOpen ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0"}`}>
-          <div className={styles.listHeading}>
-            <h2>Conversas</h2>
-            <div className="ml-auto flex items-center gap-1">
+          onClick={() => setDrawerOpen(false)}
+          className={`absolute inset-0 z-20 bg-black/50 transition-opacity motion-reduce:transition-none lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+        <aside id="attendant-conversations" aria-label="Conversas"
+          className={`absolute inset-y-0 left-0 z-30 flex w-[min(360px,92vw)] flex-col overflow-hidden border-r border-[#1A1F1B] bg-[#090B09] transition-transform duration-200 motion-reduce:transition-none lg:static lg:z-auto lg:w-auto lg:translate-x-0 ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          <div className="flex flex-col gap-3 border-b border-[#1A1F1B] px-4 pb-3.5 pt-[18px]">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-bold">Conversas</h2>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <DashboardRangePicker initialFrom={from} initialTo={to} initialFromTime={fromTime} initialToTime={toTime}
+                  timeZone={ATTENDANCE_TIMEZONE} appearance="v2" label={todayLabel}
+                  className="h-[30px] rounded-lg border-[#1E241F] bg-transparent px-2.5 text-[#C9D1CA] hover:bg-[#121512] [&_span]:font-semibold"
+                  onApply={selection => { setFrom(selection.from); setTo(selection.to); setFromTime(selection.fromTime); setToTime(selection.toTime); }} />
+                <button type="button" aria-label="Voltar ao atendimento" onClick={() => setDrawerOpen(false)} className={`${iconButton} h-[30px] w-[30px] lg:hidden`}><X /></button>
+              </div>
+            </div>
+            <div className="flex h-[38px] items-center gap-2.5 rounded-[10px] border border-[#1E241F] bg-[#070807] pl-3 pr-1 focus-within:border-palco/40">
+              <Search aria-hidden="true" className="h-[15px] w-[15px] shrink-0 text-[#6E776F]" />
+              <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Nome, telefone ou mensagem"
+                aria-label="Buscar conversas por nome, telefone ou mensagem"
+                className="h-full min-w-0 flex-1 bg-transparent text-[13px] text-neutral-100 placeholder:text-[#6E776F] focus:outline-none" />
               <Popover>
-                <PopoverTrigger asChild><button type="button" aria-label="Filtros das conversas" title="Filtros das conversas" className={`${styles.button} ${styles.quietButton}`}><Filter />{(filter !== "all" || attendant !== "all") && <span className={styles.filterDot} />}</button></PopoverTrigger>
-                <PopoverContent aria-label="Filtrar conversas" align="start" sideOffset={8} className={`${styles.floatingSurface} ${styles.filterPopover}`}>
-                  <h3 className="text-xs font-semibold">Filtrar conversas</h3>
-            <p className={styles.timezone}>Horário de Brasília</p>
-            <div className={styles.selectWrap}>
-              <label className={styles.filterLabel}>Webinar</label>
-              <select aria-label="Filtrar por webinar" value={filter} onChange={e => setFilter(e.target.value)} className={styles.select}>
-                <option value="all">Todos os webinars</option>
-                {webinars.map(w => <option key={w.id} value={w.id}>{w.phase === "before" ? "[Em breve] " : w.phase === "open" ? "[Ao vivo] " : ""}{w.title}</option>)}
-              </select><ChevronDown aria-hidden="true" />
-            </div>
-            <div className={styles.selectWrap}>
-              <label className={styles.filterLabel}>Responsável</label>
-              <select aria-label="Filtrar por atendente" value={attendant} onChange={e => setAttendant(e.target.value)} className={styles.select}>
-                <option value="all">Todos os atendentes</option><option value="unassigned">Sem responsável</option>
-                {attendants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-              </select><ChevronDown aria-hidden="true" />
-            </div>
-
-                  {(filter !== "all" || attendant !== "all") && <button type="button" onClick={() => { setFilter("all"); setAttendant("all"); }} className={styles.clearFilters}>Limpar filtros</button>}
+                <PopoverTrigger asChild>
+                  <button type="button" aria-label="Filtros das conversas" title="Filtros das conversas"
+                    className={`relative grid h-[30px] w-[30px] shrink-0 place-items-center rounded-md text-[#7C867E] hover:bg-[#121512] hover:text-neutral-100 ${focusRing}`}>
+                    <Filter className="h-[15px] w-[15px]" />
+                    {filtersActive && <span aria-hidden="true" className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-palco" />}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent aria-label="Filtrar conversas" align="end" sideOffset={8} className={`${surface} flex w-72 flex-col gap-3 p-3`}>
+                  <div>
+                    <h3 className="text-xs font-semibold">Filtrar conversas</h3>
+                    <p className="text-[11px] text-[#7C867E]">Horário de Brasília</p>
+                  </div>
+                  <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Webinar
+                    <span className="relative">
+                      <select aria-label="Filtrar por webinar" value={filter} onChange={e => setFilter(e.target.value)} className={selectClass}>
+                        <option value="all">Todos os webinars</option>
+                        {webinars.map(w => <option key={w.id} value={w.id}>{w.phase === "before" ? "[Em breve] " : w.phase === "open" ? "[Ao vivo] " : ""}{w.title}</option>)}
+                      </select>
+                      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-2.5 h-3.5 w-3.5 text-[#6E776F]" />
+                    </span>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Responsável
+                    <span className="relative">
+                      <select aria-label="Filtrar por atendente" value={attendant} onChange={e => setAttendant(e.target.value)} className={selectClass}>
+                        <option value="all">Todos os atendentes</option><option value="unassigned">Sem responsável</option>
+                        {attendants.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+                      </select>
+                      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-2.5 h-3.5 w-3.5 text-[#6E776F]" />
+                    </span>
+                  </label>
+                  {filtersActive && <button type="button" onClick={() => { setFilter("all"); setAttendant("all"); }} className="self-start text-xs font-semibold text-palco hover:underline">Limpar filtros</button>}
                 </PopoverContent>
               </Popover>
             </div>
-            <button type="button" aria-label="Voltar ao atendimento" onClick={() => setDrawerOpen(false)} className={`${styles.button} ${styles.mobileOnly}`}><ArrowLeft /></button>
+            <div role="tablist" aria-label="Status dos atendimentos" className="grid grid-cols-4 rounded-[10px] border border-[#1E241F] bg-[#070807] p-[3px]">
+              {tabs.map(([value, label]) => {
+                const selected = tab === value;
+                const count = searchedConversations.filter(c => matchesTab(c, value)).length;
+                return (
+                  <button role="tab" aria-selected={selected} type="button" key={value} onClick={() => setTab(value)}
+                    className={`flex min-w-0 flex-col items-center gap-px rounded-[7px] py-1.5 transition-colors ${focusRing} ${selected ? "bg-palco/[0.12]" : "hover:bg-[#121512]"}`}>
+                    <span className={`text-sm font-bold tabular-nums ${selected ? "text-palco" : value === "pending" && count ? "text-[#F5B742]" : "text-[#C9D1CA]"}`}>{count}</span>
+                    <span className={`max-w-full truncate text-[11px] font-medium ${selected ? "text-palco" : "text-[#7C867E]"}`}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className={styles.filters}>
-            <DashboardRangePicker initialFrom={from} initialTo={to} initialFromTime={fromTime} initialToTime={toTime}
-              timeZone={ATTENDANCE_TIMEZONE} appearance="v2" className={styles.date}
-              onApply={selection => { setFrom(selection.from); setTo(selection.to); setFromTime(selection.fromTime); setToTime(selection.toTime); }} />
-          </div>
-          <div role="tablist" aria-label="Status dos atendimentos" className={styles.tabs}>
-            {[["all", "Todos"], ["pending", "Pendentes"], ["answered", "Respondidos"], ["closed", "Finalizados"]].map(([value, label]) => (
-              <button role="tab" aria-selected={tab === value} type="button" key={value} onClick={() => setTab(value)} className={styles.tab}>
-                {label} <span>{scopedConversations.filter(c => matchesTab(c, value)).length}</span>
-              </button>
-            ))}
-          </div>
-          <div className={styles.conversationList}>
-            {conversationsLoaded && filteredConversations.length === 0 && <div className={styles.emptyList}>
-              <MessageSquare aria-hidden="true" /><p>Nenhuma conversa neste filtro.</p>
+          <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
+            {conversationsLoaded && filteredConversations.length === 0 && <div className="flex flex-col items-center gap-2 px-6 py-12 text-center text-[13px] text-[#7C867E]">
+              <MessageSquare aria-hidden="true" className="h-5 w-5" /><p>{query ? "Nenhuma conversa encontrada." : "Nenhuma conversa neste filtro."}</p>
             </div>}
-            {filteredConversations.map(c => (
-              <button key={c.leadId} type="button" onClick={() => selectConversation(c.leadId)} aria-pressed={selectedLeadId === c.leadId} className={styles.conversation}>
-                <span className={styles.avatar}>{initialOf(c.leadName)}{c.online && <span className={styles.presence} />}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={styles.personName}>{c.leadName}</span>
-                    {c.closedAt && <span className={styles.badge}>finalizado</span>}
-                    {c.pending && !c.closedAt && <span className={`${styles.badge} ${styles.pending}`}>pendente</span>}
-                  </div>
-                  {c.leadPhone && <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--inbox-muted)]"><Phone className="h-2.5 w-2.5" />{c.leadPhone}</span>}
-                  <span className={styles.webinar}>
-                    <span className={`h-1 w-1 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-[#83B94D]"}`} />
-                    <span className="truncate">{c.webinarTitle}</span>
+            {filteredConversations.map(c => {
+              const selected = selectedLeadId === c.leadId;
+              const pendingNow = c.pending && !c.closedAt;
+              const when = relativeTime(c.lastAt, nowMs);
+              return (
+                <button key={c.leadId} type="button" onClick={() => selectConversation(c.leadId)} aria-pressed={selected}
+                  className={`flex w-full gap-3 rounded-[10px] border p-3 text-left transition-colors ${focusRing} ${selected ? "border-palco/20 bg-palco/[0.07]" : "border-transparent hover:bg-[#0F120F]"}`}>
+                  <span className={`relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-[13px] font-bold ${pendingNow ? "bg-[#F5B742]/15 text-[#F5B742]" : "bg-[#1A1F1B] text-[#C9D1CA]"}`}>
+                    {initialOf(c.leadName)}
+                    {c.online && <span aria-hidden="true" className="absolute -bottom-px -right-px h-2.5 w-2.5 rounded-full border-2 border-[#090B09] bg-palco" />}
                   </span>
-                  {c.webinarPhase === "before" ? <span className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400"><Clock className="h-3 w-3" />começa em {formatCountdown(c.webinarStartDate, nowMs)}</span>
-                    : <p className={styles.preview}>{c.lastText}</p>}
-                  <p className={styles.assignee}>{c.assignedAttendantName || (c.aiEnabled && !c.aiPaused ? `IA · ${c.aiName}` : "Sem responsável")}</p>
-                </div>
-              </button>
-            ))}
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className={`truncate text-sm text-neutral-100 ${pendingNow ? "font-bold" : "font-semibold"}`}>{c.leadName}{c.online && <span className="sr-only"> (na sala agora)</span>}</span>
+                      {when && <span className={`shrink-0 text-[11px] tabular-nums ${when === "agora" && pendingNow ? "font-bold text-[#F5B742]" : "text-[#6E776F]"}`}>{when}</span>}
+                    </span>
+                    {c.webinarPhase === "before"
+                      ? <span className="flex items-center gap-1 text-xs text-[#F5B742]"><Clock aria-hidden="true" className="h-3 w-3" />começa em {formatCountdown(c.webinarStartDate, nowMs)}</span>
+                      : <span className={`line-clamp-2 text-[13px] leading-[1.4] [overflow-wrap:anywhere] ${pendingNow ? "text-neutral-100" : "text-neutral-400"}`}>{c.lastText}</span>}
+                    <span className="flex min-w-0 items-center gap-2 pt-0.5">
+                      {c.closedAt ? <span className="shrink-0 rounded-full bg-[#1A1F1B] px-[7px] py-px text-[10px] font-bold text-[#7C867E]">finalizada</span>
+                        : pendingNow ? <span className="shrink-0 rounded-full bg-[#F5B742]/[0.12] px-[7px] py-px text-[10px] font-bold text-[#F5B742]">pendente</span>
+                          : <span className="shrink-0 rounded-full bg-palco/[0.08] px-[7px] py-px text-[10px] font-bold text-palco">respondida</span>}
+                      <span className="truncate text-[11px] text-[#6E776F]">{c.webinarTitle}</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
-        <section aria-label="Área de atendimento" className={`${styles.panel} ${styles.chat}`}>
-          {!selectedConversation && <div className={styles.empty}>
-            <span className={styles.emptyArtwork} aria-hidden="true"><MessageSquare /></span>
-            <h2>{linkError ? "Não foi possível abrir a conversa" : selectedLeadId ? "Abrindo conversa…" : "Tudo começa com uma conversa"}</h2>
-            <p>{linkError || (selectedLeadId ? "Buscando o histórico do atendimento." : "Selecione uma conversa para acompanhar o histórico e responder ao seu público.")}</p>
-            {!selectedLeadId && <button type="button" onClick={() => setDrawerOpen(true)} className={`${styles.button} ${styles.primary} ${styles.mobileOnly} mt-2`}>Ver conversas <ArrowRight /></button>}
-            {linkError && selectedLeadId && <button type="button" onClick={() => { setLinkError(""); void fetchLinkedConversation(selectedLeadId); }} className={styles.button}>Tentar novamente</button>}
+        <section aria-label="Área de atendimento" className="flex min-h-0 min-w-0 flex-col">
+          {!selectedConversation && <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+            <span aria-hidden="true" className="mb-2 grid h-12 w-12 place-items-center rounded-2xl bg-palco/[0.08] text-palco"><MessageSquare className="h-5 w-5" /></span>
+            <h2 className="text-base font-bold">{linkError ? "Não foi possível abrir a conversa" : selectedLeadId ? "Abrindo conversa…" : "Tudo começa com uma conversa"}</h2>
+            <p className="max-w-sm text-[13px] text-neutral-400">{linkError || (selectedLeadId ? "Buscando o histórico do atendimento." : "Selecione uma conversa para acompanhar o histórico e responder ao seu público.")}</p>
+            {!selectedLeadId && <button type="button" onClick={() => setDrawerOpen(true)} className={`${primaryButton} mt-2 lg:hidden`}>Ver conversas <ArrowRight /></button>}
+            {linkError && selectedLeadId && <button type="button" onClick={() => { setLinkError(""); void fetchLinkedConversation(selectedLeadId); }} className={`${outlineButton} mt-2`}>Tentar novamente</button>}
           </div>}
 
           {selectedConversation && <>
-            <div ref={conversationHeaderRef} className={styles.chatHeader}>
-              <button type="button" onClick={() => setDrawerOpen(true)} data-screenshot-exclude aria-label="Voltar às conversas" className={`${styles.button} ${styles.mobileOnly}`}><ArrowLeft /></button>
-              <span className={styles.avatar}>{initialOf(selectedConversation.leadName)}{selectedConversation.online && <span className={styles.presence} />}</span>
-              <div className={styles.chatIdentity}>
-                <p>{selectedConversation.leadName}</p>
-                <div className={styles.contactMeta}>
-                  <span className="truncate">{selectedConversation.webinarTitle}</span>
-                  {selectedConversation.leadPhone && <a href={`tel:${selectedConversation.leadPhone}`} className={styles.contactPhone}><Phone />{selectedConversation.leadPhone}</a>}
-                </div>
+            <div ref={conversationHeaderRef} className="flex min-h-[68px] shrink-0 items-center gap-3 border-b border-[#1A1F1B] bg-[#0A0C0A] px-3 py-3 sm:px-6">
+              <button type="button" onClick={() => setDrawerOpen(true)} data-screenshot-exclude aria-label="Voltar às conversas" className={`${iconButton} lg:hidden`}><ArrowLeft /></button>
+              <span className={`grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full text-sm font-bold ${selectedConversation.pending && !selectedConversation.closedAt ? "bg-[#F5B742]/15 text-[#F5B742]" : "bg-[#1A1F1B] text-[#C9D1CA]"}`}>{initialOf(selectedConversation.leadName)}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-bold leading-5">{selectedConversation.leadName}</p>
+                <p className="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-neutral-400">
+                  <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${selectedConversation.online ? "bg-palco" : "bg-[#3A423B]"}`} />
+                  <span className="truncate">{selectedConversation.online ? "Na sala agora" : "Fora da sala"} · {selectedConversation.webinarTitle}</span>
+                  {selectedConversation.aiEnabled && selectedConversation.aiPaused && !selectedConversation.closedAt && <span className="shrink-0 rounded-full bg-[#1A1F1B] px-1.5 text-[10px] font-semibold text-[#7C867E]">IA pausada</span>}
+                </p>
               </div>
-              <div className={styles.headerAssignment} title={selectedConversation.assignedAttendantName ? `Atendido por ${selectedConversation.assignedAttendantName}` : selectedConversation.aiEnabled && !selectedConversation.aiPaused ? `Atendido por IA · ${selectedConversation.aiName}` : "Aguardando um atendente"}>
-                {selectedConversation.closedAt ? <CheckCircle2 aria-hidden="true" /> : selectedConversation.aiEnabled && !selectedConversation.aiPaused ? <Sparkles aria-hidden="true" /> : <UserCheck aria-hidden="true" />}
-                <span>{selectedConversation.closedAt ? "Finalizado" : (selectedConversation.assignedAttendantName ? `Atendido por ${selectedConversation.assignedAttendantName}` : null) || (selectedConversation.aiEnabled && !selectedConversation.aiPaused ? `IA · ${selectedConversation.aiName}` : "Aguardando atendente")}</span>
-                {selectedConversation.aiEnabled && selectedConversation.aiPaused && <span role="img" className={styles.pausedDot} title="IA pausada" aria-label="IA pausada" />}
-              </div>
-              <div data-screenshot-exclude className={styles.headerActions}>
+              <div data-screenshot-exclude className="flex shrink-0 items-center gap-2">
                 {conversationsLoaded && !filteredConversations.some(c => c.leadId === selectedLeadId) && <Popover>
-                  <PopoverTrigger asChild><button type="button" aria-label="Conversa fora dos filtros" title="Conversa fora dos filtros" className={`${styles.button} ${styles.quietButton}`}><Filter /></button></PopoverTrigger>
-                  <PopoverContent aria-label="Conversa fora dos filtros" align="end" className={styles.floatingSurface}><p className="text-xs leading-relaxed">Esta conversa está fora dos filtros da lista. Você pode continuar o atendimento normalmente.</p></PopoverContent>
+                  <PopoverTrigger asChild><button type="button" aria-label="Conversa fora dos filtros" title="Conversa fora dos filtros" className={iconButton}><Filter /></button></PopoverTrigger>
+                  <PopoverContent aria-label="Conversa fora dos filtros" align="end" className={`${surface} w-64 p-3`}><p className="text-xs leading-relaxed text-neutral-300">Esta conversa está fora dos filtros da lista. Você pode continuar o atendimento normalmente.</p></PopoverContent>
                 </Popover>}
+                {!selectedConversation.closedAt && (aiActive || selectedConversation.assignedAttendantId !== attendantId) &&
+                  <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className={`${outlineButton} hidden md:inline-flex`}>
+                    <UserCheck aria-hidden="true" />{aiActive ? "Assumir e pausar IA" : "Assumir conversa"}
+                  </button>}
+                {whatsapp
+                  ? <a href={whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`Abrir WhatsApp de ${selectedConversation.leadName}`} className={`${outlineButton} max-sm:w-[34px] max-sm:justify-center max-sm:px-0`}><Phone aria-hidden="true" /><span className="max-sm:sr-only">WhatsApp</span></a>
+                  : <button type="button" disabled title="Contato sem telefone" className={`${outlineButton} max-sm:hidden`}><Phone aria-hidden="true" />WhatsApp</button>}
                 {selectedConversation.closedAt
-                  ? <button type="button" disabled={controlBusy} onClick={() => void changeControl("reopen")} className={`${styles.button} ${styles.primary}`}>Reabrir e assumir</button>
-                  : (!selectedConversation.aiPaused || selectedConversation.assignedAttendantId !== attendantId) && <button type="button" disabled={controlBusy} onClick={() => void changeControl("takeover")} className={`${styles.button} ${styles.primary}`}>{selectedConversation.aiEnabled ? "Assumir e pausar IA" : "Assumir conversa"}</button>}
+                  ? <button type="button" disabled={controlBusy} onClick={() => void changeControl("reopen")} className={primaryButton}>Reabrir e assumir</button>
+                  : <button type="button" disabled={controlBusy} onClick={() => void changeControl("close")} aria-label="Finalizar atendimento" className={`${primaryButton} max-sm:w-[34px] max-sm:justify-center max-sm:px-0`}><Check aria-hidden="true" /><span className="max-sm:sr-only">Finalizar</span></button>}
+                <button type="button" onClick={() => setDetailsOpen(true)} aria-label="Detalhes do contato" title="Detalhes do contato" className={`${iconButton} xl:hidden`}><Info /></button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><button type="button" aria-label="Ações da conversa" title="Ações da conversa" className={`${styles.button} ${styles.quietButton}`}><MoreHorizontal /></button></DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={8} className={`${styles.floatingSurface} ${styles.actionMenu}`}>
-                    <DropdownMenuItem onSelect={() => void copyScreenshot()} disabled={copyingScreenshot || !thread.length} className={styles.menuItem}><ImageIcon />{copyingScreenshot ? "Copiando print…" : "Copiar print"}</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => void copyConversationLink()} className={styles.menuItem}><Copy />Copiar link</DropdownMenuItem>
-                    {!selectedConversation.closedAt && <DropdownMenuItem disabled={controlBusy} onSelect={() => { setControlError(""); setTransferTarget(""); setTransferOpen(true); }} className={styles.menuItem}><Users />Transferir atendimento</DropdownMenuItem>}
-                    {isAdmin && <DropdownMenuItem asChild className={styles.menuItem}><a href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}><Sparkles />Configurar agente</a></DropdownMenuItem>}
-                    {!selectedConversation.closedAt && selectedConversation.aiEnabled && selectedConversation.aiPaused && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("resume")} className={styles.menuItem}><Sparkles />Retomar IA</DropdownMenuItem>}
-                    {!selectedConversation.closedAt && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("close")} className={styles.menuItem}><CheckCircle2 />Encerrar atendimento</DropdownMenuItem>}
+                  <DropdownMenuTrigger asChild><button type="button" aria-label="Ações da conversa" title="Ações da conversa" className={iconButton}><MoreHorizontal /></button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={8} className={`${surface} w-56 p-1.5`}>
+                    {!selectedConversation.closedAt && (aiActive || selectedConversation.assignedAttendantId !== attendantId) && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("takeover")} className={`${menuItem} md:hidden`}><UserCheck />{aiActive ? "Assumir e pausar IA" : "Assumir conversa"}</DropdownMenuItem>}
+                    <DropdownMenuItem onSelect={() => void copyScreenshot()} disabled={copyingScreenshot || !thread.length} className={menuItem}><ImageIcon />{copyingScreenshot ? "Copiando print…" : "Copiar print"}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => void copyConversationLink()} className={menuItem}><Copy />Copiar link</DropdownMenuItem>
+                    {!selectedConversation.closedAt && <DropdownMenuItem disabled={controlBusy} onSelect={() => { setControlError(""); setTransferTarget(""); setTransferOpen(true); }} className={menuItem}><Users />Transferir atendimento</DropdownMenuItem>}
+                    {isAdmin && <DropdownMenuItem asChild className={menuItem}><a href={`/dashboard/webinars/${selectedConversation.webinarId}/chat-ai`}><Sparkles />Configurar agente</a></DropdownMenuItem>}
+                    {!selectedConversation.closedAt && selectedConversation.aiEnabled && selectedConversation.aiPaused && <DropdownMenuItem disabled={controlBusy} onSelect={() => void changeControl("resume")} className={menuItem}><Sparkles />Retomar IA</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
-            {selectedConversation.aiError && <p className="shrink-0 px-4 py-2 text-xs text-amber-700 dark:text-amber-400">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
-            {controlError && <p role="alert" className="shrink-0 px-4 py-2 text-xs text-destructive">{controlError}</p>}
-            <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite" className={styles.thread}>
-              <ConversationMessages messages={thread} leadName={selectedConversation.leadName} />
+            {selectedConversation.aiError && <p className="shrink-0 border-b border-[#1A1F1B] px-6 py-2 text-xs text-[#F5B742]">A IA não conseguiu responder. O atendimento humano pode assumir.</p>}
+            {controlError && <p role="alert" className="shrink-0 px-6 py-2 text-xs text-red-400">{controlError}</p>}
+            <div ref={threadScrollRef} aria-label="Mensagens da conversa" role="log" aria-live="polite"
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0A0C0A] px-4 py-6 sm:px-8">
+              <div className="mt-auto flex flex-col">
+                <ConversationMessages messages={thread} leadName={selectedConversation.leadName} />
+              </div>
             </div>
-            {failedReplies.length > 0 && <div role="alert" className="max-h-40 shrink-0 space-y-2 overflow-y-auto px-4 py-2 text-xs text-destructive">
+            {waitingSince !== null && <div className="flex shrink-0 justify-center px-4 pb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5B742]/10 px-2.5 py-1 text-xs font-semibold text-[#F5B742]">
+                <Clock aria-hidden="true" className="h-3 w-3" />Aguardando resposta humana há {waitingLabel}
+              </span>
+            </div>}
+            {failedReplies.length > 0 && <div role="alert" className="max-h-40 shrink-0 space-y-2 overflow-y-auto border-t border-[#1A1F1B] px-6 py-2 text-xs text-red-400">
               <p>Não foi possível confirmar o envio. As respostas foram mantidas.</p>
               {failedReplies.map(attempt => <div key={attempt.clientMessageId} className="flex items-start gap-3">
                 <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{attempt.text}</p>
-                <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className={styles.button}>Reenviar</button>
+                <button type="button" disabled={sending} onClick={() => void sendAttempt(selectedLeadId!, attempt)} aria-label={`Reenviar resposta: ${attempt.text}`} className={`${outlineButton} h-7`}>Reenviar</button>
               </div>)}
             </div>}
-            {!selectedConversation.closedAt ? <form onSubmit={e => { e.preventDefault(); handleSend(); }} className={styles.composer}>
-              <div className={styles.composerBox}>
-                <textarea value={text} onChange={e => { const leadId = selectedRef.current; if (leadId) setDrafts(previous => ({ ...previous, [leadId]: e.target.value })); }} maxLength={500}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder="Escreva uma resposta..." aria-label="Escreva uma resposta" rows={1} className={styles.input} />
-                <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar resposta" className={`${styles.button} ${styles.primary} ${styles.send}`}><Send /></button>
+            {!selectedConversation.closedAt ? <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="flex shrink-0 flex-col gap-2.5 border-t border-[#1A1F1B] px-3 pb-5 pt-3.5 sm:px-6">
+              {suggestionUnavailable && <p className="flex items-center gap-2.5 rounded-[10px] border border-[#1E241F] bg-[#0C0E0C] px-3 py-2.5 text-[13px] leading-[1.4] text-[#7C867E]">
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />Sugestão da IA indisponível: a integração com a OpenAI não está configurada.
+              </p>}
+              {suggestion && <div className="flex items-center gap-2.5 rounded-[10px] border border-palco/20 bg-palco/[0.05] px-3 py-2.5">
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-palco" />
+                <p className="min-w-0 flex-1 text-[13px] leading-[1.4] text-[#C9D1CA]">
+                  {suggestion.status === "loading" ? <span className="text-[#7C867E]">Gerando sugestão com {selectedConversation.aiName}…</span>
+                    : suggestion.status === "error" ? <span className="text-[#7C867E]">Não foi possível gerar uma sugestão agora.</span>
+                      : <>Sugestão: “{suggestion.text}”</>}
+                </p>
+                {suggestion.status === "ready" && <button type="button" onClick={() => {
+                  const leadId = selectedRef.current;
+                  if (!leadId || !suggestion.text) return;
+                  setDrafts(previous => ({ ...previous, [leadId]: suggestion.text!.slice(0, 500) }));
+                  composerRef.current?.focus();
+                }} aria-label="Usar sugestão da IA" className={`shrink-0 rounded-lg bg-palco/[0.12] px-2.5 py-[5px] text-xs font-bold text-palco hover:bg-palco/20 ${focusRing}`}>Usar</button>}
+                {suggestion.status === "error" && <button type="button" onClick={() => setSuggestions(previous => { const next = { ...previous }; delete next[suggestionKey!]; return next; })}
+                  className={`shrink-0 rounded-lg bg-palco/[0.12] px-2.5 py-[5px] text-xs font-bold text-palco hover:bg-palco/20 ${focusRing}`}>Tentar de novo</button>}
+              </div>}
+              <div className="relative flex min-h-12 items-center gap-2.5 rounded-xl border border-[#1E241F] bg-[#070807] py-1.5 pl-2 pr-2 focus-within:border-palco/40">
+                <QuickReplies ref={quickRepliesRef} draft={text} composerRef={composerRef}
+                  onInsert={value => { const leadId = selectedRef.current; if (leadId) setDrafts(previous => ({ ...previous, [leadId]: value })); }} />
+                <textarea ref={composerRef} value={text} onChange={e => { const leadId = selectedRef.current; if (leadId) setDrafts(previous => ({ ...previous, [leadId]: e.target.value })); }} maxLength={500}
+                  onKeyDown={e => {
+                    if (quickRepliesRef.current?.handleKey(e)) { e.preventDefault(); return; }
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                  }}
+                  placeholder="Escreva uma resposta…  ( / para respostas rápidas)" aria-label="Escreva uma resposta" aria-haspopup="listbox" aria-controls="quick-replies-list" aria-autocomplete="list"
+                  title="Enter para enviar · Shift + Enter para nova linha · / para respostas rápidas" rows={1}
+                  className="max-h-32 min-h-[22px] min-w-0 flex-1 resize-none bg-transparent py-1 text-sm leading-[22px] text-neutral-100 [field-sizing:content] placeholder:text-[#6E776F] focus:outline-none" />
+                {text.length > 400 && <span className="shrink-0 text-[11px] tabular-nums text-[#6E776F]">{text.length}/500</span>}
+                <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar resposta" className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-palco text-palco-ink transition-colors hover:bg-[#45e88c] disabled:opacity-40 ${focusRing}`}><Send className="h-4 w-4" /></button>
               </div>
-              <div className={styles.composerHint}><span>Enter para enviar · Shift + Enter para nova linha</span><span>{text.length}/500</span></div>
-            </form> : <div className={styles.closed}><CheckCircle2 aria-hidden="true" />Atendimento finalizado</div>}
+            </form> : <div className="flex shrink-0 items-center justify-center gap-2 border-t border-[#1A1F1B] px-6 py-5 text-[13px] text-[#7C867E]"><CheckCircle2 aria-hidden="true" className="h-4 w-4" />Atendimento finalizado</div>}
             <Dialog open={transferOpen} onOpenChange={value => { if (!controlBusy) setTransferOpen(value); }}>
-              <DialogContent className="rounded-2xl sm:max-w-md">
-                <DialogHeader><DialogTitle>Transferir atendimento</DialogTitle><DialogDescription>Escolha quem dará continuidade à conversa com {selectedConversation.leadName}. A IA ficará pausada.</DialogDescription></DialogHeader>
+              <DialogContent className={`${surface} rounded-2xl sm:max-w-md`}>
+                <DialogHeader><DialogTitle>Transferir atendimento</DialogTitle><DialogDescription className="text-neutral-400">Escolha quem dará continuidade à conversa com {selectedConversation.leadName}. A IA ficará pausada.</DialogDescription></DialogHeader>
                 <label className="space-y-2 text-sm">Novo responsável
-                  <select aria-label="Novo responsável" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} disabled={controlBusy} className="mt-2 w-full rounded-lg border bg-background p-2">
+                  <select aria-label="Novo responsável" value={transferTarget} onChange={e => setTransferTarget(e.target.value)} disabled={controlBusy} className={`${selectClass} mt-2 h-10 text-sm`}>
                     <option value="">Selecione um atendente</option>{attendants.filter(person => person.id !== selectedConversation.assignedAttendantId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
                   </select>
                 </label>
-                {controlError && <p role="alert" className="text-sm text-destructive">{controlError}</p>}
-                <div className="flex justify-end gap-2"><button type="button" disabled={controlBusy} onClick={() => setTransferOpen(false)} className="rounded-lg border px-3 py-2 text-sm">Cancelar</button><button type="button" disabled={controlBusy || !transferTarget} onClick={() => void changeControl("transfer", transferTarget)} className="rounded-lg bg-[#064B3C] px-3 py-2 text-sm text-white disabled:opacity-50">{controlBusy ? "Transferindo…" : "Confirmar transferência"}</button></div>
+                {controlError && <p role="alert" className="text-sm text-red-400">{controlError}</p>}
+                <div className="flex justify-end gap-2"><button type="button" disabled={controlBusy} onClick={() => setTransferOpen(false)} className={outlineButton}>Cancelar</button><button type="button" disabled={controlBusy || !transferTarget} onClick={() => void changeControl("transfer", transferTarget)} className={primaryButton}>{controlBusy ? "Transferindo…" : "Confirmar transferência"}</button></div>
               </DialogContent>
             </Dialog>
           </>}
         </section>
+
+        {selectedConversation && <>
+          <button type="button" aria-label="Fechar detalhes" aria-hidden={!detailsOpen} tabIndex={-1} onClick={() => setDetailsOpen(false)}
+            className={`absolute inset-0 z-20 bg-black/50 transition-opacity motion-reduce:transition-none xl:hidden ${detailsOpen ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+          <aside aria-label="Detalhes do contato"
+            className={`absolute inset-y-0 right-0 z-30 w-[min(300px,92vw)] overflow-y-auto border-l border-[#1A1F1B] bg-[#090B09] p-5 transition-transform duration-200 motion-reduce:transition-none xl:static xl:z-auto xl:w-auto xl:translate-x-0 ${detailsOpen ? "translate-x-0" : "translate-x-full"}`}>
+            <button type="button" onClick={() => setDetailsOpen(false)} aria-label="Fechar detalhes" className={`${iconButton} mb-4 h-[30px] w-[30px] xl:hidden`}><X /></button>
+            <ContactPanel key={selectedConversation.leadId} conversation={selectedConversation} details={details[selectedConversation.leadId] ?? null} onAddNote={addNote} />
+          </aside>
+        </>}
+        {!selectedConversation && <div aria-hidden="true" className="hidden border-l border-[#1A1F1B] bg-[#090B09] xl:block" />}
       </div>
     </div>
   );

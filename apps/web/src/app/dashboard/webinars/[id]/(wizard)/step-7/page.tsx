@@ -22,6 +22,7 @@ export default async function Step7Page({ params }: { params: Promise<{ id: stri
     <Step7Form
       webinarId={id}
       slug={w.slug}
+      aiReady={Boolean(process.env.OPENAI_API_KEY)}
       initial={{
         notifications: w.saleNotifications.map((n) => ({
           id: n.id,

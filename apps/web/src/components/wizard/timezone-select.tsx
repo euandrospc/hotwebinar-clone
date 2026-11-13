@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { TIMEZONES, AUTO_TIMEZONE_VALUE, resolveAutoTimezone } from "@/lib/timezones";
+import { TIMEZONES, AUTO_TIMEZONE_VALUE, resolveAutoTimezone, timezoneLabel } from "@/lib/timezones";
 
 export interface TimezoneSelectProps {
   value: string;
@@ -30,7 +30,7 @@ export function TimezoneSelect({ value, onChange }: TimezoneSelectProps) {
       </SelectTrigger>
       <SelectContent className={adminStyles.portal}>
         {TIMEZONES.map((t) => (
-          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+          <SelectItem key={t.value} value={t.value}>{timezoneLabel(t.value, t.label)}</SelectItem>
         ))}
       </SelectContent>
     </Select>

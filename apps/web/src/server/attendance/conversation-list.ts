@@ -69,6 +69,8 @@ export async function loadConversations(range: { gte: Date; lt: Date }, webinarI
       );
       return {
         aiEnabled: l.webinar.chatAiEnabled && !!process.env.OPENAI_API_KEY,
+        // Agent switched on for the webinar but the server has no model key: the inbox says so instead of hiding it.
+        aiUnavailable: l.webinar.chatAiEnabled && !process.env.OPENAI_API_KEY,
         aiName: l.webinar.chatAiName,
         aiPaused: l.aiPaused,
         closedAt: l.attendanceClosedAt?.toISOString() ?? null,

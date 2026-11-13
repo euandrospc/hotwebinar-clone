@@ -76,14 +76,14 @@ export function OfferTitleEditor(props: Props) {
     setMode(next);
     persist(next);
   }
-  return <div className="offer-rich-editor overflow-hidden rounded-xl border bg-card shadow-sm">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-      <span className="text-xs font-medium text-muted-foreground">Título da oferta</span>
-      <div className="flex rounded-lg bg-muted p-1" role="group" aria-label="Modo de edição">
-        {(["plain", "rich"] as const).map(next => <button key={next} type="button" aria-pressed={mode === next} onClick={() => changeMode(next)} className={cn("rounded-md px-3 py-1.5 text-xs font-medium", mode === next ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>{next === "plain" ? "Texto simples" : "Texto formatado"}</button>)}
+  return <div className="offer-rich-editor overflow-hidden rounded-[10px] border border-[#1E241F] bg-[#070807] font-palco text-neutral-100">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1A1F1B] py-2 pl-3.5 pr-2">
+      <span className="text-[13px] text-[#7C867E]">Título da oferta</span>
+      <div className="flex gap-0.5 rounded-lg bg-[#0F120F] p-[3px]" role="group" aria-label="Modo de edição">
+        {(["plain", "rich"] as const).map(next => <button key={next} type="button" aria-pressed={mode === next} onClick={() => changeMode(next)} className={cn("rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/60 motion-reduce:transition-none", mode === next ? "bg-[#1E241F] text-neutral-100" : "text-[#7C867E] hover:text-neutral-100")}>{next === "plain" ? "Texto simples" : "Texto formatado"}</button>)}
       </div>
     </div>
-    {mode === "plain" ? <textarea id="offerTitle" aria-label="Título da oferta" className="block min-h-36 w-full resize-y bg-transparent p-5 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" rows={3} maxLength={120} value={props.value} onChange={e => { props.onChange(e.target.value); props.onFormat(JSON.stringify({ mode: "plain", background, doc: initialContent(e.target.value) })); }} /> :
+    {mode === "plain" ? <textarea id="offerTitle" aria-label="Título da oferta" className="block min-h-24 w-full resize-y bg-transparent p-3.5 text-base text-neutral-100 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-palco/60" rows={3} maxLength={120} value={props.value} onChange={e => { props.onChange(e.target.value); props.onFormat(JSON.stringify({ mode: "plain", background, doc: initialContent(e.target.value) })); }} /> :
       <>
         <Toolbar aria-label="Formatação do título" className="offer-title-toolbar">
           <ToolbarGroup>
@@ -124,13 +124,13 @@ export function OfferTitleEditor(props: Props) {
             <TiptapButton tooltip="Inserir emoji" aria-label="Inserir emoji" onClick={() => setEmojiOpen(!emojiOpen)}>😀</TiptapButton>
           </ToolbarGroup>
         </Toolbar>
-        {emojiOpen && <div className="flex flex-wrap gap-1 border-b px-3 py-2">{emojis.map(emoji => <Button key={emoji} type="button" variant="ghost" size="icon" aria-label={`Inserir ${emoji}`} onMouseDown={e => e.preventDefault()} onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setEmojiOpen(false); }}>{emoji}</Button>)}</div>}
+        {emojiOpen && <div className="flex flex-wrap gap-1 border-b border-[#1A1F1B] px-3 py-2">{emojis.map(emoji => <Button key={emoji} type="button" variant="ghost" size="icon" aria-label={`Inserir ${emoji}`} onMouseDown={e => e.preventDefault()} onClick={() => { editor?.chain().focus().insertContent(emoji).run(); setEmojiOpen(false); }}>{emoji}</Button>)}</div>}
         <div className="offer-title-paper">
           <p className="offer-title-paper-label">Selecione um trecho para formatar</p>
           <div style={{ backgroundColor: background }} className="offer-title-document"><EditorContent editor={editor} /></div>
         </div>
       </>}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/10 px-4 py-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1A1F1B] px-3.5 py-2 text-xs text-[#7C867E]">
       {mode === "rich" ? <div className="flex items-center gap-2"><label className="flex items-center gap-2">Fundo do bloco<input type="color" aria-label="Fundo do título" className="h-5 w-6 cursor-pointer" value={background === "transparent" ? "#ffffff" : background} onChange={e => { setBackground(e.target.value); persist("rich", e.target.value); }} /></label><button type="button" className="underline underline-offset-2" onClick={() => { setBackground("transparent"); persist("rich", "transparent"); }}>Sem fundo</button></div> : <span>Texto sem formatação</span>}
       <span className="tabular-nums">{props.value.length}/120</span>
     </div>

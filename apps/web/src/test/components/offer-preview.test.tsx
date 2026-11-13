@@ -37,6 +37,6 @@ describe("OfferPreviewMobile", () => {
   });
   it("renders a placeholder when mobile image URL is missing", () => {
     render(<OfferPreviewMobile {...baseOffer} offerImageMobileUrl={null} />);
-    expect(screen.getByText(/Prévia da oferta para mobile/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prévia para mobile/i)).toBeInTheDocument();
   });
 });

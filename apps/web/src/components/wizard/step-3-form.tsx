@@ -5,16 +5,16 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlignCenter, AlignLeft, AlignRight, Upload, ArrowUp, ArrowDown } from "@/components/icons";
+import { AlignCenter, AlignLeft, AlignRight, Upload, ArrowUp, ArrowDown, Image as ImageIcon } from "@/components/icons";
 import { step3Schema, type Step3Input } from "@/lib/validations/webinar";
 import { updateWebinarStep3 } from "@/server/actions/webinar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ColorPicker } from "@/components/ui/color-picker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ColorPickerField } from "@/components/wizard/color-picker-field";
 import { LoginPreview } from "@/components/wizard/login-preview";
 import { WizardNav } from "@/components/wizard/wizard-nav";
+import { cn } from "@/lib/utils";
 
 export interface Step3FormProps {
   webinarId: string;
@@ -26,6 +26,9 @@ const FIELD_LABEL: Record<"name" | "email" | "phone", string> = {
   email: "E-mail",
   phone: "WhatsApp"
 };
+
+const SQUARE_BUTTON = "flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco disabled:opacity-50 motion-reduce:transition-none [&_svg]:h-4 [&_svg]:w-4";
+const ARROW_BUTTON = "flex h-7 w-7 items-center justify-center rounded-md text-[#9AA39C] transition-colors hover:bg-[#121512] hover:text-[#F2F5F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco disabled:opacity-35 motion-reduce:transition-none";
 
 export function Step3Form({ webinarId, initial }: Step3FormProps) {
   const router = useRouter();
@@ -98,255 +101,201 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
     return Boolean(watch("phoneEnabled"));
   }
 
+  const switchRow = (name: "nameRequired" | "emailRequired" | "phoneRequired" | "progressEnabled", text: string) => (
+    <Controller control={control} name={name} render={({ field }) => (
+      <label className={styles.switchRow}>
+        <Switch checked={field.value} onCheckedChange={field.onChange} />
+        <span>{text}</span>
+      </label>
+    )} />
+  );
+
+  const colorField = (name: "progressBarColor" | "progressTextColor" | "loginButtonColor" | "primaryColor", label: string) => (
+    <div className={cn(styles.field, "sm:w-[178px] sm:shrink-0")}>
+      <Label htmlFor={name}>{label}</Label>
+      <Controller control={control} name={name} render={({ field }) => (
+        <ColorPickerField id={name} value={field.value || "#16a34a"} onChange={field.onChange} aria-label={label} />
+      )} />
+    </div>
+  );
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <h2 className={styles.title}>Login</h2>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.formColumns}>
+      <div className={styles.formPanel}>
+        <h2 className={styles.title}>Login</h2>
 
-      <div className={styles.formColumns}>
-        <div className={styles.formPanel}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl">Logo do webinar (URL)</Label>
-              <div className="flex gap-2">
-                <Input id="logoUrl" {...register("logoUrl")} placeholder="https://..." className="flex-1" />
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void uploadLogo(f);
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-[34px] w-[34px] shrink-0"
-                  disabled={logoUploading}
-                  onClick={() => logoInputRef.current?.click()}
-                  aria-label="Enviar logo"
-                  title="Enviar logo"
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className={cn(styles.field, "flex-1")}>
+            <Label htmlFor="logoUrl">Logo do webinar (URL)</Label>
+            <div className="flex gap-4">
+              <div className={cn(styles.iconInput, "flex-1")}>
+                <ImageIcon aria-hidden="true" />
+                <Input id="logoUrl" {...register("logoUrl")} placeholder="https://..." />
               </div>
-              {errors.logoUrl && <p className="text-sm text-destructive">{errors.logoUrl.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Alinhamento do logo</Label>
-              <Controller
-                control={control}
-                name="loginLogoAlign"
-                render={({ field }) => (
-                  <div className="flex gap-2">
-                    {(["LEFT", "CENTER", "RIGHT"] as const).map((a) => {
-                      const Icon = a === "LEFT" ? AlignLeft : a === "CENTER" ? AlignCenter : AlignRight;
-                      const selected = field.value === a;
-                      return (
-                        <Button
-                          key={a}
-                          type="button"
-                          variant={selected ? "default" : "outline"}
-                          size="icon"
-                          className="h-[34px] w-[34px]"
-                          onClick={() => field.onChange(a)}
-                          aria-pressed={selected}
-                          aria-label={`Alinhar à ${a.toLowerCase()}`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </Button>
-                      );
-                    })}
-                  </div>
-                )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadLogo(f);
+                }}
               />
+              <button
+                type="button"
+                className={cn(SQUARE_BUTTON, "border-[#1E241F] text-[#C9D1CA] hover:bg-[#121512]")}
+                disabled={logoUploading}
+                onClick={() => logoInputRef.current?.click()}
+                aria-label="Enviar logo"
+                title="Enviar logo"
+              >
+                <Upload aria-hidden="true" />
+              </button>
             </div>
           </div>
-
-          <fieldset className="space-y-3 rounded-md border p-3">
-            <legend className="px-1 text-sm font-semibold">Barra de progresso</legend>
+          <div className={styles.field}>
+            <Label id="logo-align-label">Alinhamento do logo</Label>
             <Controller
               control={control}
-              name="progressEnabled"
+              name="loginLogoAlign"
               render={({ field }) => (
-                <label className="flex items-center gap-3">
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  <span className="text-xs">Exibir barra de progresso</span>
-                </label>
+                <div className="flex gap-1.5" role="group" aria-labelledby="logo-align-label">
+                  {(["LEFT", "CENTER", "RIGHT"] as const).map((a) => {
+                    const Icon = a === "LEFT" ? AlignLeft : a === "CENTER" ? AlignCenter : AlignRight;
+                    const selected = field.value === a;
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        className={cn(SQUARE_BUTTON, selected ? "border-palco bg-palco text-palco-ink" : "border-[#1E241F] text-[#C9D1CA] hover:bg-[#121512]")}
+                        onClick={() => field.onChange(a)}
+                        aria-pressed={selected}
+                        aria-label={a === "LEFT" ? "Alinhar à esquerda" : a === "CENTER" ? "Centralizar" : "Alinhar à direita"}
+                      >
+                        <Icon aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             />
-            {watch("progressEnabled") ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
+          </div>
+        </div>
+        {errors.logoUrl && <p className="-mt-2 text-xs text-destructive">{errors.logoUrl.message}</p>}
+
+        <section className={styles.formSection}>
+          <h3 className={styles.sectionTitle}>Barra de progresso</h3>
+          {switchRow("progressEnabled", "Exibir barra de progresso")}
+          {watch("progressEnabled") ? (
+            <>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className={cn(styles.field, "flex-1")}>
                   <Label htmlFor="progressStartPct">Iniciar em (%)</Label>
-                  <Input
-                    id="progressStartPct"
-                    type="number"
-                    min={0}
-                    max={99}
-                    {...register("progressStartPct", { valueAsNumber: true })}
-                  />
+                  <Input id="progressStartPct" type="number" min={0} max={99} {...register("progressStartPct", { valueAsNumber: true })} />
                 </div>
-                <div className="space-y-1">
-                  <Label>Cor da barra</Label>
-                  <Controller
-                    control={control}
-                    name="progressBarColor"
-                    render={({ field }) => (
-                      <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor da barra" />
-                    )}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Cor do texto</Label>
-                  <Controller
-                    control={control}
-                    name="progressTextColor"
-                    render={({ field }) => (
-                      <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor do texto" />
-                    )}
-                  />
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                  <Label htmlFor="progressText">Texto (use {"{pct}"} para o número)</Label>
-                  <Input id="progressText" {...register("progressText")} />
-                </div>
+                {colorField("progressBarColor", "Cor da barra")}
+                {colorField("progressTextColor", "Cor do texto")}
               </div>
-            ) : null}
-          </fieldset>
+              <div className={styles.field}>
+                <Label htmlFor="progressText">Texto (use {"{pct}"} para o número)</Label>
+                <Input id="progressText" {...register("progressText")} />
+              </div>
+            </>
+          ) : null}
+        </section>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="loginButtonText">Texto do botão</Label>
-              <Input id="loginButtonText" {...register("loginButtonText")} />
-            </div>
-            <div className="space-y-2">
-              <Label>Cor do botão</Label>
-              <Controller
-                control={control}
-                name="loginButtonColor"
-                render={({ field }) => (
-                  <ColorPicker value={field.value} onChange={field.onChange} aria-label="Cor do botão" />
-                )}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Cor primária</Label>
-              <Controller
-                control={control}
-                name="primaryColor"
-                render={({ field }) => (
-                  <ColorPicker value={field.value || "#16a34a"} onChange={field.onChange} aria-label="Cor primária" />
-                )}
-              />
-            </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className={cn(styles.field, "flex-1")}>
+            <Label htmlFor="loginButtonText">Texto do botão</Label>
+            <Input id="loginButtonText" {...register("loginButtonText")} />
           </div>
-
-          <fieldset className="space-y-3 rounded-md border p-3">
-            <legend className="px-1 text-sm font-semibold">Formulário de acesso à sala</legend>
-            <p className="text-xs text-muted-foreground">
-              Reordene os campos com as setas. Desative campos que não deseja exibir.
-            </p>
-            <Controller
-              control={control}
-              name="formFieldOrder"
-              render={({ field }) => (
-                <ol className="space-y-1.5">
-                  {field.value.map((key, idx) => (
-                    <li key={key} className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5">
-                      <span className="w-20 shrink-0 text-xs font-medium">{FIELD_LABEL[key]}</span>
-                      <div className="flex flex-1 items-center gap-2">
-                        <Switch
-                          checked={isFieldEnabled(key)}
-                          onCheckedChange={(v) => toggleFieldEnabled(key, v)}
-                        />
-                        <span className="text-[11px] text-muted-foreground">Exibir</span>
-                      </div>
-                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 shrink-0 p-0" onClick={() => moveField(idx, -1)} aria-label="Subir">
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 shrink-0 p-0" onClick={() => moveField(idx, 1)} aria-label="Descer">
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            />
-            {errors.formFieldOrder && (
-              <p className="text-sm text-destructive">{errors.formFieldOrder.message as string}</p>
-            )}
-          </fieldset>
-
-          <fieldset className="space-y-3 rounded-md border p-3">
-            <legend className="px-1 text-sm font-semibold">Campos obrigatórios</legend>
-            <Controller control={control} name="nameRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-xs">Incluir Nome como requisito obrigatório</span>
-              </label>
-            )} />
-            <Controller control={control} name="emailRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-xs">Incluir E-mail como requisito obrigatório</span>
-              </label>
-            )} />
-            <Controller control={control} name="phoneRequired" render={({ field }) => (
-              <label className="flex items-center gap-3">
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                <span className="text-xs">Incluir WhatsApp como requisito obrigatório</span>
-              </label>
-            )} />
-          </fieldset>
-
-          <fieldset className="space-y-3 rounded-md border p-3">
-            <legend className="px-1 text-sm font-semibold">Campos do formulário</legend>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="space-y-1">
-                <Label htmlFor="namePlaceholder">Placeholder Nome</Label>
-                <Input id="namePlaceholder" {...register("namePlaceholder")} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="emailPlaceholder">Placeholder E-mail</Label>
-                <Input id="emailPlaceholder" {...register("emailPlaceholder")} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="phonePlaceholder">Placeholder WhatsApp</Label>
-                <Input id="phonePlaceholder" {...register("phonePlaceholder")} />
-              </div>
-            </div>
-          </fieldset>
+          {colorField("loginButtonColor", "Cor do botão")}
+          {colorField("primaryColor", "Cor primária")}
         </div>
 
-        <aside className={styles.previewPanel}>
-          <h3 className={styles.previewTitle}>Prévia do acesso</h3>
-          <LoginPreview
-            logoUrl={watch("logoUrl") || ""}
-            loginLogoAlign={watch("loginLogoAlign")}
-            title={initial.titleHint ?? "Título do webinar"}
-            loginButtonText={watch("loginButtonText")}
-            loginButtonColor={watch("loginButtonColor")}
-            primaryColor={watch("primaryColor") || "#16a34a"}
-            nameEnabled={watch("nameEnabled")}
-            emailEnabled={watch("emailEnabled")}
-            phoneEnabled={watch("phoneEnabled")}
-            namePlaceholder={watch("namePlaceholder")}
-            emailPlaceholder={watch("emailPlaceholder")}
-            phonePlaceholder={watch("phonePlaceholder")}
-            formFieldOrder={watch("formFieldOrder") as ReadonlyArray<"name" | "email" | "phone">}
-            progressEnabled={watch("progressEnabled")}
-            progressStartPct={watch("progressStartPct")}
-            progressBarColor={watch("progressBarColor")}
-            progressTextColor={watch("progressTextColor")}
-            progressText={watch("progressText")}
+        <section className={styles.formSection}>
+          <h3 className={styles.sectionTitle}>Formulário de acesso à sala</h3>
+          <p className={styles.hint}>Reordene os campos com as setas. Desative os que não deseja exibir.</p>
+          <Controller
+            control={control}
+            name="formFieldOrder"
+            render={({ field }) => (
+              <ol className="flex flex-col gap-2">
+                {field.value.map((key, idx) => (
+                  <li key={key} className="flex h-[46px] items-center gap-4 rounded-[10px] border border-[#1E241F] bg-[#070807] px-3.5">
+                    <span className="w-[110px] shrink-0 truncate text-[13px] font-semibold text-[#F2F5F2]">{FIELD_LABEL[key]}</span>
+                    <div className="flex flex-1 items-center gap-2">
+                      <Switch aria-label={`Exibir ${FIELD_LABEL[key]}`} checked={isFieldEnabled(key)} onCheckedChange={(v) => toggleFieldEnabled(key, v)} />
+                      <span aria-hidden="true" className="text-xs text-[#9AA39C]">Exibir</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button type="button" disabled={idx === 0} onClick={() => moveField(idx, -1)} aria-label={`Subir ${FIELD_LABEL[key]}`} className={ARROW_BUTTON}>
+                        <ArrowUp aria-hidden="true" className="h-[15px] w-[15px]" />
+                      </button>
+                      <button type="button" disabled={idx === field.value.length - 1} onClick={() => moveField(idx, 1)} aria-label={`Descer ${FIELD_LABEL[key]}`} className={ARROW_BUTTON}>
+                        <ArrowDown aria-hidden="true" className="h-[15px] w-[15px]" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           />
-        </aside>
+          {errors.formFieldOrder && <p className="text-xs text-destructive">{errors.formFieldOrder.message as string}</p>}
+        </section>
+
+        <section className={styles.formSection}>
+          <h3 className={styles.sectionTitle}>Campos obrigatórios</h3>
+          {switchRow("nameRequired", "Incluir Nome como obrigatório")}
+          {switchRow("emailRequired", "Incluir E-mail como obrigatório")}
+          {switchRow("phoneRequired", "Incluir WhatsApp como obrigatório")}
+        </section>
+
+        <section className={styles.formSection}>
+          <h3 className={styles.sectionTitle}>Textos dos campos</h3>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className={styles.field}>
+              <Label htmlFor="namePlaceholder">Placeholder Nome</Label>
+              <Input id="namePlaceholder" {...register("namePlaceholder")} />
+            </div>
+            <div className={styles.field}>
+              <Label htmlFor="emailPlaceholder">Placeholder E-mail</Label>
+              <Input id="emailPlaceholder" {...register("emailPlaceholder")} />
+            </div>
+            <div className={styles.field}>
+              <Label htmlFor="phonePlaceholder">Placeholder WhatsApp</Label>
+              <Input id="phonePlaceholder" {...register("phonePlaceholder")} />
+            </div>
+          </div>
+        </section>
+
+        <WizardNav webinarId={webinarId} step={3} submitting={pending} />
       </div>
 
-      <WizardNav webinarId={webinarId} step={3} submitting={pending} />
+      <aside className={styles.previewPanel} aria-label="Prévia do acesso">
+        <h3 className={styles.previewTitle}>Prévia do acesso</h3>
+        <LoginPreview
+          logoUrl={watch("logoUrl") || ""}
+          loginLogoAlign={watch("loginLogoAlign")}
+          title={initial.titleHint ?? "Título do webinar"}
+          loginButtonText={watch("loginButtonText")}
+          loginButtonColor={watch("loginButtonColor")}
+          primaryColor={watch("primaryColor") || "#16a34a"}
+          nameEnabled={watch("nameEnabled")}
+          emailEnabled={watch("emailEnabled")}
+          phoneEnabled={watch("phoneEnabled")}
+          namePlaceholder={watch("namePlaceholder")}
+          emailPlaceholder={watch("emailPlaceholder")}
+          phonePlaceholder={watch("phonePlaceholder")}
+          formFieldOrder={watch("formFieldOrder") as ReadonlyArray<"name" | "email" | "phone">}
+          progressEnabled={watch("progressEnabled")}
+          progressStartPct={watch("progressStartPct")}
+          progressBarColor={watch("progressBarColor")}
+          progressTextColor={watch("progressTextColor")}
+          progressText={watch("progressText")}
+        />
+      </aside>
     </form>
   );
 }

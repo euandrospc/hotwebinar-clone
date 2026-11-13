@@ -10,8 +10,17 @@ import { step1Schema, type Step1Input } from "@/lib/validations/webinar";
 import { updateWebinarStep1 } from "@/server/actions/webinar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Globe } from "@/components/icons";
+import adminStyles from "@/components/admin/admin-page.module.css";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 import { ToggleCard } from "@/components/wizard/toggle-card";
+
+const LANGUAGES = [
+  { value: "pt-BR", label: "Português (Brasil)" },
+  { value: "en-US", label: "English (US)" },
+  { value: "es-ES", label: "Español" }
+] as const;
 
 export interface Step1FormProps {
   webinarId: string;
@@ -64,44 +73,54 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
       <h2 className={styles.title}>Início</h2>
 
       <div className={styles.fieldGrid}>
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome interno</Label>
-        <Input id="name" {...register("name")} />
-        {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="title">Título público</Label>
-        <Input id="title" {...register("title")} />
-        {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
-      </div>
-
+        <div className={styles.field}>
+          <Label htmlFor="name">Nome interno</Label>
+          <Input id="name" {...register("name")} />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+        </div>
+        <div className={styles.field}>
+          <Label htmlFor="title">Título público</Label>
+          <Input id="title" {...register("title")} />
+          {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+        </div>
       </div>
       <div className={styles.fieldGrid}>
-      <div className="space-y-2">
-        <Label htmlFor="slug">URL amigável</Label>
-        <Input id="slug" {...register("slug")} />
-        <p className="text-xs text-muted-foreground">
-          {origin}/<span className="font-mono">{watch("slug") || "<slug>"}</span>
-        </p>
-        {errors.slug && <p className="text-sm text-destructive">{errors.slug.message}</p>}
+        <div className={styles.field}>
+          <Label htmlFor="slug">URL amigável</Label>
+          <Input id="slug" {...register("slug")} />
+          <p className={styles.hint}>{origin}/{watch("slug") || "<slug>"}</p>
+          {errors.slug && <p className="text-xs text-destructive">{errors.slug.message}</p>}
+        </div>
+        <div className={styles.field}>
+          <Label htmlFor="language">Idioma</Label>
+          <Controller
+            control={control}
+            name="language"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="language" aria-label="Idioma" className="gap-2.5">
+                  <Globe aria-hidden="true" className="h-[15px] w-[15px] shrink-0 text-[#7C867E]" />
+                  <span className="flex-1 truncate text-left"><SelectValue placeholder="Escolha um idioma" /></span>
+                </SelectTrigger>
+                <SelectContent className={adminStyles.portal}>
+                  {LANGUAGES.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                  {LANGUAGES.some((l) => l.value === field.value) ? null : <SelectItem value={field.value}>{field.value}</SelectItem>}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.language && <p className="text-xs text-destructive">{errors.language.message}</p>}
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="language">Idioma</Label>
-        <Input id="language" {...register("language")} placeholder="pt-BR" />
-        {errors.language && <p className="text-sm text-destructive">{errors.language.message}</p>}
-      </div>
-
-      </div>
       <Controller
         control={control}
         name="accessFacilitated"
         render={({ field }) => (
           <ToggleCard
             title="Forma de acesso à sala"
-            description="Acesso Facilitado"
-            info="Ao ativar o acesso facilitado, o usuário é direcionado imediatamente para a sala do webinar, sem a necessidade de fazer login."
+            description="Acesso facilitado"
+            info="Ao ativar, o usuário vai direto para a sala do webinar, sem precisar fazer login."
             checked={field.value}
             onCheckedChange={field.onChange}
           />
@@ -113,9 +132,9 @@ export function Step1Form({ webinarId, initial }: Step1FormProps) {
         name="videoSyncWithStart"
         render={({ field }) => (
           <ToggleCard
-            title="Sincronizar vídeo com tempo de início do webinar"
+            title="Sincronizar vídeo com o início do webinar"
             description="Quando ativo, o vídeo respeita o atraso do lead."
-            info="Por exemplo, se o seu webinar estiver agendado para 20h e o usuário entrar às 20h05, o vídeo começará a partir do minuto 5."
+            info="Ex.: webinar às 20h e o usuário entra às 20h05 — o vídeo começa no minuto 5."
             checked={field.value}
             onCheckedChange={field.onChange}
           />

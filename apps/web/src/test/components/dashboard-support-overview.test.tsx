@@ -39,9 +39,9 @@ describe("Dashboard support overview", () => {
   it("shows activity, overlapping channels and the supported conversations route", () => {
     render(<DashboardSupportOverview support={support} webinarId="selected" />);
     expect(screen.getByText("48 com resposta da equipe ou IA")).toBeInTheDocument();
-    expect(screen.getByText("100 mensagens recebidas")).toBeInTheDocument();
+    expect(screen.getByText("4 por conversa")).toBeInTheDocument();
     expect(screen.getByText("15 primeiras respostas observadas")).toBeInTheDocument();
-    expect(screen.getByText("Sem retorno no recorte")).toBeInTheDocument();
+    expect(screen.getByText("sem resposta no recorte")).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "Equipe humana" })).getByText("155 respostas")).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "Agentes de IA" })).getByText("45 respostas")).toBeInTheDocument();
     expect(screen.getByText("Uma conversa pode envolver mais de um atendente.")).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("Dashboard support overview", () => {
     render(<DashboardSupportOverview support={support} />);
     await user.click(screen.getByRole("button", { name: "Ordenar por 1ª resposta" }));
     expect(visibleNames()).toEqual(["Bruno Costa", "Assistente Bravy", "Ana Oliveira", "Carla Santos", "Diego Almeida"]);
-    expect(within(agentRow("Bruno Costa")).getByText("0 s")).toBeInTheDocument();
+    expect(within(agentRow("Bruno Costa")).getByText("0s")).toBeInTheDocument();
     await user.click(nextPage());
     expect(visibleNames()).toEqual(["Elisa Lima", "Equipe sem identificação"]);
     await user.click(screen.getByRole("button", { name: "Ordenar por 1ª resposta" }));
@@ -154,9 +154,9 @@ describe("Dashboard support overview", () => {
   it("explains first-response samples without turning unavailable data into zero", async () => {
     const user = userEvent.setup();
     render(<DashboardSupportOverview support={support} />);
-    await user.hover(screen.getByRole("button", { name: "Ana Oliveira: primeira resposta 12 s, 2 amostras" }));
+    await user.hover(screen.getByRole("button", { name: "Ana Oliveira: primeira resposta 12s, 2 amostras" }));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("2 primeiras respostas atribuídas a este atendente no período.");
-    await user.unhover(screen.getByRole("button", { name: "Ana Oliveira: primeira resposta 12 s, 2 amostras" }));
+    await user.unhover(screen.getByRole("button", { name: "Ana Oliveira: primeira resposta 12s, 2 amostras" }));
     await user.click(nextPage());
     await user.hover(screen.getByRole("button", { name: "Equipe sem identificação: primeira resposta —, 0 amostras" }));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Este atendente não deu a primeira resposta em nenhuma amostra do período.");
@@ -184,7 +184,7 @@ describe("Dashboard support overview", () => {
     expect(screen.getByText("Os atendentes aparecerão aqui assim que enviarem respostas.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /primeira resposta .* amostras/ })).not.toBeInTheDocument();
     expect(container.querySelector('[tremor-id="tremor-raw"]')).toBeNull();
-    expect(screen.queryByText("0 s")).not.toBeInTheDocument();
+    expect(screen.queryByText("0s")).not.toBeInTheDocument();
   });
 
   it("does not introduce demo badges or send simulated attendants to a real inbox", () => {
@@ -192,5 +192,21 @@ describe("Dashboard support overview", () => {
     expect(screen.queryByText(/Dados de demonstração|Atendimentos simulados|Ver dados reais/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ver conversas" })).not.toBeInTheDocument();
     expect(visibleNames()).toHaveLength(5);
+  });
+
+  it("lists the current queue with links, compares conversations and keeps demo rows unlinked", () => {
+    const queue = {
+      waitingTotal: 7, previousConversations: 40,
+      waiting: [{ leadId: "lead-1", leadName: "Juliana Prado", text: "Tem certificado?", createdAt: new Date(Date.now() - 6 * 60_000).toISOString() }]
+    };
+    const { rerender } = render(<DashboardSupportOverview support={support} queue={queue} />);
+    expect(screen.getByText("+25% vs. anterior")).toBeInTheDocument();
+    expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByText("há 6 min")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Juliana Prado/ })).toHaveAttribute("href", "/atendimento?leadId=lead-1");
+    rerender(<DashboardSupportOverview support={support} queue={queue} demo />);
+    expect(screen.queryByRole("link", { name: /Juliana Prado/ })).not.toBeInTheDocument();
+    rerender(<DashboardSupportOverview support={support} queue={{ waitingTotal: 0, waiting: [], previousConversations: 0 }} />);
+    expect(screen.getByText("Nenhuma conversa aguardando resposta agora.")).toBeInTheDocument();
   });
 });

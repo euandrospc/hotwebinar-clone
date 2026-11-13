@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "db";
 import { auth } from "@/lib/auth";
 import { canAccessWebinar } from "@/lib/webinar-access";
+import { describeUserAgent, formatLastActive } from "@/lib/account-sessions";
+import { normalizePublicIp } from "@/lib/geoip";
 import {
   accountSettingsSchema,
   type AccountSettingsInput
@@ -56,6 +58,58 @@ export async function upsertAccountSettings(input: AccountSettingsInput): Promis
       brandName: parsed.data.brandName || null
     }
   });
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
+}
+
+export type AccountSession = {
+  id: string;
+  current: boolean;
+  label: string;
+  mobile: boolean;
+  location: string | null;
+  lastActive: string;
+};
+
+/** Unexpired sessions of the signed-in user, current first, with cached IP location. */
+export async function listAccountSessions(): Promise<AccountSession[]> {
+  const session = await requireSession();
+  const rows = await prisma.session.findMany({
+    where: { userId: session.user.id, expiresAt: { gt: new Date() } },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, ipAddress: true, userAgent: true, updatedAt: true }
+  });
+  const ips = [...new Set(rows.map(row => normalizePublicIp(row.ipAddress)).filter((ip): ip is string => !!ip))];
+  const lookups = ips.length
+    ? await prisma.geoIpLookup.findMany({ where: { ip: { in: ips }, status: "SUCCESS" }, select: { ip: true, city: true, region: true, country: true } })
+    : [];
+  const missing = ips.filter(ip => !lookups.some(l => l.ip === ip));
+  // Unknown IPs go through the shared, rate-limited GeoIP worker; never call the provider here.
+  if (missing.length) await prisma.geoIpLookup.createMany({ data: missing.map(ip => ({ ip })), skipDuplicates: true }).catch(() => undefined);
+  const now = new Date();
+  return rows
+    .map(row => {
+      const current = row.id === session.session.id;
+      const geo = lookups.find(l => l.ip === normalizePublicIp(row.ipAddress));
+      const place = geo ? [geo.city ?? geo.region, geo.country].filter(Boolean).join(", ") : "";
+      return {
+        id: row.id,
+        current,
+        ...describeUserAgent(row.userAgent),
+        location: place || null,
+        lastActive: current ? "agora" : formatLastActive(row.updatedAt, now)
+      };
+    })
+    .sort((a, b) => Number(b.current) - Number(a.current));
+}
+
+export async function revokeAccountSession(id: string): Promise<Result> {
+  const session = await requireSession();
+  if (typeof id !== "string" || !id || id === session.session.id) {
+    return { error: { message: "Use “Sair” para encerrar a sessão deste dispositivo." } };
+  }
+  const { count } = await prisma.session.deleteMany({ where: { id, userId: session.user.id } });
+  if (!count) return { error: { message: "Sessão não encontrada ou já encerrada." } };
   revalidatePath("/dashboard/settings");
   return { ok: true };
 }
