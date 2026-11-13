@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { Bolt, ChevronUp, LogOut, Moon, Sun } from "@/components/icons";
+import { Bolt, ChevronUp, LogOut } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { generateAvatar } from "@/lib/generate-avatar";
@@ -14,8 +13,6 @@ const menuItemClassName = "rounded-lg py-2.5 text-[13px] text-[#52635A] transiti
 export function UserMenu({ name, email, collapsed = false }: { name: string; email: string; collapsed?: boolean }) {
   const avatar = generateAvatar(name || email);
   const { logout, pending } = useAdminLogout();
-  const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -30,10 +27,6 @@ export function UserMenu({ name, email, collapsed = false }: { name: string; ema
       <DropdownMenuContent side={collapsed ? "right" : "top"} align={collapsed ? "end" : "start"} sideOffset={8} collisionPadding={8} className="w-64 max-w-[calc(100vw-1rem)] rounded-xl border-[#E3E9E3] bg-white/95 p-2 shadow-[0_16px_48px_-16px_rgba(18,42,28,0.25),0_4px_12px_-4px_rgba(18,42,28,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-[#111815]/95 dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)]">
         <DropdownMenuLabel className="px-2 py-2"><p className="truncate font-medium">{name}</p><p className="mt-1 truncate text-xs font-normal text-muted-foreground">{email}</p></DropdownMenuLabel>
         <DropdownMenuItem asChild className={menuItemClassName}><Link href="/dashboard/settings"><Bolt />Configurações da conta</Link></DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => setTheme(isDark ? "light" : "dark")} className={menuItemClassName}>
-          {isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-          {isDark ? "Mudar para claro" : "Mudar para escuro"}
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={logout} disabled={pending} className={menuItemClassName}><LogOut />{pending ? "Saindo…" : "Sair da conta"}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
