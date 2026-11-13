@@ -32,3 +32,6 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   globalThis.ResizeObserver = ResizeObserverMock as any;
 }
+
+// next/font is a build-time transform; in tests every font returns the class names it would emit.
+vi.mock("next/font/google", () => new Proxy({}, { get: () => () => ({ className: "", variable: "", style: { fontFamily: "" } }) }));

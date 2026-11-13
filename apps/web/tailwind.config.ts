@@ -7,7 +7,10 @@ export default {
     container: { center: true, padding: { DEFAULT: "1rem", md: "2rem" }, screens: { "2xl": "1400px" } },
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"]
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Login page (Palco design) fonts, loaded with next/font in components/admin/palco-auth.tsx.
+        palco: ["var(--palco-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        "palco-serif": ["var(--palco-serif)", "Georgia", "serif"]
       },
       colors: {
         border: "hsl(var(--border))",

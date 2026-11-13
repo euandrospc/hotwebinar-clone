@@ -2,15 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient, signIn } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { AnimatedCharactersLoginPage } from "@/components/ui/animated-characters-login-page";
+import { PalcoAuthShell, palcoForm as f } from "@/components/admin/palco-auth";
 
-import { AdminAuthFrame } from "@/components/admin/admin-auth-frame";
-import styles from "@/components/admin/admin-auth-frame.module.css";
-
-export function LoginClient({ brandName }: { brandName: string }) {
+export function LoginClient() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [challenge, setChallenge] = useState(false);
@@ -38,10 +33,10 @@ export function LoginClient({ brandName }: { brandName: string }) {
     finally { setLoading(false); }
   }
 
-  async function onSubmit(email: string, password: string) {
+  async function onSubmit(email: string, password: string, rememberMe = true) {
     setError(null);
     setLoading(true);
-    const res = await signIn.email({ email, password });
+    const res = await signIn.email({ email, password, rememberMe });
     setLoading(false);
     if (res.error) {
       setError("Credenciais inválidas");
@@ -55,27 +50,17 @@ export function LoginClient({ brandName }: { brandName: string }) {
   }
 
   if (challenge) return (
-    <AdminAuthFrame title="Verificação em duas etapas" description={backup ? "Digite um dos códigos de recuperação que você salvou." : "Digite o código de 6 dígitos do seu aplicativo autenticador."}>
-      <form onSubmit={verifySecondFactor} className={styles.form}>
-        <div className={styles.field}><Label htmlFor="second-factor" className={styles.label}>{backup ? "Código de recuperação" : "Código do autenticador"}</Label>
-          <Input className={styles.input} id="second-factor" autoFocus autoComplete="one-time-code" inputMode={backup ? "text" : "numeric"} value={code} onChange={e => setCode(e.target.value)} required maxLength={backup ? 64 : 6} /></div>
-        {error && <p role="alert" className={styles.error}>{error}</p>}
-        <Button type="submit" className={styles.submit} disabled={loading}>{loading ? "Validando…" : "Confirmar acesso"}</Button>
-        <Button type="button" variant="ghost" className={styles.secondary} disabled={loading} onClick={() => { setBackup(!backup); setCode(""); setError(null); }}>{backup ? "Usar aplicativo autenticador" : "Usar código de recuperação"}</Button>
-        <Button type="button" variant="ghost" className={styles.secondary} disabled={loading} onClick={() => { setChallenge(false); setCode(""); setError(null); }}>Voltar ao login</Button>
+    <PalcoAuthShell eyebrow="Verificação em duas etapas" title="Confirme que é você." description={backup ? "Digite um dos códigos de recuperação que você salvou." : "Digite o código de 6 dígitos do seu aplicativo autenticador."}>
+      <form onSubmit={verifySecondFactor} className={f.form} aria-labelledby="auth-title">
+        <div className={f.field}><label htmlFor="second-factor" className={f.label}>{backup ? "Código de recuperação" : "Código do autenticador"}</label>
+          <div className={f.input}><input id="second-factor" autoFocus autoComplete="one-time-code" inputMode={backup ? "text" : "numeric"} value={code} onChange={e => setCode(e.target.value)} required maxLength={backup ? 64 : 6} /></div></div>
+        {error && <p role="alert" className={f.error}>{error}</p>}
+        <button type="submit" className={f.submit} disabled={loading}>{loading ? "Validando…" : "Confirmar acesso"}</button>
+        <button type="button" className={f.secondary} disabled={loading} onClick={() => { setBackup(!backup); setCode(""); setError(null); }}>{backup ? "Usar aplicativo autenticador" : "Usar código de recuperação"}</button>
+        <button type="button" className={f.secondary} disabled={loading} onClick={() => { setChallenge(false); setCode(""); setError(null); }}>Voltar ao login</button>
       </form>
-    </AdminAuthFrame>
+    </PalcoAuthShell>
   );
 
-  return (
-    <AnimatedCharactersLoginPage
-      title={brandName}
-      subtitle="Entre com seus dados"
-      submitLabel="Entrar"
-      loadingLabel="Entrando..."
-      onSubmit={onSubmit}
-      error={error}
-      loading={loading}
-    />
-  );
+  return <AnimatedCharactersLoginPage onSubmit={onSubmit} error={error} loading={loading} />;
 }

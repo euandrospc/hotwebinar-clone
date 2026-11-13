@@ -8,7 +8,7 @@ vi.mock("@/components/ui/animated-characters-login-page", () => ({ AnimatedChara
 beforeEach(() => { vi.resetAllMocks(); window.history.replaceState(null, "", "/login?from=%2Fatendimento%3FleadId%3D123"); mocks.login.mockResolvedValue({ data: { twoFactorRedirect: true } }); });
 afterEach(cleanup);
 it("waits for the second factor and preserves the shared conversation destination", async () => {
-  render(<LoginClient brandName="Bravy" />);
+  render(<LoginClient />);
   fireEvent.click(screen.getByText("Entrar"));
   await screen.findByText("Verificação em duas etapas");
   expect(mocks.push).not.toHaveBeenCalled();
@@ -22,7 +22,7 @@ it("waits for the second factor and preserves the shared conversation destinatio
   await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/atendimento?leadId=123"));
 });
 it("accepts recovery codes through the dedicated verification endpoint", async () => {
-  render(<LoginClient brandName="Bravy" />);
+  render(<LoginClient />);
   fireEvent.click(screen.getByText("Entrar"));
   await screen.findByText("Verificação em duas etapas");
   fireEvent.click(screen.getByText("Usar código de recuperação"));
