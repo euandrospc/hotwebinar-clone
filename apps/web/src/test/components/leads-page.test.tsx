@@ -147,6 +147,16 @@ describe("Leads page server pagination", () => {
     expect(url.searchParams.has("pageSize")).toBe(false);
   });
 
+  it("shows the country flag from flagcdn, falling back to the raw code when it isn't ISO alpha-2", async () => {
+    mocks.findLeads.mockResolvedValue([row, { ...row, id: "lead-27", name: "Outro", country: "XYZ" }]);
+    render(await loadPage({ period: "all" }));
+
+    const flag = screen.getByRole("img", { name: "Brasil" });
+    expect(flag).toHaveAttribute("src", "https://flagcdn.com/w40/br.png");
+    expect(flag).toHaveAttribute("loading", "lazy");
+    expect(screen.getByText("XYZ")).toBeInTheDocument();
+  });
+
   it("shows the empty state without fetching rows when no leads match", async () => {
     mocks.count.mockResolvedValue(0);
     mocks.findLeads.mockResolvedValue([]);

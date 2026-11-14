@@ -156,7 +156,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
         <DashboardRangePicker appearance="v2" initialFrom={toIsoDate(rangeStart)} initialTo={toIsoDate(rangeEnd)} initialFromTime={toIsoTime(rangeStart)} initialToTime={toIsoTime(rangeEnd)} />
       } />
 
-      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_260px] xl:items-start">
         <div className="min-w-0 space-y-4">
           <AudienceSummary data={audience} timezone={webinar.timezone} />
           <MetricsVideoRetention data={retention} />
@@ -177,7 +177,7 @@ export default async function MetricsPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
-        <div className="min-w-0 space-y-2.5">
+        <div className="min-w-0">
           <MetricsKpiList kpis={kpis} webinarId={id} />
         </div>
       </div>

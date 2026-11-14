@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Clock, Flag, Play, Radio } from "@/components/icons";
+import { Flag, Hourglass, Play, Radio } from "@/components/icons";
 import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
-
-import styles from "./webinar-operations.module.css";
 
 export function formatCountdown(ms: number) {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -42,9 +40,9 @@ export function RealtimeCountdown({ data }: { data: WebinarRealtimeSnapshot }) {
     return formatCountdown(target - now);
   };
   const colors = {
-    waiting: "text-amber-700 dark:text-amber-400",
-    active: "text-emerald-700 dark:text-emerald-400",
-    ended: "text-muted-foreground"
+    waiting: "text-[#F5B742]",
+    active: "text-palco",
+    ended: "text-[#7C867E]"
   };
   const liveState = closed || start === null || schedule.mode === "JIT"
     ? "ended" : now < start ? "waiting" : "active";
@@ -59,19 +57,19 @@ export function RealtimeCountdown({ data }: { data: WebinarRealtimeSnapshot }) {
     { icon: Play, color: colors[liveState], label: closed ? "Live encerrada" : start !== null && now < start ? "Início em" : "Live há",
       value: schedule.mode === "JIT" ? "Por espectador" : start === null ? "Sem início definido" : formatCountdown(now < start ? start - now : Math.min(now, end ?? now) - start) },
     { icon: Radio, color: colors[milestoneState(schedule.pitchAtSec)], label: "Pitch em", value: milestone(schedule.pitchAtSec, "Iniciado") },
-    { icon: Clock, color: colors[milestoneState(schedule.offerShowAtSec, schedule.offerDisabled || linkEnded)], label: "Link em", value: schedule.offerDisabled ? "Desativado" : linkEnded ? "Encerrado" : milestone(schedule.offerShowAtSec, "Liberado") },
+    { icon: Hourglass, color: colors[milestoneState(schedule.offerShowAtSec, schedule.offerDisabled || linkEnded)], label: "Link em", value: schedule.offerDisabled ? "Desativado" : linkEnded ? "Encerrado" : milestone(schedule.offerShowAtSec, "Liberado") },
     { icon: Flag, color: colors[end === null ? "ended" : liveState], label: "Fim em", value: closed ? "Encerrado" : end === null ? "Não configurado" : formatCountdown(end - now) }
   ];
 
   return (
-    <section aria-label="Cronograma do webinar" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Cronograma do webinar" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
       {rows.map(({ icon: Icon, label, value, color }) => (
-        <div key={label} className={styles.surface}>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Icon aria-hidden="true" className={cn("h-4 w-4 shrink-0", color)} />
+        <div key={label} className="flex min-w-0 flex-col gap-2 rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-3.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#9AA39C]">
+            <Icon aria-hidden="true" className={cn("h-3 w-3 shrink-0", color)} />
             <span>{label}</span>
           </div>
-          <p className={cn("mt-2 text-base font-semibold tracking-tight tabular-nums", color)}>{value}</p>
+          <p className={cn("text-[13px] font-bold tabular-nums", color)}>{value}</p>
         </div>
       ))}
     </section>

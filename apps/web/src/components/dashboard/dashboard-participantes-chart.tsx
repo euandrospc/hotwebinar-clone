@@ -11,14 +11,14 @@ const formatCount = (value: number) => numberFormat.format(value);
 function ParticipantsTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-[#E5E9E6] dark:border-border bg-white dark:bg-card px-4 py-3 text-xs shadow-lg shadow-black/5">
-      <p className="mb-2 text-[#7C8580] dark:text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-[#1E241F] bg-[#121512] px-4 py-3 font-palco text-xs shadow-lg">
+      <p className="mb-2 text-[#7C867E]">{label}</p>
       <div className="flex items-center gap-6">
-        <span className="flex items-center gap-2 text-[#59645E] dark:text-muted-foreground">
-          <span aria-hidden="true" className="size-2 rounded-full bg-[#A6DE6B]" />
+        <span className="flex items-center gap-2 text-neutral-400">
+          <span aria-hidden="true" className="size-2 rounded-full bg-[#B6F09A]" />
           {payload[0].category}
         </span>
-        <span className="font-semibold tabular-nums text-[#163C2F] dark:text-foreground">{formatCount(payload[0].value)}</span>
+        <span className="font-semibold tabular-nums text-neutral-100">{formatCount(payload[0].value)}</span>
       </div>
     </div>
   );
@@ -38,23 +38,23 @@ export function DashboardParticipantesChart({ data }: { data: DailyParticipants[
   const range = data.length > 0 ? `${data[0].date} a ${data[data.length - 1].date}` : "Período selecionado";
 
   return (
-    <section aria-labelledby="participants-title" className="h-full min-w-0 rounded-2xl border border-[#E5E9E6] dark:border-border bg-white dark:bg-card p-5 sm:p-6">
+    <section aria-labelledby="participants-title" className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-5 font-palco">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 id="participants-title" className="text-sm font-medium text-[#59645E] dark:text-muted-foreground">Participantes</h3>
-          <div className="mt-2 flex items-baseline gap-2">
-            <p className="text-3xl font-semibold tracking-tight tabular-nums text-[#153D30] dark:text-foreground">{formatCount(total)}</p>
-            <span className="text-xs text-[#7C8580] dark:text-muted-foreground">sessões no período</span>
+          <h3 id="participants-title" className="text-[13px] text-neutral-400">Participantes</h3>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <p className="text-[26px] font-semibold leading-tight tabular-nums text-neutral-100">{formatCount(total)}</p>
+            <span className="text-[11px] text-[#7C867E]">sessões no período</span>
           </div>
         </div>
-        <div role="group" aria-label="Visualização de participantes" className="inline-flex rounded-lg border border-[#E5E9E6] dark:border-border bg-[#F8FAF8] dark:bg-muted/40 p-1">
+        <div role="group" aria-label="Visualização de participantes" className="inline-flex gap-0.5 rounded-lg border border-[#1E241F] bg-[#070807] p-[3px]">
           {([{ value: "daily", label: "Por dia" }, { value: "cumulative", label: "Acumulado" }] as const).map((option) => (
             <button
               key={option.value}
               type="button"
               aria-pressed={view === option.value}
               onClick={() => { setView(option.value); setSelectedDate(null); }}
-              className={cn("rounded-md px-3 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#064B3C] dark:focus-visible:ring-[#A6DE6B]", view === option.value ? "bg-white dark:bg-card font-medium text-[#064B3C] dark:text-[#A6DE6B] shadow-sm" : "text-[#78817C] dark:text-muted-foreground hover:text-[#064B3C] dark:hover:text-foreground")}
+              className={cn("rounded-md px-2.5 py-[5px] text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco motion-reduce:transition-none", view === option.value ? "bg-palco/[0.08] font-semibold text-[#B6F09A]" : "text-neutral-400 hover:text-neutral-100")}
             >
               {option.label}
             </button>
@@ -64,8 +64,8 @@ export function DashboardParticipantesChart({ data }: { data: DailyParticipants[
 
       {total === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
-          <p className="text-sm font-medium text-[#59645E] dark:text-muted-foreground">Nenhuma sessão neste período</p>
-          <p className="max-w-64 text-xs leading-relaxed text-[#7C8580] dark:text-muted-foreground">Escolha outro período ou aguarde as primeiras visitas aos seus webinars.</p>
+          <p className="text-sm font-medium text-neutral-400">Nenhuma sessão neste período</p>
+          <p className="max-w-64 text-xs leading-relaxed text-[#7C867E]">Escolha outro período ou aguarde as primeiras visitas aos seus webinars.</p>
         </div>
       ) : (
         <AreaChart
@@ -74,7 +74,7 @@ export function DashboardParticipantesChart({ data }: { data: DailyParticipants[
           index="date"
           categories={[category]}
           colors={["chartLime"]}
-          className="mt-5 h-60 sm:h-64"
+          className="h-48 [&_.recharts-cartesian-axis-tick_text]:!fill-[#5A635C] [&_.recharts-cartesian-axis-tick_text]:text-[10px] [&_.recharts-cartesian-grid_line]:!stroke-[#1A1F1B]"
           valueFormatter={formatCount}
           showLegend={false}
           yAxisWidth={42}
@@ -86,7 +86,7 @@ export function DashboardParticipantesChart({ data }: { data: DailyParticipants[
         />
       )}
 
-      <footer className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#F0F2F0] dark:border-border pt-3 text-xs text-[#7C8580] dark:text-muted-foreground">
+      <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#7C867E]">
         <span>{range}</span>
         <span aria-live="polite">
           {selected ? `${selected.date} · ${formatCount(Number(selected[category]))} ${view === "daily" ? "sessões" : "acumuladas"}` : "Cada visita representa uma sessão"}

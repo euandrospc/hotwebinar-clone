@@ -2,10 +2,8 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { BarChart3, Pencil, Radio, Sparkles, Users, Webhook } from "@/components/icons";
+import { BarChart3, Pencil, Radio, Users, Webhook, Zap } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import sidebarStyles from "@/components/admin/sidebar.module.css";
-import styles from "./webinar-tabs.module.css";
 
 interface Props {
   webinarId: string;
@@ -16,7 +14,7 @@ const TABS = [
   { label: "Leads", suffix: "/leads", icon: Users },
   { label: "Métricas", suffix: "/metrics", icon: BarChart3 },
   { label: "Tempo real", suffix: "/realtime", icon: Radio },
-  { label: "Agente IA", suffix: "/chat-ai", icon: Sparkles },
+  { label: "Agente IA", suffix: "/chat-ai", icon: Zap },
   { label: "Webhooks", suffix: "/webhooks", icon: Webhook }
 ] as const;
 
@@ -40,7 +38,7 @@ export function WebinarTabs({ webinarId }: Props) {
   }, [pathname]);
   const base = `/dashboard/webinars/${webinarId}`;
   return (
-    <nav ref={navigation} data-webinar-navigation aria-label="Navegação do webinar" className={cn(styles.navigation, sidebarStyles.surface)}>
+    <nav ref={navigation} data-webinar-navigation aria-label="Navegação do webinar" className="flex w-max min-w-0 max-w-full shrink-0 items-center gap-1 self-start overflow-x-auto rounded-xl border border-[#1E241F] bg-[#0C0E0C] p-[5px] font-palco [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {TABS.map((t) => {
         const Icon = t.icon;
         const href = `${base}${t.suffix}`;
@@ -52,9 +50,12 @@ export function WebinarTabs({ webinarId }: Props) {
             key={t.label}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={cn(styles.navLink, active && sidebarStyles.activeItem)}
+            className={cn(
+              "group inline-flex h-8 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-lg border px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palco/60 motion-reduce:transition-none",
+              active ? "border-palco/25 bg-palco/[0.08] text-neutral-100" : "border-transparent text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-100"
+            )}
           >
-            <Icon aria-hidden="true" />
+            <Icon aria-hidden="true" className={cn("size-3.5 shrink-0", active ? "text-palco" : "text-neutral-500 group-hover:text-neutral-300")} />
             {t.label}
           </Link>
         );

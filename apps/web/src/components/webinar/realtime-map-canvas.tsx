@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { divIcon, latLngBounds, type Popup as LeafletPopup } from "leaflet";
 import { Marker, MapContainer, TileLayer, Tooltip, Popup, useMap, useMapEvents } from "react-leaflet";
-import { ArrowLeft, ArrowRight, MapPin } from "@/components/icons";
+import { ArrowLeft, ArrowRight, Target } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import type { WebinarRealtimeSnapshot } from "@/lib/webinar-realtime";
 import { findOverlappingMapPins } from "@/lib/map-pin-layout";
@@ -141,17 +141,18 @@ function MapControls({ locations }: { locations: Locations }) {
   }, [map]);
 
   return (
-    <div className="absolute right-3 top-3 z-[500]">
-      <Button variant="outline" size="sm" disabled={!locations.length} onClick={fitLocations}>
-        <MapPin className="h-4 w-4" /> Centralizar mapa
-      </Button>
+    <div className="absolute right-4 top-4 z-[500]">
+      <button type="button" disabled={!locations.length} onClick={fitLocations}
+        className="inline-flex items-center gap-1.5 rounded-lg bg-[#3A3F3B]/90 px-3 py-2 text-xs text-neutral-100 shadow-sm backdrop-blur-sm transition-colors hover:bg-[#3A3F3B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-palco disabled:cursor-not-allowed disabled:opacity-80 motion-reduce:transition-none">
+        <Target aria-hidden="true" className="h-3 w-3" /> Centralizar mapa
+      </button>
     </div>
   );
 }
 
 export function RealtimeMapCanvas({ locations }: { locations: Locations }) {
   return (
-    <div className="relative isolate h-[300px] sm:h-[350px]">
+    <div className="relative isolate h-full">
       <MapContainer center={[-15, -55]} zoom={3} scrollWheelZoom className="h-full w-full" aria-label="Mapa dos espectadores online">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -161,9 +162,9 @@ export function RealtimeMapCanvas({ locations }: { locations: Locations }) {
         <AudiencePins locations={locations} />
       </MapContainer>
       {locations.length === 0 && (
-        <div className="pointer-events-none absolute inset-x-4 bottom-9 z-[500] mx-auto max-w-sm rounded-lg border bg-card/95 p-3 text-center shadow-sm">
-          <p className="text-xs font-medium">Nenhuma localização ao vivo agora</p>
-          <p className="mt-1 text-xs text-muted-foreground">O mapa aparece automaticamente quando há espectadores com localização disponível.</p>
+        <div className="pointer-events-none absolute inset-x-4 bottom-9 z-[500] mx-auto flex max-w-xs flex-col gap-1 rounded-lg bg-[#111311]/95 p-3 text-center shadow-lg">
+          <p className="text-xs font-semibold text-neutral-100">Nenhuma localização ao vivo agora</p>
+          <p className="text-[11px] text-[#9AA39C]">O mapa aparece automaticamente quando há espectadores com localização disponível.</p>
         </div>
       )}
     </div>

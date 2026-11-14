@@ -7,7 +7,7 @@ const RealtimeMapCanvas = dynamic(
   () => import("./realtime-map-canvas").then((module) => module.RealtimeMapCanvas),
   {
     ssr: false,
-    loading: () => <div className="h-[300px] animate-pulse bg-muted sm:h-[350px]" aria-label="Carregando mapa ao vivo" />
+    loading: () => <div className="h-full animate-pulse bg-[#121512] motion-reduce:animate-none" aria-label="Carregando mapa ao vivo" />
   }
 );
 

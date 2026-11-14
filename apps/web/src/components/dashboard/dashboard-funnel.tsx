@@ -6,12 +6,11 @@ import { Portal as TooltipPortal } from "@radix-ui/react-tooltip";
 import { Info, Filter } from "@/components/icons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { FunnelStage } from "@/lib/dashboard-stats";
-import surfaceStyles from "@/components/webinar/webinar-operations.module.css";
-import styles from "./dashboard-funnel.module.css";
+import { cn } from "@/lib/utils";
 
 const number = new Intl.NumberFormat("pt-BR");
 const percentage = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
-const colors = ["#dcecc8", "#b6d88c", "#8fbe63", "#50875d", "#064b3c"];
+const colors = ["#B6CBA8", "#9BC78A", "#6FA352", "#2F6B3E", "#0E4A35"];
 const shortLabels: Record<string, string> = {
   Visitas: "Visitas",
   "Acessou o webinar": "Webinar",
@@ -34,8 +33,7 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
   const active = stages[activeIndex];
   const max = Math.max(1, ...stages.map((stage) => stage.count));
   const base = stages[0]?.count ?? 0;
-  const checkpointWidth = Math.max(36, ...stages.map((stage) => number.format(stage.count).length * 7 + 12));
-  const chartPadding = Math.max(24, Math.ceil(checkpointWidth / 2) + 4);
+  const checkpointWidth = Math.max(48, ...stages.map((stage) => number.format(stage.count).length * 7 + 28));
   const percentFor = (stage: FunnelStage) => base > 0 && Number.isFinite(stage.pct) ? `${percentage.format(stage.pct)}%` : "—";
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -56,23 +54,23 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
   }
 
   return (
-    <section className={`${surfaceStyles.surface} ${styles.funnel}`} aria-labelledby={`${id}-title`}>
-      <header className={styles.header}>
-        <span className={styles.icon}><Filter aria-hidden="true" /></span>
-        <h3 id={`${id}-title`}>Funil de conversão</h3>
+    <section className="flex min-w-0 flex-col gap-4 rounded-2xl border border-[#1E241F] bg-[#0C0E0C] p-[18px]" aria-labelledby={`${id}-title`}>
+      <header className="flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-palco/[.12] text-palco"><Filter aria-hidden="true" className="h-3 w-3" /></span>
+        <h3 id={`${id}-title`} className="text-[13px] font-semibold text-neutral-100">Funil de conversão</h3>
         <TooltipProvider delayDuration={150}>
           <Tooltip>
-            <TooltipTrigger asChild><button type="button" className={styles.info} aria-label="Sobre os dados do funil"><Info aria-hidden="true" /></button></TooltipTrigger>
-            <TooltipPortal><TooltipContent className={styles.tooltip}>Hoje, no fuso do webinar. Percentuais em relação às visitas. Etapas são contagens independentes; diferenças não comprovam perdas individuais. Compras podem ocorrer sem registro nas etapas anteriores.</TooltipContent></TooltipPortal>
+            <TooltipTrigger asChild><button type="button" className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full text-[#5A635C] transition-colors hover:bg-white/5 hover:text-neutral-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-palco motion-reduce:transition-none" aria-label="Sobre os dados do funil"><Info aria-hidden="true" className="h-3.5 w-3.5" /></button></TooltipTrigger>
+            <TooltipPortal><TooltipContent className="max-w-[min(320px,calc(100vw-32px))] rounded-xl border-[#1E241F] bg-[#121512] p-3 text-xs leading-relaxed text-neutral-300">Hoje, no fuso do webinar. Percentuais em relação às visitas. Etapas são contagens independentes; diferenças não comprovam perdas individuais. Compras podem ocorrer sem registro nas etapas anteriores.</TooltipContent></TooltipPortal>
           </Tooltip>
         </TooltipProvider>
       </header>
 
       {active ? <>
-        <div className={styles.chartViewport} role="group" aria-label="Etapas do funil" onPointerLeave={() => setHoveredLabel(null)}>
-          <div className={styles.chart} style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(${checkpointWidth}px, 1fr))`, minWidth: stages.length * checkpointWidth + Math.max(0, stages.length - 1) * 6 + chartPadding * 2, paddingInline: chartPadding }}>
+        <div className="min-w-0 overflow-x-auto [scrollbar-width:thin]" role="group" aria-label="Etapas do funil" onPointerLeave={() => setHoveredLabel(null)}>
+          <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(${checkpointWidth}px, 1fr))`, minWidth: stages.length * checkpointWidth + Math.max(0, stages.length - 1) * 2 }}>
           {stages.map((stage, index) => {
-            const heightFor = (i: number) => 12 + 88 * ((stages[i]?.count ?? 0) / max);
+            const heightFor = (i: number) => 13 + 76 * ((stages[i]?.count ?? 0) / max);
             const left = heightFor(index);
             const right = index + 1 < stages.length ? heightFor(index + 1) : left;
             const color = colors[Math.min(index, colors.length - 1)];
@@ -80,7 +78,7 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
               key={stage.label}
               ref={(element) => { buttons.current[index] = element; }}
               type="button"
-              className={styles.stage}
+              className="relative flex min-w-0 cursor-pointer flex-col items-stretch gap-4 rounded-md p-0 [-webkit-tap-highlight-color:transparent] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-palco"
               data-active={activeIndex === index}
               aria-label={`${stage.label}: ${number.format(stage.count)}, ${percentFor(stage)} em relação às visitas`}
               aria-pressed={selected === index}
@@ -93,7 +91,7 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
               onClick={() => { setSelectedLabel(stage.label); setHoveredLabel(null); }}
               onKeyDown={(event) => handleKeyDown(event, index)}
             >
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.shape} aria-hidden="true">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={cn("block h-[90px] w-full transition-[opacity,filter] duration-150 motion-reduce:transition-none", activeIndex === index ? "opacity-100 saturate-[1.12]" : "opacity-90")} aria-hidden="true">
                 <motion.polygon
                   initial={false}
                   animate={{ points: `0,${50 - left / 2} 100,${50 - right / 2} 100,${50 + right / 2} 0,${50 + left / 2}` }}
@@ -101,21 +99,21 @@ export function DashboardFunnel({ stages }: { stages: FunnelStage[] }) {
                   fill={color}
                 />
               </svg>
-              <span className={styles.checkpoint} aria-hidden="true">{number.format(stage.count)}</span>
-              <span className={styles.stageLabel}>{shortLabels[stage.label] ?? stage.label}</span>
+              <span className={cn("absolute left-2 top-[45px] z-[1] inline-flex -translate-y-1/2 items-center justify-center rounded-full border px-2 py-1 text-[10px] font-bold leading-none tabular-nums text-neutral-100 transition-colors duration-150 motion-reduce:transition-none", activeIndex === index ? "border-palco/50 bg-[#123020]" : "border-[#3A4A3D] bg-[#1B241D]")} aria-hidden="true">{number.format(stage.count)}</span>
+              <span className={cn("self-start whitespace-nowrap text-left text-[11px] leading-4 transition-colors duration-150 motion-reduce:transition-none", activeIndex === index ? "font-semibold text-[#B6F09A]" : "text-[#7C867E]")}>{shortLabels[stage.label] ?? stage.label}</span>
             </button>;
           })}
           </div>
         </div>
 
-        <div id={`${id}-detail`} role="region" aria-label="Detalhes da etapa" aria-live="polite" aria-atomic="true" className={styles.detail}>
-          <motion.div key={active.label} initial={{ opacity: reducedMotion ? 1 : 0.6 }} animate={{ opacity: 1 }} transition={{ duration: reducedMotion ? 0 : 0.15 }} className={styles.detailContent}>
-            <p className={styles.detailLabel}><span aria-hidden="true" style={{ background: colors[Math.min(activeIndex, colors.length - 1)] }} />{active.label}</p>
-            <p className={styles.percentage}><strong>{percentFor(active)}</strong><span>em relação às visitas</span></p>
+        <div id={`${id}-detail`} role="region" aria-label="Detalhes da etapa" aria-live="polite" aria-atomic="true" className="rounded-xl border border-[#1E3A26] bg-[#102516] px-3.5 py-3">
+          <motion.div key={active.label} initial={{ opacity: reducedMotion ? 1 : 0.6 }} animate={{ opacity: 1 }} transition={{ duration: reducedMotion ? 0 : 0.15 }} className="flex items-center justify-between gap-4">
+            <p className="min-w-0 text-[13px] font-semibold text-neutral-100">{active.label}</p>
+            <p className="flex shrink-0 flex-col items-end gap-0.5"><strong className="text-lg font-semibold leading-tight tabular-nums text-[#B6F09A]">{percentFor(active)}</strong><span className="text-[10px] text-[#7C867E]">em relação às visitas</span></p>
           </motion.div>
         </div>
-        <p className={styles.hint}>Explore as etapas · clique para manter a seleção</p>
-      </> : <p className={styles.empty}>Nenhuma etapa disponível</p>}
+        <p className="text-[10px] text-[#6E776F]">Explore as etapas · clique para manter a seleção</p>
+      </> : <p className="text-sm text-[#7C867E]">Nenhuma etapa disponível</p>}
     </section>
   );
 }
