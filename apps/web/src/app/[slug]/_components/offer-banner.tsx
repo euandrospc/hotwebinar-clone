@@ -3,13 +3,15 @@ import { OfferTitle } from "@/components/webinar/offer-title";
 import { useEffect, useRef } from "react";
 import type { PlayerOffer } from "../_lib/public-types";
 import type { PublicLeadWithUtms } from "@/lib/public-dto";
-import { tagAbKirvanoCheckout } from "@/lib/kirvano-link";
+import { tagAbKirvanoCheckout, tagLiveOrigin } from "@/lib/kirvano-link";
 import { leadScopedUrl } from "@/lib/lead-request-scope";
 
 interface Props {
   offer: PlayerOffer;
   lead: PublicLeadWithUtms;
   webinarId: string;
+  /** Room slug: tags the checkout with the room and the day of the live. */
+  slug?: string | null;
   currentTimeSec: number;
 }
 
@@ -36,7 +38,7 @@ function buildUrl(link: string, lead: PublicLeadWithUtms, passUtms: boolean): st
   return url.toString();
 }
 
-export function OfferBanner({ offer, lead, webinarId, currentTimeSec }: Props) {
+export function OfferBanner({ offer, lead, webinarId, slug, currentTimeSec }: Props) {
   const seenRef = useRef(false);
   const active = isActive(offer, currentTimeSec);
 
@@ -52,7 +54,8 @@ export function OfferBanner({ offer, lead, webinarId, currentTimeSec }: Props) {
     // Keep the event alive when the configured offer opens in this same tab.
     void fetch(leadScopedUrl("/api/offer-click", { webinarId, leadId: lead.id }), { method: "POST", keepalive: true }).catch(() => {});
     if (!offer.link) return;
-    const originalUrl = buildUrl(offer.link, lead, offer.passUtms);
+    const withLeadUtms = buildUrl(offer.link, lead, offer.passUtms);
+    const originalUrl = slug ? tagLiveOrigin(withLeadUtms, { slug, leadId: lead.id }) : withLeadUtms;
     const url = offer.abLeadAttribution ? tagAbKirvanoCheckout(originalUrl, lead.id) : originalUrl;
     window.open(url, offer.sameWindow ? "_self" : "_blank", "noopener,noreferrer");
   }

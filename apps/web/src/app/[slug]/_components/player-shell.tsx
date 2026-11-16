@@ -49,7 +49,7 @@ export function PlayerShell({
         />
       </div>
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
-        <OfferBanner offer={offer} lead={lead} webinarId={webinar.id} currentTimeSec={currentTimeSec} />
+        <OfferBanner offer={offer} lead={lead} webinarId={webinar.id} slug={webinar.slug} currentTimeSec={currentTimeSec} />
         <div className="min-h-0 flex-1">
           <ChatPanel
             key={lead.id}

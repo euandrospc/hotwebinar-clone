@@ -79,6 +79,17 @@ describe("OfferBanner", () => {
     fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
     expect(open.mock.calls[0][0]).toBe("https://pay.kirvano.com/x?utm_content=creative");
   });
+  it("tags the checkout with the room and the day when the room slug is known", () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+    render(<OfferBanner webinarId="webinar" slug="aula-10h" offer={{ ...baseOffer, link: "https://pay.kirvano.com/x?utm_content=creative" }} lead={baseLead} currentTimeSec={150} />);
+    fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
+    const url = new URL(open.mock.calls[0][0]);
+    expect(url.searchParams.get("utm_source")).toBe("lives");
+    expect(url.searchParams.get("utm_medium")).toBe("aula-10h");
+    expect(url.searchParams.get("utm_campaign")).toMatch(/^aula-10h-\d{4}$/);
+    expect(url.searchParams.get("utm_content")).toBe("creative");
+  });
   it("shows raffle badge when raffle enabled", () => {
     render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, raffleEnabled: true }} lead={baseLead} currentTimeSec={150} />);
     expect(screen.getByText(/Sorteio/i)).toBeInTheDocument();

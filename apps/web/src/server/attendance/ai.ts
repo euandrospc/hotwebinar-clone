@@ -69,7 +69,7 @@ export async function processAiConversation(leadId: string) {
       });
       if (!updated.count) return null;
       return tx.leadChatMessage.create({
-        data: { leadId, webinarId: lead.webinarId, sender: "team", aiAgentName: lead.webinar.chatAiName, text: tagKirvanoLinks(text, leadId) },
+        data: { leadId, webinarId: lead.webinarId, sender: "team", aiAgentName: lead.webinar.chatAiName, text: tagKirvanoLinks(text, leadId, lead.webinar.slug) },
         select: chatMessageSelect
       });
     });

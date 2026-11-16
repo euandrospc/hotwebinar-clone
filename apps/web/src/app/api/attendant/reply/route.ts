@@ -20,13 +20,13 @@ export async function POST(request: Request) {
   }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
-  const lead = await prisma.lead.findUnique({ where: { id: parsed.data.leadId }, select: { id: true, webinarId: true } });
+  const lead = await prisma.lead.findUnique({ where: { id: parsed.data.leadId }, select: { id: true, webinarId: true, webinar: { select: { slug: true } } } });
   if (!lead) return NextResponse.json({ error: "not_found" }, { status: 404 });
   try {
     const { message, created } = await createChatMessage({
       leadId: lead.id,
       webinarId: lead.webinarId,
-      text: tagKirvanoLinks(parsed.data.text, lead.id),
+      text: tagKirvanoLinks(parsed.data.text, lead.id, lead.webinar.slug),
       sender: "team",
       authorUserId: session.user.id,
       clientMessageId: parsed.data.clientMessageId

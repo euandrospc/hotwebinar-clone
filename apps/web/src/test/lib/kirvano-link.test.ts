@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tagKirvanoLinks, leadIdFromUtm, tagAbKirvanoCheckout } from "@/lib/kirvano-link";
+import { tagKirvanoLinks, leadIdFromUtm, tagAbKirvanoCheckout, tagLiveOrigin, liveDayTag } from "@/lib/kirvano-link";
 
 describe("tagKirvanoLinks", () => {
   it("adds the lead tag and keeps existing UTMs", () => {
@@ -44,5 +44,45 @@ describe("experiment checkout attribution", () => {
   });
   it.each(["https://kirvano.com.evil.test/x", "https://fakekirvano.com/x", "https://checkout.example/x", "javascript:alert(1)", "invalid"])("does not tag an unrelated destination: %s", (link) => {
     expect(tagAbKirvanoCheckout(link, "L1")).toBe(link);
+  });
+});
+
+describe("live origin UTMs", () => {
+  const now = new Date("2026-11-17T01:30:00Z"); // 16/11 22:30 em São Paulo
+
+  it("uses the São Paulo day", () => {
+    expect(liveDayTag(now)).toBe("1611");
+  });
+
+  it("tags an untagged checkout with the room and the day", () => {
+    const url = new URL(tagLiveOrigin("https://pay.kirvano.com/x", { slug: "aula-10h", leadId: "L1", now }));
+    expect(url.searchParams.get("utm_source")).toBe("lives");
+    expect(url.searchParams.get("utm_medium")).toBe("aula-10h");
+    expect(url.searchParams.get("utm_campaign")).toBe("aula-10h-1611");
+    expect(url.searchParams.get("utm_term")).toBe("aula-10h-1611");
+    expect(leadIdFromUtm(url.searchParams.get("utm_content"))).toBe("L1");
+  });
+
+  it("keeps UTMs already in the link and still records the day in utm_term", () => {
+    const url = new URL(tagLiveOrigin(
+      "https://pay.kirvano.com/x?utm_source=comercial&utm_medium=tiago&utm_campaign=aula-claude-code&utm_content=oferta-497",
+      { slug: "aula-15h", leadId: "L1", now }
+    ));
+    expect(url.searchParams.get("utm_source")).toBe("comercial");
+    expect(url.searchParams.get("utm_campaign")).toBe("aula-claude-code");
+    expect(url.searchParams.get("utm_content")).toBe("oferta-497");
+    expect(url.searchParams.get("utm_term")).toBe("aula-15h-1611");
+  });
+
+  it("tags Kirvano links sent in the chat when the room is known", () => {
+    const out = tagKirvanoLinks("Link: https://pay.kirvano.com/abc.", "L1", "ao-vivo");
+    const url = new URL(out.slice("Link: ".length, -1));
+    expect(out.endsWith(".")).toBe(true);
+    expect(url.searchParams.get("utm_content")).toBe("lead_L1");
+    expect(url.searchParams.get("utm_term")).toMatch(/^ao-vivo-\d{4}$/);
+  });
+
+  it.each(["javascript:alert(1)", "invalid"])("leaves an invalid destination alone: %s", (link) => {
+    expect(tagLiveOrigin(link, { slug: "aula-10h", leadId: "L1", now })).toBe(link);
   });
 });
