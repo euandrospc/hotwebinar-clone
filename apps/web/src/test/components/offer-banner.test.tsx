@@ -90,6 +90,16 @@ describe("OfferBanner", () => {
     expect(url.searchParams.get("utm_campaign")).toMatch(/^aula-10h-\d{4}$/);
     expect(url.searchParams.get("utm_content")).toBe("creative");
   });
+  it("keeps the day when the room forwards the lead's UTMs", () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+    render(<OfferBanner webinarId="webinar" slug="aula-15h" offer={{ ...baseOffer, link: "https://pay.kirvano.com/x", passUtms: true }} lead={{ ...baseLead, utmTerm: "t1" }} currentTimeSec={150} />);
+    fireEvent.click(screen.getByRole("button", { name: /QUERO/ }));
+    const url = new URL(open.mock.calls[0][0]);
+    expect(url.searchParams.get("utm_source")).toBe("fb");
+    expect(url.searchParams.get("utm_campaign")).toBe("launch");
+    expect(url.searchParams.get("utm_term")).toMatch(/^aula-15h-\d{4}$/);
+  });
   it("shows raffle badge when raffle enabled", () => {
     render(<OfferBanner webinarId="webinar" offer={{ ...baseOffer, raffleEnabled: true }} lead={baseLead} currentTimeSec={150} />);
     expect(screen.getByText(/Sorteio/i)).toBeInTheDocument();

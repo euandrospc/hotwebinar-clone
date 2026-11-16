@@ -52,9 +52,10 @@ export function liveDayTag(now: Date = new Date()): string {
 /**
  * Tags a checkout opened from a room with the room and the day of the live, so a sale
  * shows which edition it came from (recurring rooms reuse the same link every day).
- * utm_campaign and utm_term get "<slug>-<DDMM>" (ex.: aula-10h-1611); utm_term keeps the
- * day even when the link or the lead already brings its own utm_campaign.
- * Never overwrites a UTM that is already in the link.
+ * utm_term is always "<slug>-<DDMM>" (ex.: aula-10h-1611), even when the link or the lead
+ * (rooms forward the lead's UTMs) already brought one, so the day of the live is never lost.
+ * The other UTMs are filled only when empty: utm_source=lives, utm_medium=<slug>,
+ * utm_campaign=<slug>-<DDMM> and utm_content=lead_<id>.
  */
 export function tagLiveOrigin(link: string, opts: { slug: string; leadId: string; now?: Date }): string {
   let url: URL;
@@ -65,9 +66,9 @@ export function tagLiveOrigin(link: string, opts: { slug: string; leadId: string
     ["utm_source", "lives"],
     ["utm_medium", opts.slug],
     ["utm_campaign", edition],
-    ["utm_term", edition],
     ["utm_content", LEAD_TAG_PREFIX + opts.leadId]
   ];
   for (const [key, value] of fill) if (!url.searchParams.get(key)) url.searchParams.set(key, value);
+  url.searchParams.set("utm_term", edition);
   return url.toString();
 }

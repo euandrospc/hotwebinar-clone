@@ -74,6 +74,13 @@ describe("live origin UTMs", () => {
     expect(url.searchParams.get("utm_term")).toBe("aula-15h-1611");
   });
 
+  it("always records the day in utm_term, even over a forwarded utm_term", () => {
+    const url = new URL(tagLiveOrigin("https://pay.kirvano.com/x?utm_source=email&utm_campaign=aviso&utm_term=adset9", { slug: "ao-vivo", leadId: "L1", now }));
+    expect(url.searchParams.get("utm_term")).toBe("ao-vivo-1611");
+    expect(url.searchParams.get("utm_source")).toBe("email");
+    expect(url.searchParams.get("utm_campaign")).toBe("aviso");
+  });
+
   it("tags Kirvano links sent in the chat when the room is known", () => {
     const out = tagKirvanoLinks("Link: https://pay.kirvano.com/abc.", "L1", "ao-vivo");
     const url = new URL(out.slice("Link: ".length, -1));
