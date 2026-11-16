@@ -133,6 +133,16 @@ Os testes Redis são opt-in e usam prefixo separado do ambiente de desenvolvimen
 REALTIME_REDIS_TEST_URL=redis://127.0.0.1:6382 pnpm --filter web test src/test/lib/realtime-presence.test.ts src/test/lib/realtime-bus.test.ts src/test/lib/realtime-gateway.test.ts
 ```
 
+## Participantes sem conversa (API de atendimento)
+
+`GET /api/attendant/participants-without-chat?webinarId=<id>` lista os leads de uma live que assistiram ao menos o tempo de permanência dentro do período e nunca tiveram mensagem no chat nem atendimento encerrado. Exige sessão de admin ou atendente: login por `POST /api/auth/sign-in/email` e envio do cookie.
+
+- Período: `from`, `to`, `fromTime` e `toTime`, iguais aos de `/api/attendant/conversations`. O padrão é hoje em America/Sao_Paulo, o que isola a live do dia de cada webinar.
+- Permanência: `minWatchedSec`, que por padrão é a do webinar. É medida pelos ticks de vídeo (cerca de 30 s cada) dentro do período, não por `permanenceFired`, que é gravado uma vez por lead e não serve para salas recorrentes. `watchedSecInRange` é aproximado.
+- `onlineOnly=1` mantém só quem está assistindo agora. `page` e `pageSize` (25, 50 ou 100) paginam.
+- Cada lead que recebe mensagem sai da lista. Uma automação deve ler sempre a página 1 até esvaziar e enviar com `POST /api/attendant/reply` usando `clientMessageId` fixo por lead.
+- Requisições iguais compartilham o resultado por 5 s.
+
 ## Recuperação de geolocalização
 
 O worker iniciado em `apps/web/server.ts` usa PostgreSQL como fila e cache por IP
