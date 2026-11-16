@@ -30,6 +30,9 @@ const { startAudienceRecorder } = await import("./src/server/audience-history");
 const stopAudienceRecorder = startAudienceRecorder();
 const { startGeoIpWorker } = await import("./src/server/geoip-worker");
 const stopGeoIpWorker = startGeoIpWorker();
+const { startWebhookWorker, closeWebhookQueue } = await import("jobs");
+const { deliverWebhook } = await import("./src/server/webhook-delivery");
+const stopWebhookWorker = startWebhookWorker(deliverWebhook);
 server.on("upgrade", (request, socket, head) => {
   if (!request.url?.startsWith("/socket.io/")) void upgrade(request, socket, head);
 });
@@ -51,6 +54,8 @@ async function shutdown() {
   stopAttendanceAi();
   stopAudienceRecorder();
   await stopGeoIpWorker();
+  await stopWebhookWorker();
+  await closeWebhookQueue();
   await gateway.close();
   await closeRedis();
   await app.close();

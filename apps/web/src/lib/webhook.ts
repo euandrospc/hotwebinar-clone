@@ -58,8 +58,8 @@ export async function enqueueWebhook(
   };
 
   // Never let webhook plumbing fail or stall the lead's page or opt-in: the enqueue
-  // is not awaited, since an unreachable Trigger.dev makes tasks.trigger retry for
-  // minutes. A delivery left PENDING can be resent from the webhooks dashboard.
+  // into the Redis queue is not awaited. If Redis is down the delivery stays
+  // PENDING and can be resent from the webhooks dashboard.
   const fail = (err: unknown) =>
     console.error(`[webhook] enqueue failed (${event}, webinar ${webinar.id})`, err);
   try {

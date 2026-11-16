@@ -5,6 +5,8 @@ const nextConfig = {
   // output (Next logs a warning and can serve a stale/incorrect build). Plain
   // build + `next start` over the copied tree is what this deploy actually uses.
   transpilePackages: ["db", "jobs"],
+  // BullMQ loads Lua scripts and optional native modules at runtime.
+  serverExternalPackages: ["bullmq", "ioredis"],
   experimental: {
     serverActions: { bodySizeLimit: "5mb" }
   }

@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { Portal as TooltipPortal } from "@radix-ui/react-tooltip";
-import { LayoutDashboard, TvMinimalPlay, Video, Headset, MessageSquare, Gauge, Bolt, PanelLeft, Target } from "@/components/icons";
+import { LayoutDashboard, TvMinimalPlay, Video, Headset, MessageSquare, Gauge, Bolt, PanelLeft, Target, Hourglass } from "@/components/icons";
 import type { AppIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,6 +25,7 @@ const OPERATION: NavigationItem[] = [
   { href: "/dashboard/atendentes", label: "Atendentes", icon: Headset }
 ];
 const MANAGEMENT: NavigationItem[] = [
+  { href: "/dashboard/filas", label: "Filas", icon: Hourglass },
   { href: "/dashboard/consumo", label: "Consumo", icon: Gauge },
   { href: "/dashboard/settings", label: "Configurações", icon: Bolt }
 ];
