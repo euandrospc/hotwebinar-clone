@@ -48,15 +48,14 @@ export async function getWebhookQueueOverview(state: QueueState, requestedPage: 
   try {
     const queue = await openWebhookQueue();
     const [raw, paused, workers] = await Promise.all([
-      queue.getJobCounts("failed", "waiting", "paused", "active", "delayed", "completed"),
+      queue.getJobCounts("failed", "waiting", "active", "delayed", "completed"),
       queue.isPaused(),
       // Some managed Redis providers block CLIENT LIST; the count is informative only.
       queue.getWorkersCount().catch(() => 0)
     ]);
-    // A paused queue reports its waiting jobs under "paused".
     const counts: Record<QueueState, number> = {
       failed: raw.failed ?? 0,
-      waiting: (raw.waiting ?? 0) + (raw.paused ?? 0),
+      waiting: raw.waiting ?? 0,
       active: raw.active ?? 0,
       delayed: raw.delayed ?? 0,
       completed: raw.completed ?? 0
@@ -67,7 +66,7 @@ export async function getWebhookQueueOverview(state: QueueState, requestedPage: 
     const page = Math.min(Math.max(1, requestedPage), totalPages);
     const start = (page - 1) * QUEUE_PAGE_SIZE;
     const fetched = await queue.getJobs(
-      state === "waiting" ? ["waiting", "paused"] : state,
+      state,
       start,
       start + QUEUE_PAGE_SIZE - 1,
       // Oldest first for what is still queued; newest first for what already ran.
