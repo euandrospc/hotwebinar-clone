@@ -55,7 +55,7 @@ describe("GET /api/dashboard/online", () => {
     expect(queries.snapshot).not.toHaveBeenCalled();
   });
 
-  it("keeps the owner-wide legacy response without manufacturing combined history", async () => {
+  it("keeps the owner-wide live response and absent combined history when nothing was recorded", async () => {
     const response = await request();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -72,7 +72,40 @@ describe("GET /api/dashboard/online", () => {
       select: { id: true, title: true, name: true }
     });
     expect(queries.owner).not.toHaveBeenCalled();
-    expect(queries.samples).not.toHaveBeenCalled();
+    expect(queries.samples).toHaveBeenCalledWith({
+      where: { webinar: { ownerId: "owner" }, observedAt: { gte: from, lte: now } },
+      orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
+      select: { sampledAt: true, observedAt: true, online: true }
+    });
+  });
+
+  it("sums concurrent owner-scoped samples before calculating average and peak, preserving gaps and zero", async () => {
+    const middle = new Date("2026-11-05T17:25:00.000Z");
+    const observedFirst = new Date(from.getTime() + 1000);
+    const observedFirstLater = new Date(from.getTime() + 1500);
+    queries.samples.mockResolvedValue([
+      { sampledAt: from, observedAt: observedFirst, online: 10 },
+      { sampledAt: from, observedAt: observedFirstLater, online: 2 },
+      { sampledAt: middle, observedAt: middle, online: 1 },
+      { sampledAt: middle, observedAt: middle, online: 20 },
+      { sampledAt: now, observedAt: now, online: 0 },
+      { sampledAt: now, observedAt: now, online: 0 }
+    ]);
+    const body = await (await request()).json();
+    expect(queries.samples).toHaveBeenCalledWith({
+      where: { webinar: { ownerId: "owner" }, observedAt: { gte: from, lte: now } },
+      orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
+      select: { sampledAt: true, observedAt: true, online: true }
+    });
+    expect(body.audience).toEqual({
+      windowMinutes: 60, from: from.toISOString(), to: now.toISOString(), average: 11, peak: 21, sampleCount: 3,
+      points: [
+        { at: observedFirstLater.toISOString(), online: 12 },
+        { at: middle.toISOString(), online: 21 },
+        { at: now.toISOString(), online: 0 }
+      ]
+    });
+    expect(body.online).toBe(30);
   });
 
   it("does not turn missing historical observations into zero or append current presence", async () => {
@@ -92,7 +125,7 @@ describe("GET /api/dashboard/online", () => {
     expect(queries.samples).toHaveBeenCalledWith({
       where: { webinarId: "selected", webinar: { ownerId: "owner" }, observedAt: { gte: from, lte: now } },
       orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
-      select: { observedAt: true, online: true }
+      select: { sampledAt: true, observedAt: true, online: true }
     });
     expect(body.audience).toEqual({
       windowMinutes: 60, from: from.toISOString(), to: now.toISOString(), average: 3, peak: 6, sampleCount: 3,

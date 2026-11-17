@@ -1,5 +1,6 @@
 import { prisma } from "db";
 import { ownerScope, type AccessUser } from "@/lib/webinar-access";
+import { dashboardCourseSalesScope } from "./sales-scope";
 import { DASHBOARD_EVENT_KINDS } from "@/lib/dashboard-overview";
 import { buildDashboardInsights, dashboardComparisonRange, type DashboardInsights } from "@/lib/dashboard-insights";
 
@@ -35,7 +36,7 @@ export async function getDashboardInsights(viewer: AccessUser, rangeStart: Date,
       orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     }),
     prisma.sale.findMany({
-      where: { webinar: webinarWhere, createdAt: { gte: previous.start, lte: rangeEnd } },
+      where: { webinar: webinarWhere, createdAt: { gte: previous.start, lte: rangeEnd }, ...dashboardCourseSalesScope },
       select: { id: true, webinarId: true, amount: true, currency: true, createdAt: true }
     })
   ]);

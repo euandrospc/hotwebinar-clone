@@ -26,24 +26,27 @@ export function DashboardWebinarPicker({ webinars, selectedId, compact = false }
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const selected = webinars.find((webinar) => webinar.id === selectedId) ?? webinars[0];
+  const allWebinars = selectedId === "all";
+  const selected = allWebinars ? undefined : webinars.find((webinar) => webinar.id === selectedId) ?? webinars[0];
+  const value = allWebinars ? "all" : selected?.id;
 
   function selectWebinar(id: string) {
-    if (id === selected?.id || !webinars.some((webinar) => webinar.id === id)) return;
+    if (id === value || (id !== "all" && !webinars.some((webinar) => webinar.id === id))) return;
     const query = new URLSearchParams(searchParams.toString());
     query.set("webinarId", id);
     startTransition(() => router.push(`${pathname}?${query.toString()}`, { scroll: false }));
   }
 
-  if (!selected) return null;
+  if (!webinars.length) return null;
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2.5" aria-busy={pending}>
       {!compact && <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F0F7E9] text-[#527660] dark:bg-[#17382D] dark:text-[#A6DE6B]" aria-hidden="true"><TvMinimalPlay className="h-4 w-4" /></span>}
       {webinars.length > 1 ? (
-        <Select name="webinarId" value={selected.id} onValueChange={selectWebinar} disabled={pending}>
+        <Select name="webinarId" value={value} onValueChange={selectWebinar} disabled={pending}>
           <SelectTrigger aria-label="Webinar analisado" className={cn("h-9 w-auto min-w-0 max-w-[min(480px,calc(100vw-7rem))] gap-3 rounded-lg border-border/70 bg-card text-sm font-medium", compact && "h-10 max-w-[min(260px,calc(100vw-3rem))] rounded-xl text-xs shadow-none")}><SelectValue /></SelectTrigger>
           <SelectContent className="max-w-[calc(100vw-2rem)] rounded-xl">
+            <SelectItem value="all">Todos</SelectItem>
             {webinars.map((webinar) => (
               <SelectItem key={webinar.id} value={webinar.id} textValue={webinar.title}>
                 <span className="block max-w-[min(400px,calc(100vw-5rem))] truncate" title={webinar.title}>{webinar.title}</span>
@@ -52,9 +55,9 @@ export function DashboardWebinarPicker({ webinars, selectedId, compact = false }
           </SelectContent>
         </Select>
       ) : (
-        <span className="min-w-0 max-w-full truncate text-sm font-medium" title={selected.title}>{selected.title}</span>
+        <span className="min-w-0 max-w-full truncate text-sm font-medium" title={selected?.title ?? "Todos"}>{selected?.title ?? "Todos"}</span>
       )}
-      {!compact && <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px]", selected.status.toUpperCase() === "ACTIVE" ? "bg-[#F0F7E9] text-[#46704F] dark:bg-[#17382D] dark:text-[#A6DE6B]" : "bg-muted/60 text-muted-foreground")}>
+      {!compact && selected && <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px]", selected.status.toUpperCase() === "ACTIVE" ? "bg-[#F0F7E9] text-[#46704F] dark:bg-[#17382D] dark:text-[#A6DE6B]" : "bg-muted/60 text-muted-foreground")}>
         <span className={cn("h-1.5 w-1.5 rounded-full", selected.status.toUpperCase() === "ACTIVE" ? "bg-[#91C86A]" : "bg-muted-foreground/40")} aria-hidden="true" />
         {statusLabel(selected.status)}
       </span>}
