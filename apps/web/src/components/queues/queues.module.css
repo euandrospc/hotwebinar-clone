@@ -33,3 +33,5 @@
 @media (max-width: 1023px) { .states { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 639px) { .states { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .state { padding: 12px; } .stateValue { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .state { transition: none; } }
+.failedCount { color: #b4524a; }
+:global(.dark) .failedCount { color: #e0a39c; }

@@ -116,3 +116,52 @@ export async function getWebhookQueueOverview(state: QueueState, requestedPage: 
     return { available: false, reason: "unavailable" };
   }
 }
+
+export interface WebhookWebinarTotals {
+  webinarId: string;
+  webinarName: string;
+  sent: number;
+  failed: number;
+  pending: number;
+  total: number;
+}
+
+export interface WebhookDeliveryTotals {
+  sent: number;
+  failed: number;
+  pending: number;
+  total: number;
+  webinars: WebhookWebinarTotals[];
+}
+
+/**
+ * All-time delivery totals from PostgreSQL. The queue only retains its latest
+ * finished jobs, so sent counts must come from the delivery history.
+ */
+export async function getWebhookDeliveryTotals(): Promise<WebhookDeliveryTotals> {
+  const groups = await prisma.webhookDelivery.groupBy({ by: ["webinarId", "status"], _count: { _all: true } });
+  const names = await prisma.webinar.findMany({
+    where: { id: { in: [...new Set(groups.map((g) => g.webinarId))] } },
+    select: { id: true, name: true, title: true }
+  });
+  const nameById = new Map(names.map((w) => [w.id, w.name || w.title]));
+
+  const byWebinar = new Map<string, WebhookWebinarTotals>();
+  for (const group of groups) {
+    const row = byWebinar.get(group.webinarId) ?? {
+      webinarId: group.webinarId,
+      webinarName: nameById.get(group.webinarId) ?? "Webinar removido",
+      sent: 0, failed: 0, pending: 0, total: 0
+    };
+    const count = group._count._all;
+    if (group.status === "SUCCESS") row.sent += count;
+    else if (group.status === "FAILED") row.failed += count;
+    else row.pending += count;
+    row.total += count;
+    byWebinar.set(group.webinarId, row);
+  }
+
+  const webinars = [...byWebinar.values()].sort((a, b) => b.total - a.total || a.webinarName.localeCompare(b.webinarName));
+  const sum = (key: "sent" | "failed" | "pending" | "total") => webinars.reduce((acc, w) => acc + w[key], 0);
+  return { sent: sum("sent"), failed: sum("failed"), pending: sum("pending"), total: sum("total"), webinars };
+}
