@@ -72,10 +72,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     orderBy: { updatedAt: "desc" },
     select: { id: true, title: true, name: true, status: true }
   })).map((webinar) => ({ ...webinar, title: webinar.title || webinar.name || "Sem título" }));
-  const selectedWebinar = demo?.webinar ?? (sp.webinarId
+  const allWebinars = sp.webinarId === "all";
+  const selectedWebinar = allWebinars ? undefined : demo?.webinar ?? (sp.webinarId
     ? webinars.find((webinar) => webinar.id === sp.webinarId)
     : webinars.find((webinar) => webinar.status === "ACTIVE") ?? webinars[0]);
-  if (sp.webinarId && !selectedWebinar) notFound();
+  if (sp.webinarId && !allWebinars && !selectedWebinar) notFound();
   const [overview, insights] = demo ? [demo.overview, demo.insights] : await Promise.all([
     getDashboardOverview(session.user, rangeStart, rangeEnd, selectedWebinar?.id),
     getDashboardInsights(session.user, rangeStart, rangeEnd, selectedWebinar?.id)
@@ -91,7 +92,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const to = displayParts(rangeEnd);
   const queryParams: Record<string, string> = {};
   if (process.env.NODE_ENV === "development") queryParams.demo = demo ? "1" : "0";
-  const realWebinarId = demo ? sp.webinarId : selectedWebinar?.id;
+  const realWebinarId = allWebinars ? "all" : demo ? sp.webinarId : selectedWebinar?.id;
   if (realWebinarId && realWebinarId !== "demo-webinar") queryParams.webinarId = realWebinarId;
 
   return (
@@ -99,7 +100,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <header className="flex flex-wrap items-center justify-between gap-3 pb-1 [container-type:inline-size]">
         <DashboardRealtimePreview webinarId={demo ? undefined : selectedWebinar?.id} demoOnline={demo?.online} demoHistory={demo?.realtime} />
         <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          {webinars.length > 1 && <DashboardWebinarPicker webinars={webinars} selectedId={selectedWebinar?.id ?? ""} compact />}
+          {webinars.length > 1 && <DashboardWebinarPicker webinars={webinars} selectedId={allWebinars ? "all" : selectedWebinar?.id ?? ""} compact />}
           <DashboardRangePicker
             initialFrom={from.date}
             initialTo={to.date}
@@ -125,7 +126,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <DashboardMotion className="min-w-0" delay={0.12}><DashboardSupportOverview support={insights.support} webinarId={selectedWebinar?.id} demo={Boolean(demo)} /></DashboardMotion>
       <DashboardMotion className="min-w-0" delay={0.14}>
         <DashboardChatIntelligence
-          webinarId={selectedWebinar?.id}
+          webinarId={allWebinars ? "all" : selectedWebinar?.id}
           from={rangeStart.toISOString()}
           to={rangeEnd.toISOString()}
           demoReport={demo ? createChatIntelligenceDemo({

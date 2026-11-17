@@ -34,6 +34,16 @@ async function ownedWebinar(viewer: AccessUser, scope: ChatIntelligenceScope) {
 const messageScope = (ownerId: string, scope: ChatIntelligenceScope) => ({
   webinarId: scope.webinarId, webinar: { ownerId }, sender: "lead", createdAt: { gte: scope.from, lte: scope.to }
 });
+const pendingAnalysis = {
+  OR: [
+    { analysis: { is: null } },
+    { analysis: { is: { OR: [{ version: { not: CHAT_INTELLIGENCE_VERSION } }, { model: { not: CLASSIFICATION_MODEL } }] } } }
+  ]
+};
+const pendingWebinars = (viewer: AccessUser, scope: ChatIntelligenceScope) => ({
+  ...ownerScope(viewer),
+  leadChatMessages: { some: { sender: "lead", createdAt: { gte: scope.from, lte: scope.to }, ...pendingAnalysis } }
+});
 
 interface TotalsRow {
   totalMessages: number; analyzedMessages: number; objectionMessages: number; questionMessages: number;
@@ -44,10 +54,24 @@ interface ExampleRow { kind: string; category: string; id: string; leadId: strin
 
 /** Aggregates in PostgreSQL: totals never depend on a display/sample limit. */
 export async function getChatIntelligenceReport(viewer: AccessUser, scope: ChatIntelligenceScope): Promise<ChatIntelligenceReport> {
-  const webinar = await ownedWebinar(viewer, scope);
-  const ownerId = webinar.ownerId;
+  assertScope(viewer, scope);
+  const allWebinars = scope.webinarId === "all";
+  const webinar = allWebinars ? null : await ownedWebinar(viewer, scope);
+  const ownerId = webinar ? webinar.ownerId : ownerScope(viewer).ownerId;
+  // Keep owner restrictions in SQL too, including if ownership changes during a request.
+  const ownerSql = ownerId ? Prisma.sql`w."ownerId" = ${ownerId}` : Prisma.sql`TRUE`;
+  const webinarSql = allWebinars ? Prisma.sql`TRUE` : Prisma.sql`m."webinarId" = ${scope.webinarId}`;
+  const pending = allWebinars ? await prisma.webinar.findMany({
+    where: pendingWebinars(viewer, scope),
+    select: { chatInsightLeaseToken: true, chatInsightLeaseUntil: true }
+  }) : [];
+  const now = new Date();
+  const leased = (item: { chatInsightLeaseToken: string | null; chatInsightLeaseUntil: Date | null }) =>
+    Boolean(item.chatInsightLeaseToken && item.chatInsightLeaseUntil && item.chatInsightLeaseUntil > now);
+  // A busy webinar must not prevent processing another available webinar in Todos.
+  const isProcessing = webinar ? leased(webinar) : pending.length > 0 && pending.every(leased);
   const currentAnalysis = Prisma.sql`a."version" = ${CHAT_INTELLIGENCE_VERSION} AND a."model" = ${CLASSIFICATION_MODEL}`;
-  const scopeSql = Prisma.sql`w."ownerId" = ${ownerId} AND m."webinarId" = ${scope.webinarId}
+  const scopeSql = Prisma.sql`${ownerSql} AND ${webinarSql}
     AND m."sender" = 'lead' AND m."createdAt" >= ${scope.from} AND m."createdAt" <= ${scope.to}`;
   const classified = Prisma.sql`SELECT m."id", m."leadId", m."text", m."createdAt", a."objections", a."questions"
     FROM "lead_chat_message" m JOIN "webinar" w ON w."id" = m."webinarId"
@@ -89,7 +113,7 @@ export async function getChatIntelligenceReport(viewer: AccessUser, scope: ChatI
   }).sort((a, b) => b.messageCount - a.messageCount || a.label.localeCompare(b.label, "pt-BR"));
   return {
     webinarId: scope.webinarId, providerReady: Boolean(process.env.OPENAI_API_KEY),
-    isProcessing: Boolean(webinar.chatInsightLeaseToken && webinar.chatInsightLeaseUntil && webinar.chatInsightLeaseUntil > new Date()),
+    isProcessing,
     ...totals, pendingMessages: Math.max(0, totals.totalMessages - totals.analyzedMessages),
     lastAnalyzedAt: totals.lastAnalyzedAt?.toISOString() ?? null,
     objections: rows("objection", OBJECTION_CATEGORIES, totals.objectionMessages),
@@ -98,6 +122,22 @@ export async function getChatIntelligenceReport(viewer: AccessUser, scope: ChatI
 }
 
 export async function processChatIntelligenceBatch(viewer: AccessUser, scope: ChatIntelligenceScope): Promise<ChatIntelligenceBatchResult> {
+  assertScope(viewer, scope);
+  if (scope.webinarId === "all") {
+    if (!process.env.OPENAI_API_KEY) throw new ChatIntelligenceError("provider_missing", 409);
+    const next = await prisma.webinar.findFirst({
+      where: { ...pendingWebinars(viewer, scope), OR: [{ chatInsightLeaseUntil: null }, { chatInsightLeaseUntil: { lte: new Date() } }] },
+      orderBy: { id: "asc" }, select: { id: true }
+    });
+    // Reuse the individual lease, authorization and webinar context for every batch.
+    const result = next ? await processChatIntelligenceBatch(viewer, { ...scope, webinarId: next.id }) : null;
+    const report = await getChatIntelligenceReport(viewer, scope);
+    const processedMessages = result?.processedMessages ?? 0;
+    // The chosen batch may have been claimed/completed by another request.
+    // Let the client retry remaining work instead of treating that race as a failure.
+    const busy = Boolean(result?.busy || report.isProcessing || (processedMessages === 0 && report.pendingMessages > 0));
+    return { processedMessages, busy, report };
+  }
   const webinar = await ownedWebinar(viewer, scope);
   const ownerId = webinar.ownerId;
   if (!process.env.OPENAI_API_KEY) throw new ChatIntelligenceError("provider_missing", 409);
@@ -111,10 +151,7 @@ export async function processChatIntelligenceBatch(viewer: AccessUser, scope: Ch
   let processedMessages = 0;
   try {
     const candidates = await prisma.leadChatMessage.findMany({
-      where: { ...messageScope(ownerId, scope), OR: [
-        { analysis: { is: null } },
-        { analysis: { is: { OR: [{ version: { not: CHAT_INTELLIGENCE_VERSION } }, { model: { not: CLASSIFICATION_MODEL } }] } } }
-      ] },
+      where: { ...messageScope(ownerId, scope), ...pendingAnalysis },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }], take: BATCH_SIZE,
       select: { id: true, text: true }
     });

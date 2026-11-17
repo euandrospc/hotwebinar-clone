@@ -28,11 +28,11 @@ export async function GET(request: Request) {
     const from = new Date(to.getTime() - 60 * 60 * 1000);
     const [snap, samples] = await Promise.all([
       getOnlineSnapshot(),
-      webinarId ? prisma.audienceSample.findMany({
-        where: { webinarId, webinar: ownerScope(session), observedAt: { gte: from, lte: to } },
+      prisma.audienceSample.findMany({
+        where: { ...(webinarId ? { webinarId } : {}), webinar: ownerScope(session), observedAt: { gte: from, lte: to } },
         orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
-        select: { observedAt: true, online: true }
-      }) : Promise.resolve([])
+        select: { sampledAt: true, observedAt: true, online: true }
+      })
     ]);
     // Keep the existing owner-wide live count; only history uses the requested scope.
     const webinars = snap.byWebinar.size
@@ -45,13 +45,31 @@ export async function GET(request: Request) {
       .map((w) => ({ webinarId: w.id, title: w.title || w.name || "Webinar", online: snap.byWebinar.get(w.id) ?? 0 }))
       .sort((a, b) => b.online - a.online);
     const online = byWebinar.reduce((n, w) => n + w.online, 0);
+    // All webinars share the recorder's 15-second bucket. Sum concurrent
+    // observations first: averaging webinar averages or adding their individual
+    // peaks would describe a different audience. Keep the actual observation
+    // time (the latest if recorder instances observed the same bucket separately).
+    const buckets = new Map<number, { observedAt: Date; online: number }>();
+    if (!webinarId) {
+      for (const sample of samples) {
+        const key = sample.sampledAt.getTime();
+        const bucket = buckets.get(key);
+        if (bucket) {
+          bucket.online += sample.online;
+          if (sample.observedAt > bucket.observedAt) bucket.observedAt = sample.observedAt;
+        } else {
+          buckets.set(key, { observedAt: sample.observedAt, online: sample.online });
+        }
+      }
+    }
+    const observations = webinarId ? samples : [...buckets.values()].sort((a, b) => a.observedAt.getTime() - b.observedAt.getTime());
     // Missing observations stay missing, and current presence is not a historical sample.
     const audience: RealtimeAudienceHistory = {
       windowMinutes: 60, from: from.toISOString(), to: to.toISOString(),
-      sampleCount: samples.length,
-      average: samples.length ? samples.reduce((sum, sample) => sum + sample.online, 0) / samples.length : null,
-      peak: samples.length ? Math.max(...samples.map((sample) => sample.online)) : null,
-      points: samples.map((sample) => ({ at: sample.observedAt.toISOString(), online: sample.online }))
+      sampleCount: observations.length,
+      average: observations.length ? observations.reduce((sum, sample) => sum + sample.online, 0) / observations.length : null,
+      peak: observations.length ? Math.max(...observations.map((sample) => sample.online)) : null,
+      points: observations.map((sample) => ({ at: sample.observedAt.toISOString(), online: sample.online }))
     };
 
     return NextResponse.json({ online, byWebinar, audience }, { headers: responseHeaders });

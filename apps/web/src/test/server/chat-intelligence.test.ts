@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAT_INTELLIGENCE_VERSION } from "@/lib/dashboard-chat-intelligence";
 
-const queries = vi.hoisted(() => ({ owned: vi.fn(), lease: vi.fn(), messages: vi.fn(), raw: vi.fn(), tx: vi.fn(), upsert: vi.fn(), classify: vi.fn() }));
+const queries = vi.hoisted(() => ({ owned: vi.fn(), pending: vi.fn(), lease: vi.fn(), messages: vi.fn(), raw: vi.fn(), tx: vi.fn(), upsert: vi.fn(), classify: vi.fn() }));
 vi.mock("db", async () => {
   const original = await vi.importActual<typeof import("db")>("db");
   return { Prisma: original.Prisma, prisma: {
-    webinar: { findFirst: queries.owned, updateMany: queries.lease }, leadChatMessage: { findMany: queries.messages },
+    webinar: { findFirst: queries.owned, findMany: queries.pending, updateMany: queries.lease }, leadChatMessage: { findMany: queries.messages },
     leadChatMessageAnalysis: { upsert: queries.upsert }, $queryRaw: queries.raw, $transaction: queries.tx
   } };
 });
@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(now);
   Object.values(queries).forEach((query) => query.mockReset());
   queries.owned.mockResolvedValue(webinar);
+  queries.pending.mockResolvedValue([]);
   queries.lease.mockResolvedValue({ count: 1 });
   queries.messages.mockResolvedValue([]);
   queries.upsert.mockResolvedValue({});
@@ -35,6 +36,74 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("dashboard chat intelligence", () => {
+  it("consolidates Todos with the same access scope and combined category denominators", async () => {
+    queries.raw.mockImplementation(async (query) => {
+      if (query.sql.includes('AS "totalMessages"')) return [{ ...emptyTotals, totalMessages: 14, analyzedMessages: 10, objectionMessages: 8 }];
+      if (query.sql.includes("GROUP BY")) return [{ kind: "objection", category: "price", messageCount: 6, conversationCount: 5 }];
+      return [];
+    });
+    const report = await getChatIntelligenceReport({ id: "owner" }, { ...scope, webinarId: "all" });
+    expect(report).toMatchObject({ webinarId: "all", totalMessages: 14, pendingMessages: 4, objections: [{ messageCount: 6, conversationCount: 5, percentage: 75 }] });
+    expect(queries.owned).not.toHaveBeenCalled();
+    expect(queries.pending.mock.calls[0][0].where).toMatchObject({ ownerId: "owner" });
+    for (const [query] of queries.raw.mock.calls) {
+      expect(query.values).toEqual(expect.arrayContaining(["owner", scope.from, scope.to, CHAT_INTELLIGENCE_VERSION, "gpt-5.4-mini"]));
+      expect(query.values).not.toContain("all");
+      expect(query.sql).toContain('w."ownerId" =');
+      expect(query.sql).not.toContain('m."webinarId" =');
+    }
+    queries.raw.mockClear();
+    queries.pending.mockClear();
+    await getChatIntelligenceReport({ id: "admin", role: "admin" }, { ...scope, webinarId: "all" });
+    expect(queries.pending.mock.calls[0][0].where).not.toHaveProperty("ownerId");
+    for (const [query] of queries.raw.mock.calls) {
+      expect(query.values).not.toContain("admin");
+      expect(query.values).not.toContain("owner");
+      expect(query.sql).not.toContain('w."ownerId" =');
+    }
+  });
+  it("keeps available webinars processable while another webinar has a lease", async () => {
+    const busy = { chatInsightLeaseToken: "other", chatInsightLeaseUntil: new Date(now.getTime() + 50_000) };
+    queries.pending.mockResolvedValue([busy, webinar]);
+    expect((await getChatIntelligenceReport({ id: "owner" }, { ...scope, webinarId: "all" })).isProcessing).toBe(false);
+    queries.pending.mockResolvedValue([busy]);
+    expect((await getChatIntelligenceReport({ id: "owner" }, { ...scope, webinarId: "all" })).isProcessing).toBe(true);
+    queries.pending.mockResolvedValue([]);
+    expect(await getChatIntelligenceReport({ id: "owner" }, { ...scope, webinarId: "all" })).toMatchObject({ isProcessing: false, totalMessages: 0, pendingMessages: 0 });
+  });
+  it("processes Todos one owned webinar at a time with its original title and lease", async () => {
+    queries.messages.mockResolvedValue([{ id: "m", text: "Qual o preço?" }]);
+    const result = await processChatIntelligenceBatch({ id: "owner" }, { ...scope, webinarId: "all" });
+    expect(result).toMatchObject({ processedMessages: 1, busy: false, report: { webinarId: "all" } });
+    expect(queries.owned.mock.calls[0][0]).toMatchObject({
+      where: { ownerId: "owner", leadChatMessages: { some: { sender: "lead", createdAt: { gte: scope.from, lte: scope.to } } },
+        OR: [{ chatInsightLeaseUntil: null }, { chatInsightLeaseUntil: { lte: now } }] }
+    });
+    expect(queries.owned.mock.calls[1][0].where).toEqual({ id: "selected", ownerId: "owner" });
+    expect(queries.classify).toHaveBeenCalledWith("gpt-5.4-mini", "Aula", [{ id: "m", text: "Qual o preço?" }]);
+    for (const [update] of queries.lease.mock.calls) expect(update.where).toMatchObject({ id: "selected", ownerId: "owner" });
+    expect(queries.upsert).toHaveBeenCalledTimes(1);
+  });
+  it("does not call the provider for an empty or fully leased Todos scope", async () => {
+    queries.owned.mockResolvedValue(null);
+    expect(await processChatIntelligenceBatch({ id: "owner" }, { ...scope, webinarId: "all" })).toMatchObject({ processedMessages: 0, busy: false, report: { webinarId: "all", pendingMessages: 0 } });
+    queries.pending.mockResolvedValue([{ chatInsightLeaseToken: "other", chatInsightLeaseUntil: new Date(now.getTime() + 50_000) }]);
+    queries.raw.mockImplementation(async (query) => query.sql.includes('AS "totalMessages"') ? [{ ...emptyTotals, totalMessages: 3 }] : []);
+    expect(await processChatIntelligenceBatch({ id: "owner" }, { ...scope, webinarId: "all" })).toMatchObject({ processedMessages: 0, busy: true, report: { webinarId: "all", pendingMessages: 3 } });
+    expect(queries.classify).not.toHaveBeenCalled();
+    expect(queries.lease).not.toHaveBeenCalled();
+  });
+  it("retries Todos when the chosen webinar is claimed concurrently and another remains available", async () => {
+    queries.lease.mockResolvedValue({ count: 0 });
+    queries.pending.mockResolvedValue([webinar]);
+    queries.raw.mockImplementation(async (query) => query.sql.includes('AS "totalMessages"') ? [{ ...emptyTotals, totalMessages: 3 }] : []);
+    expect(await processChatIntelligenceBatch({ id: "owner" }, { ...scope, webinarId: "all" })).toMatchObject({
+      processedMessages: 0, busy: true, report: { webinarId: "all", isProcessing: false, pendingMessages: 3 }
+    });
+    expect(queries.classify).not.toHaveBeenCalled();
+    queries.owned.mockResolvedValue(null);
+    expect(await processChatIntelligenceBatch({ id: "owner" }, { ...scope, webinarId: "all" })).toMatchObject({ processedMessages: 0, busy: true });
+  });
   it("requires an owned webinar before reading messages, aggregates or leasing", async () => {
     queries.owned.mockResolvedValue(null);
     await expect(getChatIntelligenceReport({ id: "owner" }, scope)).rejects.toMatchObject({ code: "not_found", status: 404 });
