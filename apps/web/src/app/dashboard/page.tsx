@@ -114,7 +114,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </header>
 
       <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(280px,0.38fr)_minmax(0,1fr)]">
-        <DashboardMotion className="min-w-0"><DashboardSummary totals={overview.totals} comparison={insights.comparison} /></DashboardMotion>
+        <DashboardMotion className="min-w-0"><DashboardSummary totals={overview.totals} comparison={insights.comparison} salesBreakdown={overview.salesBreakdown} /></DashboardMotion>
         <DashboardMotion className="min-w-0" delay={0.04}><DashboardWatchChart watch={insights.watch} /></DashboardMotion>
       </div>
 

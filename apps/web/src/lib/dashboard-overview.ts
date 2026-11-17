@@ -64,6 +64,13 @@ export interface DashboardOverview {
   daily: DashboardOverviewDailyPoint[];
   webinars: DashboardOverviewWebinar[];
   excludedCurrencySales: number;
+  salesBreakdown?: DashboardSalesBreakdown;
+}
+
+/** Reconciles order count with the unique observed buyers in the funnel. */
+export interface DashboardSalesBreakdown {
+  ordersWithoutPeriodAccess: number;
+  repeatBuyerOrders: number;
 }
 
 /** The first occurrence for this webinar/lead/kind inside the selected period. */
@@ -183,6 +190,7 @@ export function buildDashboardOverview(input: BuildDashboardOverviewInput): Dash
   }
 
   let excludedCurrencySales = 0;
+  const salesBreakdown: DashboardSalesBreakdown = { ordersWithoutPeriodAccess: 0, repeatBuyerOrders: 0 };
   const seenSales = new Set<string>();
   for (const sale of input.sales) {
     const state = sale.webinarId ? states.get(sale.webinarId) : undefined;
@@ -199,7 +207,12 @@ export function buildDashboardOverview(input: BuildDashboardOverviewInput): Dash
     point.sales++;
     // Never guess a lead from buyerEmail. Multiple payments from one lead are
     // multiple sales, but only one converted member of this webinar's cohort.
-    if (sale.leadId && state.accesses.has(sale.leadId)) state.buyers.add(sale.leadId);
+    if (sale.leadId && state.accesses.has(sale.leadId)) {
+      if (state.buyers.has(sale.leadId)) salesBreakdown.repeatBuyerOrders++;
+      state.buyers.add(sale.leadId);
+    } else {
+      salesBreakdown.ordersWithoutPeriodAccess++;
+    }
   }
 
   const totals = emptyTotals();
@@ -264,6 +277,7 @@ export function buildDashboardOverview(input: BuildDashboardOverviewInput): Dash
       b.revenueCents - a.revenueCents || b.sales - a.sales || b.registrations - a.registrations ||
       a.title.localeCompare(b.title, "pt-BR") || a.id.localeCompare(b.id)
     ),
-    excludedCurrencySales
+    excludedCurrencySales,
+    salesBreakdown
   };
 }

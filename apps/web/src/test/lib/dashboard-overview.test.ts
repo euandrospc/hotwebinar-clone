@@ -53,6 +53,8 @@ describe("dashboard overview aggregation", () => {
     // A linked purchase does not require an OFFER_CLICK; chat checkouts are valid.
     expect(overview.funnel[4].pct).toBe(75);
     expect(overview.excludedCurrencySales).toBe(1);
+    expect(overview.salesBreakdown).toEqual({ ordersWithoutPeriodAccess: 1, repeatBuyerOrders: 1 });
+    expect(overview.totals.convertedLeads + overview.salesBreakdown!.ordersWithoutPeriodAccess + overview.salesBreakdown!.repeatBuyerOrders).toBe(overview.totals.sales);
   });
 
   it("deduplicates observed accesses, heartbeats and buyers while retaining separate payments", () => {
@@ -70,6 +72,7 @@ describe("dashboard overview aggregation", () => {
       convertedLeads: 1, conversionRate: 100
     });
     expect(overview.funnel.map(({ count }) => count)).toEqual([1, 1, 0, 1, 1]);
+    expect(overview.salesBreakdown).toEqual({ ordersWithoutPeriodAccess: 0, repeatBuyerOrders: 1 });
     expect(overview.funnelTransitions.map(({ overlapCount }) => overlapCount)).toEqual([1, 0, 0, 1]);
     expect(overview.funnelTransitions[3]).toMatchObject({ overlapCount: 1, previousOnlyCount: 0, currentOnlyCount: 0, overlapRate: 100 });
   });
@@ -147,6 +150,7 @@ describe("dashboard overview aggregation", () => {
       sales: [sale("return-purchase", "cookie-return", 38900), sale("no-observed-access", "unseen", 10000)]
     });
     expect(overview.totals).toMatchObject({ registrations: 3, viewers: 1, attendees: 1, attendanceRate: 33.33, convertedLeads: 1, conversionRate: 33.33, sales: 2 });
+    expect(overview.salesBreakdown).toEqual({ ordersWithoutPeriodAccess: 1, repeatBuyerOrders: 0 });
     expect(overview.funnel).toEqual([
       { label: "Acessos", count: 3, pct: 100 },
       { label: "Assistiram", count: 1, pct: 33.33 },

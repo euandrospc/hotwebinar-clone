@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const queries = vi.hoisted(() => ({ webinars: vi.fn(), leads: vi.fn(), events: vi.fn(), messages: vi.fn(), sales: vi.fn() }));
-vi.mock("db", () => ({ prisma: {
+vi.mock("db", async () => ({ Prisma: (await vi.importActual<typeof import("db")>("db")).Prisma, prisma: {
   webinar: { findMany: queries.webinars }, lead: { findMany: queries.leads },
   event: { groupBy: queries.events }, leadChatMessage: { findMany: queries.messages }, sale: { findMany: queries.sales }
 } }));
 
 import { getDashboardInsights } from "@/server/dashboard/insights";
+import { dashboardCourseSalesScope } from "@/server/dashboard/sales-scope";
 
 const start = new Date("2026-11-01T03:00:00.000Z");
 const end = new Date("2026-11-08T02:59:59.999Z");
@@ -41,6 +42,7 @@ describe("dashboard insights query scope", () => {
       authorUserId: true, authorUser: { select: { name: true, image: true } }
     });
     expect(queries.sales.mock.calls[0][0].where.createdAt).toEqual({ gte: new Date("2026-10-25T03:00:00.000Z"), lte: end });
+    expect(queries.sales.mock.calls[0][0].where).toMatchObject(dashboardCourseSalesScope);
     expect(result.watch).toMatchObject({ viewerCount: 1, averageWatchedSeconds: 1800, pitchAtSeconds: 300 });
     expect(result.geography.totalAccesses).toBe(1);
   });

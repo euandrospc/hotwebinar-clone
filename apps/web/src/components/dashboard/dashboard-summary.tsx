@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, DollarSign, Info } from "@/components/icons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { DashboardSalesBreakdown } from "@/lib/dashboard-overview";
 import styles from "./dashboard-card.module.css";
 
 interface SummaryTotals {
@@ -22,7 +23,7 @@ const number = new Intl.NumberFormat("pt-BR");
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const percent = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
-export function DashboardSummary({ totals, comparison }: { totals: SummaryTotals; comparison: Comparison }) {
+export function DashboardSummary({ totals, comparison, salesBreakdown }: { totals: SummaryTotals; comparison: Comparison; salesBreakdown?: DashboardSalesBreakdown }) {
   const change = comparison.revenueChangePct;
   const ChangeIcon = change !== null && change < 0 ? ArrowDown : ArrowUp;
   const ticket = totals.sales > 0 ? totals.revenueCents / totals.sales : null;
@@ -33,7 +34,7 @@ export function DashboardSummary({ totals, comparison }: { totals: SummaryTotals
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h2 className="text-[13px] font-medium leading-5 text-white/85">Faturamento</h2>
-            <Tooltip><TooltipTrigger asChild><button type="button" aria-label="Sobre o faturamento" className="rounded-full text-white/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><Info className="size-3.5" /></button></TooltipTrigger><TooltipContent className="max-w-72 leading-relaxed">Vendas em reais registradas no período. O sistema não desconta estornos. A comparação usa o intervalo imediatamente anterior, com a mesma duração.</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild><button type="button" aria-label="Sobre o faturamento" className="rounded-full text-white/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><Info className="size-3.5" /></button></TooltipTrigger><TooltipContent className="max-w-72 leading-relaxed">Pedidos das duas versões do curso Dominando Claude Code, em reais, registrados no período. Pedidos da Aula de Configuração e de outros produtos ficam de fora. Valor total do pedido, incluindo adicionais quando houver, sem descontar estornos. A comparação usa o intervalo imediatamente anterior, com a mesma duração.</TooltipContent></Tooltip>
           </div>
           <DollarSign aria-hidden="true" className="size-4 text-[#BDDF9E]" />
         </div>
@@ -47,7 +48,16 @@ export function DashboardSummary({ totals, comparison }: { totals: SummaryTotals
           )}
         </div>
         <dl className="mt-auto grid grid-cols-2 gap-4 pt-4">
-          <div className="border-t border-white/15 pt-2"><dt className="text-[11px] text-white/65">Vendas</dt><dd className="mt-0.5 text-lg font-medium leading-6 tabular-nums">{number.format(totals.sales)}</dd></div>
+          <div className="border-t border-white/15 pt-2">
+            <dt className="flex items-center gap-1.5 text-[11px] text-white/65">Vendas<Tooltip><TooltipTrigger asChild><button type="button" aria-label="Sobre as vendas" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><Info className="size-3" /></button></TooltipTrigger><TooltipContent className="max-w-72 space-y-1 leading-relaxed">
+              <p>{number.format(totals.sales)} {totals.sales === 1 ? "pedido" : "pedidos"} do curso no período. O funil mostra {number.format(totals.convertedLeads)} {totals.convertedLeads === 1 ? "comprador" : "compradores"} com acesso identificado no mesmo webinar e período.</p>
+              {salesBreakdown && <>
+                <p>{number.format(salesBreakdown.ordersWithoutPeriodAccess)} {salesBreakdown.ordersWithoutPeriodAccess === 1 ? "pedido" : "pedidos"} sem acesso identificado no recorte.</p>
+                <p>{number.format(salesBreakdown.repeatBuyerOrders)} {salesBreakdown.repeatBuyerOrders === 1 ? "pedido adicional de comprador já contado" : "pedidos adicionais de compradores já contados"} no funil.</p>
+              </>}
+            </TooltipContent></Tooltip></dt>
+            <dd className="mt-0.5 text-lg font-medium leading-6 tabular-nums">{number.format(totals.sales)}</dd>
+          </div>
           <div className="border-t border-white/15 pt-2">
             <dt className="flex items-center gap-1.5 text-[11px] text-white/65">Conversão<Tooltip><TooltipTrigger asChild><button type="button" aria-label="Sobre a conversão" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><Info className="size-3" /></button></TooltipTrigger><TooltipContent className="max-w-64">{number.format(totals.convertedLeads)} compradores entre {number.format(totals.registrations)} acessos identificados no webinar. Captação externa não entra no cálculo.</TooltipContent></Tooltip></dt>
             <dd className="mt-0.5 text-lg font-medium leading-6 tabular-nums">{totals.conversionRate === null ? "—" : `${percent.format(totals.conversionRate)}%`}</dd>

@@ -1,5 +1,6 @@
 import { prisma } from "db";
 import { ownerScope, type AccessUser } from "@/lib/webinar-access";
+import { dashboardCourseSalesScope } from "./sales-scope";
 import {
   buildDashboardOverview,
   DASHBOARD_EVENT_KINDS,
@@ -32,7 +33,7 @@ export async function getDashboardOverview(viewer: AccessUser, rangeStart: Date,
       _max: { videoSec: true }
     }),
     prisma.sale.findMany({
-      where: { webinar: webinarWhere, createdAt },
+      where: { webinar: webinarWhere, createdAt, ...dashboardCourseSalesScope },
       select: { id: true, webinarId: true, leadId: true, amount: true, currency: true, createdAt: true }
     })
   ]);

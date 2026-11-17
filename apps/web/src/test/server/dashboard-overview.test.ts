@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const queries = vi.hoisted(() => ({ webinars: vi.fn(), events: vi.fn(), sales: vi.fn() }));
-vi.mock("db", () => ({
+vi.mock("db", async () => ({
+  Prisma: (await vi.importActual<typeof import("db")>("db")).Prisma,
   prisma: {
     webinar: { findMany: queries.webinars },
     event: { groupBy: queries.events },
@@ -10,6 +11,7 @@ vi.mock("db", () => ({
 }));
 
 import { getDashboardOverview } from "@/server/dashboard/overview";
+import { dashboardCourseSalesScope } from "@/server/dashboard/sales-scope";
 
 const start = new Date("2026-11-01T03:00:00Z");
 const end = new Date("2026-11-08T02:59:59.999Z");
@@ -32,7 +34,7 @@ describe("dashboard overview query scope", () => {
       where: expect.objectContaining({ webinar: { ownerId: "owner", id: "selected" }, createdAt: { gte: start, lte: end } }),
       _min: { createdAt: true }, _max: { videoSec: true }
     }));
-    expect(queries.sales).toHaveBeenCalledWith(expect.objectContaining({ where: { webinar: { ownerId: "owner", id: "selected" }, createdAt: { gte: start, lte: end } } }));
+    expect(queries.sales).toHaveBeenCalledWith(expect.objectContaining({ where: { webinar: { ownerId: "owner", id: "selected" }, createdAt: { gte: start, lte: end }, ...dashboardCourseSalesScope } }));
     expect(overview.totals).toMatchObject({ registrations: 1, viewers: 1 });
     expect(overview.funnel[2].count).toBe(1);
   });
@@ -47,6 +49,7 @@ describe("dashboard overview query scope", () => {
   it("defaults to all owned webinars and rejects missing authentication context", async () => {
     await getDashboardOverview({ id: "owner" }, start, end);
     expect(queries.webinars.mock.calls[0][0].where).toEqual({ ownerId: "owner" });
+    expect(queries.sales.mock.calls[0][0].where).toMatchObject(dashboardCourseSalesScope);
     await expect(getDashboardOverview({ id: "" }, start, end)).rejects.toThrow("Dashboard owner is required");
     expect(queries.webinars).toHaveBeenCalledTimes(1);
   });
