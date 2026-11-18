@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import adminStyles from "@/components/admin/admin-page.module.css";
+import { PHONE_COUNTRIES } from "@/lib/phone-countries";
 import { LoginPreview } from "@/components/wizard/login-preview";
 import { WizardNav } from "@/components/wizard/wizard-nav";
 
@@ -316,6 +319,26 @@ export function Step3Form({ webinarId, initial }: Step3FormProps) {
               <div className="space-y-1">
                 <Label htmlFor="phonePlaceholder">Placeholder WhatsApp</Label>
                 <Input id="phonePlaceholder" {...register("phonePlaceholder")} />
+              </div>
+              <div className="space-y-1">
+                <Label>País inicial do WhatsApp</Label>
+                <Controller
+                  control={control}
+                  name="phoneDefaultCountry"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger aria-label="País inicial do WhatsApp">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className={adminStyles.portal}>
+                        {PHONE_COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <p className="text-[11px] text-muted-foreground">O participante pode trocar o país no campo.</p>
               </div>
             </div>
           </fieldset>

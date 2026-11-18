@@ -25,7 +25,7 @@ const props: PlayerShellProps = {
     loginButtonText: "Entrar", loginButtonColor: "#dc2626",
     nameEnabled: true, nameRequired: true, namePlaceholder: "Nome",
     emailEnabled: true, emailRequired: true, emailPlaceholder: "Email",
-    phoneEnabled: false, phoneRequired: false, phonePlaceholder: "Telefone",
+    phoneEnabled: false, phoneRequired: false, phonePlaceholder: "Telefone", phoneDefaultCountry: "BR",
     pitchAtSec: 100, waitingTemplate: "DEFAULT", closedGroupUrl: null,
     loginLogoAlign: "CENTER", progressEnabled: false, progressStartPct: 0,
     progressBarColor: "#dc2626", progressTextColor: "#ffffff", progressText: "",

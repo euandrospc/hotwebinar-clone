@@ -60,7 +60,7 @@ export function CaptureForm({ w }: { w: PublicWebinar }) {
       <div className="space-y-1" key="phone">
         <Label>Telefone{w.phoneRequired ? " *" : ""}</Label>
         <PhoneInput
-          defaultCountry="BR"
+          defaultCountry={w.phoneDefaultCountry}
           international
           placeholder={w.phonePlaceholder}
           value={phone}

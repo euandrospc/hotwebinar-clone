@@ -1,4 +1,5 @@
 import type { Lead, Video, Webinar } from "db";
+import { toPhoneCountry, type PhoneCountry } from "@/lib/phone-countries";
 
 export type PublicWebinar = {
   id: string;
@@ -19,6 +20,7 @@ export type PublicWebinar = {
   nameEnabled: boolean; nameRequired: boolean; namePlaceholder: string;
   emailEnabled: boolean; emailRequired: boolean; emailPlaceholder: string;
   phoneEnabled: boolean; phoneRequired: boolean; phonePlaceholder: string;
+  phoneDefaultCountry: PhoneCountry;
   pitchAtSec: number | null;
   waitingTemplate: "DEFAULT" | "WITH_THUMB" | "IMMERSIVE" | "MINIMAL" | "FEATURES";
   closedGroupUrl: string | null;
@@ -70,6 +72,7 @@ export function publicWebinarDto(w: Webinar): PublicWebinar {
     nameEnabled: w.nameEnabled, nameRequired: w.nameRequired, namePlaceholder: w.namePlaceholder,
     emailEnabled: w.emailEnabled, emailRequired: w.emailRequired, emailPlaceholder: w.emailPlaceholder,
     phoneEnabled: w.phoneEnabled, phoneRequired: w.phoneRequired, phonePlaceholder: w.phonePlaceholder,
+    phoneDefaultCountry: toPhoneCountry(w.phoneDefaultCountry),
     pitchAtSec: w.pitchAtSec,
     waitingTemplate: w.waitingTemplate,
     closedGroupUrl: w.closedGroupUrl,

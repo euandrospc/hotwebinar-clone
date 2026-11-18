@@ -27,6 +27,23 @@ describe("publicWebinarDto", () => {
   });
 });
 
+describe("publicWebinarDto phoneDefaultCountry", () => {
+  const base: any = {
+    id: "w1", slug: "live-15h-py", title: "T", name: "N",
+    mode: "UNICO", startDate: null, endDate: null, timezone: "America/Sao_Paulo",
+    formFieldOrder: ["name", "email", "phone"]
+  };
+
+  it("keeps the configured starting country", () => {
+    expect(publicWebinarDto({ ...base, phoneDefaultCountry: "PY" }).phoneDefaultCountry).toBe("PY");
+  });
+
+  it("falls back to Brazil for a missing or unknown country", () => {
+    expect(publicWebinarDto({ ...base }).phoneDefaultCountry).toBe("BR");
+    expect(publicWebinarDto({ ...base, phoneDefaultCountry: "ZZ" }).phoneDefaultCountry).toBe("BR");
+  });
+});
+
 describe("publicVideoDto", () => {
   it("returns null for null input", () => {
     expect(publicVideoDto(null)).toBeNull();

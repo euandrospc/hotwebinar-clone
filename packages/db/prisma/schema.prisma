@@ -225,6 +225,8 @@ model Webinar {
   namePlaceholder        String             @default("Seu nome")
   emailPlaceholder       String             @default("Seu e-mail")
   phonePlaceholder       String             @default("Seu telefone")
+  // ISO country the public WhatsApp field starts on (BR, PY...). Leads can still pick any country.
+  phoneDefaultCountry    String             @default("BR")
   pitchAtSec             Int?
   // Offer (sub-plan D2)
   chatAiEnabled          Boolean @default(false)

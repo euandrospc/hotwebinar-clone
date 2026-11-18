@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { canAccessWebinar } from "@/lib/webinar-access";
 import { prisma } from "db";
 import { Step3Form } from "@/components/wizard/step-3-form";
+import { toPhoneCountry } from "@/lib/phone-countries";
 
 export const metadata: Metadata = { title: "Acesso ao webinar" };
 
@@ -32,6 +33,7 @@ export default async function Step3Page({ params }: { params: Promise<{ id: stri
         namePlaceholder: w.namePlaceholder,
         emailPlaceholder: w.emailPlaceholder,
         phonePlaceholder: w.phonePlaceholder,
+        phoneDefaultCountry: toPhoneCountry(w.phoneDefaultCountry),
         loginLogoAlign: w.loginLogoAlign,
         progressEnabled: w.progressEnabled,
         progressStartPct: w.progressStartPct,

@@ -1,5 +1,6 @@
 import { storedTitleFormatSchema } from "@/lib/offer-title-format";
 import { z } from "zod";
+import { PHONE_COUNTRY_CODES } from "@/lib/phone-countries";
 import { isReservedSlug } from "@/lib/slug-blacklist";
 
 export const slugSchema = z
@@ -61,6 +62,7 @@ export const step3Schema = z.object({
   namePlaceholder: z.string(),
   emailPlaceholder: z.string(),
   phonePlaceholder: z.string(),
+  phoneDefaultCountry: z.enum(PHONE_COUNTRY_CODES),
   loginLogoAlign: z.enum(["LEFT", "CENTER", "RIGHT"]),
   progressEnabled: z.boolean(),
   progressStartPct: z.number().int().min(0).max(99),

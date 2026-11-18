@@ -71,7 +71,7 @@ describe("step3Schema", () => {
       nameEnabled: true, nameRequired: true,
       emailEnabled: true, emailRequired: true,
       phoneEnabled: true, phoneRequired: false,
-      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "",
+      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "", phoneDefaultCountry: "BR",
       loginLogoAlign: "CENTER",
       progressEnabled: false, progressStartPct: 50,
       progressBarColor: "#dc2626", progressTextColor: "#ffffff",
@@ -88,12 +88,38 @@ describe("step3Schema", () => {
       nameEnabled: true, nameRequired: true,
       emailEnabled: true, emailRequired: true,
       phoneEnabled: true, phoneRequired: false,
-      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "",
+      namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "", phoneDefaultCountry: "BR",
       loginLogoAlign: "CENTER",
       progressEnabled: false, progressStartPct: 50,
       progressBarColor: "#dc2626", progressTextColor: "#ffffff",
       progressText: "test", formFieldOrder: ["name", "email"]
     }).success).toBe(true);
+  });
+});
+
+describe("step3Schema phoneDefaultCountry", () => {
+  const base = {
+    logoUrl: "",
+    primaryColor: "",
+    loginButtonText: "Entrar",
+    loginButtonColor: "#16a34a",
+    nameEnabled: true, nameRequired: true,
+    emailEnabled: true, emailRequired: true,
+    phoneEnabled: true, phoneRequired: true,
+    namePlaceholder: "", emailPlaceholder: "", phonePlaceholder: "",
+    loginLogoAlign: "CENTER" as const,
+    progressEnabled: false, progressStartPct: 50,
+    progressBarColor: "#dc2626", progressTextColor: "#ffffff",
+    progressText: "test", formFieldOrder: ["name", "email", "phone"] as ("name" | "email" | "phone")[]
+  };
+
+  it("accepts Paraguay as the starting country", () => {
+    expect(step3Schema.safeParse({ ...base, phoneDefaultCountry: "PY" }).success).toBe(true);
+  });
+
+  it("rejects a country outside the list", () => {
+    expect(step3Schema.safeParse({ ...base, phoneDefaultCountry: "XX" }).success).toBe(false);
+    expect(step3Schema.safeParse({ ...base }).success).toBe(false);
   });
 });
 
