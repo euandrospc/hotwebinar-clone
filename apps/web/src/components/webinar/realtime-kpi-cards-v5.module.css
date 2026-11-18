@@ -91,5 +91,5 @@
 
 @container realtime-kpis (width < 720px) {
   .row { grid-template-columns: minmax(0, 1fr); }
-  .card { width: 100%; max-width: 280px; }
+  .card { width: 100%; }
 }

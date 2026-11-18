@@ -1,4 +1,5 @@
 .card {
+  container: realtime-funnel / inline-size;
   width: 100%;
   max-width: 840px;
   min-width: 0;
@@ -40,7 +41,7 @@
   scrollbar-width: thin;
 }
 
-.content { min-width: 560px; }
+.content { min-width: 0; }
 .chart { position: relative; min-width: 0; height: 140px; }
 .chart:focus-within { outline: 2px solid #535bff; outline-offset: -2px; border-radius: 6px; }
 .svg { display: block; width: 100%; height: 140px; }
@@ -72,3 +73,10 @@
 :global(.dark) .tooltip { border-color: #373a44; background: #202126; color: #d6d9e1; }
 :global(.dark) .label { color: #989eab; }
 :global(.dark) .period, :global(.dark) .percent, :global(.dark) .empty, :global(.dark) .unavailable { color: #989eab; }
+
+@container realtime-funnel (width < 560px) {
+  .chart, .svg, .empty { height: 104px; }
+  .stages { gap: 2px; padding-inline: 0; }
+  .label { display: flex; align-items: center; justify-content: center; min-height: 28px; font-size: 10px; overflow-wrap: anywhere; }
+  .tooltip { max-width: min(210px, 58%); }
+}
