@@ -34,6 +34,14 @@ function timeFormatter(timezone: string) {
   catch { return new Intl.DateTimeFormat("en-US", { ...options, timeZone: "America/Sao_Paulo" }); }
 }
 
+/** Each equal-width segment represents the time between its two configured milestones. */
+function segmentProgress(from: RealtimeSessionMilestone, to: RealtimeSessionMilestone | undefined, now: number) {
+  if (from.at === null || !to || to.at === null || to.at <= from.at
+    || !["upcoming", "reached", "closed"].includes(from.state)
+    || !["upcoming", "reached", "closed"].includes(to.state)) return null;
+  return Math.min(1, Math.max(0, (now - from.at) / (to.at - from.at)));
+}
+
 /** Anchor both real and demo clocks to the snapshot, rather than the device's timezone or clock. */
 export function RealtimeSessionV5({ schedule, updatedAt, timezone }: Props) {
   const id = useId();
@@ -67,50 +75,41 @@ export function RealtimeSessionV5({ schedule, updatedAt, timezone }: Props) {
   const next = model.milestones.find((milestone) => milestone.id === model.nextId);
 
   return (
-    <section className={styles.card} data-realtime-session="v5" data-motion={motionEnabled || undefined} aria-labelledby={`${id}-title`}>
-      <header className={styles.header}>
-        <div className={styles.heading}>
-          <h2 className={styles.title} id={`${id}-title`}>Session</h2>
-          <span className={styles.phase} data-phase={model.phase}>
-            <motion.span
-              className={styles.phaseDot}
-              aria-hidden="true"
-              initial={false}
-              animate={{ opacity: motionEnabled && model.phase === "live" ? [1, 0.45, 1] : 1 }}
-              transition={{ duration: motionEnabled ? 2.8 : 0, repeat: motionEnabled && model.phase === "live" ? Infinity : 0, ease: "easeInOut" }}
-            />
-            {phaseLabels[model.phase]}
-          </span>
-        </div>
-        {next && <span className={styles.nextLabel}>Up next <span>·</span> <strong>{next.label}</strong></span>}
-      </header>
+    <section className={styles.card} data-realtime-session="v5" data-motion={motionEnabled || undefined} aria-label="Webinar timeline">
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         Session {phaseLabels[model.phase].toLowerCase()}.{next ? ` Next milestone: ${next.label}.` : ""}
       </span>
       <ol className={styles.timeline}>
-        {model.milestones.map((milestone) => {
+        {model.milestones.map((milestone, index) => {
           const isNext = model.nextId === milestone.id;
           const absoluteTime = milestone.at === null ? null : formatter.format(new Date(milestone.at));
           const description = [absoluteTime, milestone.detail].filter(Boolean).join(". ");
+          const progress = segmentProgress(milestone, model.milestones[index + 1], now);
           return (
             <li className={styles.milestone} key={milestone.id} data-milestone={milestone.id} data-state={milestone.state} data-next={isNext || undefined}>
+              {index < model.milestones.length - 1 && (
+                <span className={styles.connector} data-available={progress !== null || undefined} aria-hidden="true">
+                  <span className={styles.connectorFill} style={{ transform: `scaleX(${progress ?? 0})` }} />
+                </span>
+              )}
               <Popover>
                 <PopoverTrigger asChild>
                   <button className={styles.trigger} type="button" title={description} aria-describedby={`${id}-${milestone.id}-description`}>
+                    <span className={styles.caption}>
+                      <span className={styles.label}>{milestone.label}</span>
+                      <span className={styles.value} data-countdown={milestone.state === "upcoming" || undefined} aria-live="off">
+                        {milestoneValue(milestone)}
+                      </span>
+                    </span>
                     <motion.span
                       className={styles.marker}
                       aria-hidden="true"
                       initial={false}
                       animate={{
-                        opacity: motionEnabled && isNext ? [1, 0.7, 1] : 1,
-                        scale: motionEnabled && isNext ? [1, 1.15, 1] : 1,
+                        opacity: motionEnabled && isNext ? [1, 0.45, 1] : 1,
                       }}
                       transition={{ duration: motionEnabled ? 3.2 : 0, repeat: motionEnabled && isNext ? Infinity : 0, ease: "easeInOut" }}
-                    >{milestone.state === "reached" ? "✓" : ""}</motion.span>
-                    <span className={styles.label}>{milestone.label}</span>
-                    <span className={styles.value} data-countdown={milestone.state === "upcoming" || undefined} aria-live="off">
-                      {milestoneValue(milestone)}
-                    </span>
+                    />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className={styles.popover} align="start" sideOffset={8}>

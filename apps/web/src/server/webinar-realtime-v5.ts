@@ -34,6 +34,9 @@ export async function getWebinarRealtimeSnapshot(
   const timezone = !webinar.timezone || webinar.timezone === "__auto__" ? "America/Sao_Paulo" : webinar.timezone;
   const today = zonedParts(now, timezone);
   const dayStart = zonedToUtc(today.y, today.mo, today.d, 0, 0, 0, timezone);
+  // Resolve wall-clock midnights independently: yesterday can have 23 or 25
+  // hours at a DST transition, and is not always "dayStart minus 24 hours".
+  const yesterdayStart = zonedToUtc(today.y, today.mo, today.d - 1, 0, 0, 0, timezone);
   const audienceRange = { gte: dayStart, lte: now };
   const liveRange = { gte: new Date(now.getTime() - 60 * 60 * 1_000), lte: now };
   const recentRange = { gte: new Date(Math.min(dayStart.getTime(), liveRange.gte.getTime())), lte: now };
@@ -50,7 +53,7 @@ export async function getWebinarRealtimeSnapshot(
     ? { webinarId, OR: [{ observedAt: recentRange }, { observedAt: sessionRange }] }
     : { webinarId, observedAt: recentRange };
 
-  const [leads, daily, samples, attendants] = await Promise.all([
+  const [leads, daily, samples, yesterdayPeak, attendants] = await Promise.all([
     online.byWebinar.has(webinarId) ? db.lead.findMany({
       where: { webinarId, id: { in: [...online.leadIds] } },
       select: { id: true, name: true, userAgent: true, city: true, region: true, country: true, lat: true, lng: true },
@@ -59,6 +62,13 @@ export async function getWebinarRealtimeSnapshot(
     db.audienceSample.findMany({
       where: sampleWhere,
       orderBy: [{ observedAt: "asc" }, { sampledAt: "asc" }],
+      select: { observedAt: true, online: true },
+    }),
+    // Read one peak instead of loading yesterday's whole curve. Use observedAt,
+    // as in today's KPI, and retain the first observed time when peaks tie.
+    db.audienceSample.findFirst({
+      where: { webinarId, observedAt: { gte: yesterdayStart, lt: dayStart } },
+      orderBy: [{ online: "desc" }, { observedAt: "asc" }, { sampledAt: "asc" }],
       select: { observedAt: true, online: true },
     }),
     // Staff presence is optional. An unavailable presence service must not turn
@@ -89,6 +99,12 @@ export async function getWebinarRealtimeSnapshot(
       average: daySamples.length ? daySamples.reduce((sum, sample) => sum + sample.online, 0) / daySamples.length : null,
       peak: peak?.online ?? null,
       peakAt: peak?.observedAt.toISOString() ?? null,
+      yesterday: {
+        peak: yesterdayPeak?.online ?? null,
+        peakAt: yesterdayPeak?.observedAt.toISOString() ?? null,
+        from: yesterdayStart.toISOString(),
+        to: dayStart.toISOString(),
+      },
       sampleCount: daySamples.length,
       history: historyFor(audienceRange),
       liveHistory: historyFor(liveRange),

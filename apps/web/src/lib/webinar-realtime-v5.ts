@@ -48,6 +48,8 @@ export interface WebinarRealtimeSnapshot {
     average: number | null;
     peak: number | null;
     peakAt: string | null;
+    /** Previous complete calendar day in the webinar timezone; `to` is exclusive. */
+    yesterday?: { peak: number | null; peakAt: string | null; from: string; to: string };
     sampleCount: number;
     history?: { from: string; to: string; points: Array<{ at: string; online: number }> };
     /** Last-hour readings, independently of calendar-day boundaries. */

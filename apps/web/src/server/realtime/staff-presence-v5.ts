@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { hostname } from "node:os";
 import { getRedis, realtimePrefix, waitForRedisReady } from "./redis";
 
-export const STAFF_PRESENCE_WINDOW_MS = 45_000;
+// Allow ordinary background timer throttling; suspended/disconnected tabs still expire.
+export const STAFF_PRESENCE_WINDOW_MS = 90_000;
 export type StaffPresenceLease = { userId: string; sessionId: string; tabId: string };
 export type StaffPresenceSnapshot = { presenceSource: "local" | "server"; leases: StaffPresenceLease[] };
 
@@ -17,7 +18,7 @@ export function staffPresenceKeys() {
 const TOUCH = `
 redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[3])
 redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
-redis.call('EXPIRE', KEYS[1], 90)
+redis.call('EXPIRE', KEYS[1], 180)
 redis.call('SET', KEYS[2], ARGV[1], 'EX', 86400)
 return 1
 `;

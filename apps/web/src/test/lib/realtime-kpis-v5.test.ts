@@ -35,16 +35,48 @@ describe("realtime v5 KPI values", () => {
   it("preserves unknown data instead of inventing zero and retains observed zero", () => {
     const missing = buildRealtimeKpis(snapshot());
     expect(missing.live).toEqual({ value: 0, points: [] });
-    expect(missing.audience).toEqual({ value: null, points: [] });
-    expect(missing.revenue).toEqual({ value: null, points: [] });
+    expect(missing.audience).toEqual({ value: null, peak: null, peakAt: null, yesterdayPeak: null, peakChangePct: null, points: [] });
+    expect(missing.revenue).toEqual({ value: null, yesterdayValue: null, changePct: null, points: [] });
     const zero = buildRealtimeKpis(snapshot({
-      audience: audience([{ at: "2026-11-17T14:30:00.000Z", online: 0 }], { average: 0 }),
+      audience: audience([{ at: "2026-11-17T14:30:00.000Z", online: 0 }], { average: 0, peak: 0 }),
       sales: sales({ today: { ...sales().today, revenueCents: 0 } })
     }));
     expect(zero.audience.value).toBe(0);
+    expect(zero.audience.peak).toBe(0);
+    expect(zero.audience.peakAt).toBe("2026-11-17T14:30:00.000Z");
     expect(zero.live.points).toHaveLength(1);
     expect(zero.live.points[0].value).toBe(0);
     expect(zero.revenue.value).toBe(0);
+  });
+
+  it("retains the server's daily peak when a later reading in the same chart slot is lower", () => {
+    const peakAt = "2026-11-17T14:59:01.000Z";
+    const result = buildRealtimeKpis(snapshot({ audience: audience([
+      { at: peakAt, online: 120 },
+      { at: "2026-11-17T14:59:05.000Z", online: 20 },
+      { at: "2026-11-17T14:59:46.000Z", online: 10 },
+    ], { average: 50, peak: 120, peakAt }) }));
+    expect(result.audience.points.map(point => point.value)).toEqual([20, null, null, 10]);
+    expect(result.audience).toMatchObject({ value: 50, peak: 120, peakAt });
+  });
+
+  it.each([null, -1, Number.NaN, Infinity, 1.5])("does not manufacture a daily peak from incomplete curves when the server reports %s", (peak) => {
+    const result = buildRealtimeKpis(snapshot({ audience: audience([
+      { at: "2026-11-17T14:30:00.000Z", online: 20 },
+    ], { peak }) }));
+    expect(result.audience.peak).toBeNull();
+    expect(result.audience.peakAt).toBeNull();
+  });
+
+  it("retains an observed daily peak when the chart history is absent", () => {
+    const result = buildRealtimeKpis(snapshot({ audience: audience([], { history: undefined }) }));
+    expect(result.audience).toEqual({ value: 8.5, peak: 20, peakAt: "2026-11-17T14:30:00.000Z", yesterdayPeak: null, peakChangePct: null, points: [] });
+  });
+
+  it.each([null, "invalid", "2026-11-17T02:59:59.999Z", "2026-11-17T15:00:00.001Z"])("does not show an invalid or out-of-day peak time: %s", (peakAt) => {
+    const result = buildRealtimeKpis(snapshot({ audience: audience([], { peakAt }) }));
+    expect(result.audience.peak).toBe(20);
+    expect(result.audience.peakAt).toBeNull();
   });
 
   it("uses server averages and today's BRL total, not averages or totals from the curves", () => {
@@ -53,6 +85,43 @@ describe("realtime v5 KPI values", () => {
     expect(result.audience.value).toBe(8.5);
     expect(result.revenue.value).toBe(123.45);
     expect(result.updatedAt).toBe("2026-11-17T15:00:00.000Z");
+  });
+});
+
+describe("realtime v5 peak comparison", () => {
+  const yesterday = (peak: number | null) => ({ peak, peakAt: null, from: "2026-11-16T03:00:00.000Z", to: "2026-11-17T03:00:00.000Z" });
+
+  it.each([
+    [201, 224, (201 - 224) / 224 * 100],
+    [150, 100, 50], [100, 100, 0], [0, 100, -100],
+  ])("calculates today's observed peak %s against yesterday's %s", (peak, previous, change) => {
+    const result = buildRealtimeKpis(snapshot({ audience: audience([], { peak, yesterday: yesterday(previous) }) }));
+    expect(result.audience.yesterdayPeak).toBe(previous);
+    expect(result.audience.peakChangePct).toBeCloseTo(change);
+  });
+
+  it.each([null, 0, -1, Infinity, 1.5])("does not invent a percentage for an absent, zero or invalid baseline: %s", previous => {
+    const result = buildRealtimeKpis(snapshot({ audience: audience([], { yesterday: yesterday(previous) }) }));
+    expect(result.audience.peakChangePct).toBeNull();
+    expect(result.audience.yesterdayPeak).toBe(previous === 0 ? 0 : null);
+  });
+
+  it("does not compare absent current readings or a stale/different calendar day", () => {
+    expect(buildRealtimeKpis(snapshot({ audience: audience([], { peak: null, yesterday: yesterday(100) }) })).audience.peakChangePct).toBeNull();
+    for (const range of [
+      { from: "2026-11-15T03:00:00.000Z", to: "2026-11-16T03:00:00.000Z" },
+      { from: "2026-11-16T12:00:00.000Z", to: "2026-11-17T03:00:00.000Z" },
+    ]) {
+      expect(buildRealtimeKpis(snapshot({ audience: audience([], { yesterday: { ...yesterday(100), ...range } }) })).audience.peakChangePct).toBeNull();
+    }
+  });
+
+  it("accepts the complete 23-hour previous calendar day at a DST transition", () => {
+    const result = buildRealtimeKpis(snapshot({
+      updatedAt: "2026-03-09T12:00:00.000Z", sales: sales({ timezone: "America/New_York" }),
+      audience: audience([], { peak: 150, yesterday: { peak: 100, peakAt: null, from: "2026-03-08T05:00:00.000Z", to: "2026-03-09T04:00:00.000Z" } }),
+    }));
+    expect(result.audience.peakChangePct).toBe(50);
   });
 });
 
@@ -144,8 +213,8 @@ describe("realtime v5 audience curves", () => {
       { at: "2026-11-17T14:59:00.000Z", online: -1 },
       { at: "2026-11-17T14:59:15.000Z", online: Number.NaN },
       { at: "2026-11-17T14:59:30.000Z", online: 1.5 }
-    ], { average: null }) }));
-    expect(result.audience).toEqual({ value: null, points: [] });
+    ], { average: null, peak: null, peakAt: null }) }));
+    expect(result.audience).toEqual({ value: null, peak: null, peakAt: null, yesterdayPeak: null, peakChangePct: null, points: [] });
     expect(buildRealtimeKpis(snapshot({ updatedAt: "invalid", audience: audience([]) })).live.points).toEqual([]);
   });
 });
@@ -184,6 +253,61 @@ describe("realtime v5 revenue curve", () => {
       points: [{ date: "2026-10-31", revenueCents: 9_900, count: 1 }]
     } }) }));
     expect(result.timezone).toBe("America/Sao_Paulo");
-    expect(result.revenue).toEqual({ value: 123.45, points: [] });
+    expect(result.revenue).toMatchObject({ value: 123.45, points: [] });
+  });
+});
+
+describe("realtime v5 revenue comparison", () => {
+  it.each([
+    [12_345, 99_900, (12_345 - 99_900) / 99_900 * 100],
+    [150_000, 100_000, 50], [100_000, 100_000, 0], [0, 100_000, -100],
+  ])("calculates today's %s cents against yesterday's actual %s cents", (today, previous, change) => {
+    const source = sales();
+    const result = buildRealtimeKpis(snapshot({ sales: sales({
+      today: { ...source.today, revenueCents: today },
+      yesterday: { ...source.yesterday, revenueCents: previous },
+      changePct: 999,
+    }) }));
+    expect(result.revenue.value).toBe(today / 100);
+    expect(result.revenue.yesterdayValue).toBe(previous / 100);
+    expect(result.revenue.changePct).toBeCloseTo(change);
+  });
+
+  it.each([0, -1, Number.NaN, Infinity, 1.5])("keeps a zero baseline but does not invent a percentage for invalid/zero yesterday revenue: %s", previous => {
+    const result = buildRealtimeKpis(snapshot({ sales: sales({ yesterday: { ...sales().yesterday, revenueCents: previous } }) }));
+    expect(result.revenue.yesterdayValue).toBe(previous === 0 ? 0 : null);
+    expect(result.revenue.changePct).toBeNull();
+  });
+
+  it("rejects a partial/stale previous day, a different current window, or invalid current amount", () => {
+    const source = sales();
+    for (const range of [
+      { from: "2026-11-15T03:00:00.000Z", to: "2026-11-16T03:00:00.000Z" },
+      { from: "2026-11-16T12:00:00.000Z", to: "2026-11-17T03:00:00.000Z" },
+    ]) {
+      const result = buildRealtimeKpis(snapshot({ sales: sales({ yesterday: { ...source.yesterday, ...range } }) }));
+      expect(result.revenue.yesterdayValue).toBeNull();
+      expect(result.revenue.changePct).toBeNull();
+    }
+    for (const today of [
+      { ...source.today, from: "2026-11-16T03:00:00.000Z" },
+      { ...source.today, to: "2026-11-17T14:00:00.000Z" },
+      { ...source.today, revenueCents: Number.NaN },
+    ]) {
+      const result = buildRealtimeKpis(snapshot({ sales: sales({ today }) }));
+      expect(result.revenue.yesterdayValue).toBe(999);
+      expect(result.revenue.changePct).toBeNull();
+    }
+  });
+
+  it("compares calendar days in the webinar timezone across DST", () => {
+    const source = sales();
+    const updatedAt = "2026-03-09T12:00:00.000Z";
+    const result = buildRealtimeKpis(snapshot({ updatedAt, sales: sales({
+      timezone: "America/New_York",
+      today: { ...source.today, from: "2026-03-09T04:00:00.000Z", to: updatedAt, revenueCents: 150_000 },
+      yesterday: { ...source.yesterday, from: "2026-03-08T05:00:00.000Z", to: "2026-03-09T04:00:00.000Z", revenueCents: 100_000 },
+    }) }));
+    expect(result.revenue).toMatchObject({ value: 1500, yesterdayValue: 1000, changePct: 50 });
   });
 });

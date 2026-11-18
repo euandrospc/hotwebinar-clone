@@ -35,8 +35,8 @@ export function RealtimeAttendantsV5({ data, timezone }: { data: RealtimeAttenda
   const period = periodDescription(data, timezone);
   const localPresence = data.presenceSource === "local";
   const presenceDescription = localPresence
-    ? "Presence covers visible Attendance tabs on this local instance only, not the deployed site. Handled chats are distinct conversations answered today in this webinar in the connected database."
-    : "Attendants online now and the number of distinct conversations each person answered today in this webinar.";
+    ? "Presence covers open Attendance tabs with a recent heartbeat on this local instance only, including background tabs. Handled chats are distinct conversations answered today in this webinar in the connected database."
+    : "Attendants with an open Attendance tab and a recent heartbeat, including background tabs, and the number of distinct conversations each person answered today in this webinar.";
   const rowOrder = data.items.map(item => item.id).join("|");
 
   return (

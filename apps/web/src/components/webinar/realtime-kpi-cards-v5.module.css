@@ -34,9 +34,12 @@
   color: #373e4c;
 }
 
-.liveDot { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: #535bff; }
+.liveIndicator { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; margin-block: -1px; color: #9298a4; }
+.liveIndicator[data-active="true"] { color: #e34755; }
+.liveIndicator svg { width: 100%; height: 100%; overflow: visible; }
 
 .body {
+  position: relative;
   display: grid;
   grid-template-columns: max-content minmax(48px, 1fr);
   align-items: center;
@@ -45,7 +48,7 @@
   min-width: 0;
 }
 
-.summary { min-width: 0; }
+.summary { min-width: 0; align-self: start; }
 
 .value {
   margin: 0;
@@ -55,6 +58,32 @@
   letter-spacing: -0.3px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.peak {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 2px 0 0;
+  color: #757b87;
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.card:is([data-kpi="audience"], [data-kpi="revenue"]) .summary { align-self: start; min-height: 42px; }
+.card:is([data-kpi="audience"], [data-kpi="revenue"]) .peak { position: absolute; top: 26px; left: 0; max-width: 100%; margin: 0; gap: 0 4px; flex-wrap: wrap; }
+.card:is([data-kpi="audience"], [data-kpi="revenue"]) .chart { align-self: start; height: 26px; }
+.peakComparison { display: inline-flex; align-items: baseline; gap: 4px; }
+.peakChange { font-weight: 500; font-variant-numeric: tabular-nums; }
+.peakChange[data-trend="down"] { color: #b65563; }
+.peakChange[data-trend="up"] { color: #257d65; }
+
+.peakValue {
+  color: #535bff;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart {
@@ -86,10 +115,21 @@
 }
 
 :global(.dark) .title { color: #d6d9e1; }
-:global(.dark) .liveDot { background: #9298ff; }
+:global(.dark) .liveIndicator { color: #747c8c; }
+:global(.dark) .liveIndicator[data-active="true"] { color: #f47782; }
 :global(.dark) .empty { color: #989eab; }
+:global(.dark) .peak { color: #989eab; }
+:global(.dark) .peakValue { color: #9298ff; }
+:global(.dark) .peakChange[data-trend="down"] { color: #e1929b; }
+:global(.dark) .peakChange[data-trend="up"] { color: #81c5ae; }
 
 @container realtime-kpis (width < 720px) {
-  .row { grid-template-columns: minmax(0, 1fr); }
+  .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card { width: 100%; }
+  .card[data-kpi="revenue"] { grid-column: 1 / -1; }
+}
+
+@container (width < 160px) {
+  .body { grid-template-columns: max-content minmax(24px, 1fr); column-gap: 6px; }
+  .card[data-kpi="audience"] .summary { min-height: 56px; }
 }

@@ -50,7 +50,7 @@ describe("realtime geographic Brazil map", () => {
     expect(screen.getByRole("link", { name: "© OpenStreetMap contributors" })).toHaveAttribute("href", "https://www.openstreetmap.org/copyright");
     expect(screen.getByRole("link", { name: "Natural Earth" })).toBeInTheDocument();
     expect(screen.getByText("160 in Brazil")).toBeInTheDocument();
-    expect(options.credits).toMatchObject({ enabled: true, text: "Highcharts.com" });
+    expect(options.credits).toMatchObject({ enabled: false });
   });
 
   it("updates the state overlay by ID without replacing tiles or changing the user's viewport", async () => {

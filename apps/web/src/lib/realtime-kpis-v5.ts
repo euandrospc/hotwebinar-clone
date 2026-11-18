@@ -21,8 +21,18 @@ export interface RealtimeKpiSeries {
 
 export interface RealtimeKpis {
   live: RealtimeKpiSeries;
-  audience: RealtimeKpiSeries;
-  revenue: RealtimeKpiSeries;
+  audience: RealtimeKpiSeries & {
+    /** Highest observed daily reading, before the chart's 15-second slot reduction. */
+    peak: number | null;
+    peakAt: string | null;
+    yesterdayPeak: number | null;
+    peakChangePct: number | null;
+  };
+  revenue: RealtimeKpiSeries & {
+    /** Recorded gross BRL over the complete previous calendar day. */
+    yesterdayValue: number | null;
+    changePct: number | null;
+  };
   updatedAt: string;
   timezone: string;
 }
@@ -105,12 +115,29 @@ export function buildRealtimeKpis(snapshot: WebinarRealtimeSnapshot): RealtimeKp
   const timezone = timezoneFor(snapshot);
   const cutoff = Date.parse(snapshot.updatedAt);
   let dayStart = Number.NaN;
+  let yesterdayStart = Number.NaN;
   if (Number.isFinite(cutoff)) {
     const today = zonedParts(new Date(cutoff), timezone);
     dayStart = zonedToUtc(today.y, today.mo, today.d, 0, 0, 0, timezone).getTime();
+    const yesterday = new Date(Date.UTC(today.y, today.mo, today.d - 1));
+    yesterdayStart = zonedToUtc(yesterday.getUTCFullYear(), yesterday.getUTCMonth(), yesterday.getUTCDate(), 0, 0, 0, timezone).getTime();
   }
   const average = snapshot.audience?.average;
-  const revenueCents = snapshot.sales?.today.revenueCents;
+  const peak = snapshot.audience?.peak;
+  const peakAt = snapshot.audience?.peakAt;
+  const peakTime = peakAt ? Date.parse(peakAt) : Number.NaN;
+  const yesterday = snapshot.audience?.yesterday;
+  const yesterdayPeak = yesterday && isCount(yesterday.peak)
+    && Date.parse(yesterday.from) === yesterdayStart && Date.parse(yesterday.to) === dayStart
+    ? yesterday.peak : null;
+  const todaySales = snapshot.sales?.today;
+  const yesterdaySales = snapshot.sales?.yesterday;
+  const revenueCents = todaySales?.revenueCents;
+  const yesterdayRevenueCents = yesterdaySales && isCount(yesterdaySales.revenueCents)
+    && Date.parse(yesterdaySales.from) === yesterdayStart && Date.parse(yesterdaySales.to) === dayStart
+    ? yesterdaySales.revenueCents : null;
+  const hasCurrentRevenueWindow = todaySales
+    && Date.parse(todaySales.from) === dayStart && Date.parse(todaySales.to) === cutoff;
 
   return {
     updatedAt: snapshot.updatedAt,
@@ -121,10 +148,18 @@ export function buildRealtimeKpis(snapshot: WebinarRealtimeSnapshot): RealtimeKp
     },
     audience: {
       value: typeof average === "number" && Number.isFinite(average) && average >= 0 ? average : null,
+      peak: isCount(peak) ? peak : null,
+      peakAt: isCount(peak) && Number.isFinite(peakTime) && peakTime >= dayStart && peakTime <= cutoff ? peakAt! : null,
+      yesterdayPeak,
+      peakChangePct: isCount(peak) && yesterdayPeak !== null && yesterdayPeak > 0
+        ? (peak - yesterdayPeak) / yesterdayPeak * 100 : null,
       points: buildRealtimeAudiencePoints(snapshot.audience?.history, dayStart, cutoff)
     },
     revenue: {
       value: isCount(revenueCents) ? revenueCents / 100 : null,
+      yesterdayValue: yesterdayRevenueCents === null ? null : yesterdayRevenueCents / 100,
+      changePct: hasCurrentRevenueWindow && isCount(revenueCents) && yesterdayRevenueCents !== null && yesterdayRevenueCents > 0
+        ? (revenueCents - yesterdayRevenueCents) / yesterdayRevenueCents * 100 : null,
       points: revenuePoints(snapshot, cutoff, timezone)
     }
   };

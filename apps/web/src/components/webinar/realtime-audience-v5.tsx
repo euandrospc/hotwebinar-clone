@@ -86,7 +86,7 @@ function themeOptions(dark: boolean): Highcharts.Options {
       borderColor: dark ? "#373a44" : "#e3e5eb",
       style: { color: text, fontSize: "11px" },
     },
-    credits: { style: { color: muted, fontSize: "9px" } },
+    credits: { enabled: false },
   };
 }
 
@@ -137,7 +137,7 @@ function chartOptions(data: RealtimeAccessTimeV5Data, timezone: string): Highcha
       },
     },
     series: [{ type: "area", id: "concurrent-audience", name: "Concurrent viewers", color: "#535bff", data: audiencePoints(data, timezone) }],
-    credits: { enabled: true, position: { align: "right", x: 0, y: -2 } },
+    credits: { enabled: false },
   };
 }
 

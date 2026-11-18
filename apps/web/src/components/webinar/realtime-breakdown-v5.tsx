@@ -65,7 +65,7 @@ function themeOptions(dark: boolean): Highcharts.Options {
         },
       },
     },
-    credits: { style: { color: muted, fontSize: "9px" } },
+    credits: { enabled: false },
   };
 }
 
@@ -126,7 +126,7 @@ function chartOptions(
         },
       },
     },
-    credits: { enabled: true, position: { align: "center", x: 0, y: -2 } },
+    credits: { enabled: false },
     responsive: {
       rules: [{
         condition: { maxWidth: 340 },

@@ -57,7 +57,7 @@ export default async function RealtimeV5Page({ params, searchParams }: {
     if (snapshotResult.status === "rejected") {
       if (snapshotResult.reason instanceof RealtimeSourceNotFoundError) notFound();
       return (
-        <AdminPage className="md:!pt-3">
+        <AdminPage className="!pt-5">
           <section data-realtime-version="v5" aria-label="Realtime dashboard">
             <RealtimeBreadcrumbV5 webinarId={id} webinarTitle={webinars?.find(webinar => webinar.id === id)?.title} webinars={webinars} />
             <p role="status" className="text-sm text-muted-foreground">Realtime data unavailable. Please refresh to try again.</p>
@@ -69,7 +69,7 @@ export default async function RealtimeV5Page({ params, searchParams }: {
   }
 
   return (
-    <AdminPage className="md:!pt-3">
+    <AdminPage className="!pt-5">
       <RealtimeDashboardV5 key={id} webinarId={id} initialSnapshot={initialSnapshot} webinars={webinars} demo={demo} />
     </AdminPage>
   );

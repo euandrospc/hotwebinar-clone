@@ -63,6 +63,8 @@ describe("realtime v5 demo snapshot", () => {
     expect(audience.average).toBeLessThan(160);
     expect(audience.peak).toBe(201);
     expect(points.find(point => point.at === audience.peakAt)?.online).toBe(audience.peak);
+    // This visual fixture has no observed previous day; never invent the comparison.
+    expect(audience.yesterday).toBeUndefined();
   });
 
   it("keeps today's and yesterday's revenue aligned with the monthly series and webinar calendar", () => {

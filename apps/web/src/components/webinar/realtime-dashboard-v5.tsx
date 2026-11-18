@@ -87,8 +87,8 @@ export function RealtimeDashboardV5({ webinarId, initialSnapshot, webinars, demo
     updatedAt: initialSnapshot.updatedAt,
     timezone: initialSnapshot.sales?.timezone ?? "America/Sao_Paulo",
     live: { value: null, points: [] },
-    audience: { value: null, points: [] },
-    revenue: { value: null, points: [] },
+    audience: { value: null, peak: null, peakAt: null, yesterdayPeak: null, peakChangePct: null, points: [] },
+    revenue: { value: null, yesterdayValue: null, changePct: null, points: [] },
   }, [snapshot, initialSnapshot]);
   const mapData = useMemo(() => buildRealtimeMapV5(snapshot), [snapshot]);
   const deviceData = useMemo(() => buildRealtimeDevicesV5(snapshot), [snapshot]);

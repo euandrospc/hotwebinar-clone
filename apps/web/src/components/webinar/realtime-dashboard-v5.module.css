@@ -3,7 +3,7 @@
   min-width: 0;
 }
 
-.breadcrumb { min-width: 0; margin-bottom: 12px; color: #757b87; font-size: 12px; line-height: 20px; }
+.breadcrumb { min-width: 0; margin-bottom: 16px; color: #757b87; font-size: 12px; line-height: 20px; }
 .breadcrumb ol { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; list-style: none; }
 .breadcrumb li { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .breadcrumb svg { flex: 0 0 12px; width: 12px; height: 12px; color: #a1a6b1; }

@@ -46,7 +46,7 @@ function themeOptions(dark: boolean, basemapAvailable = true): Highcharts.Option
         style: { color: text, fontSize: "16px", fontWeight: "400" },
       },
     },
-    credits: { style: { color: "#4e5967", fontSize: "9px" } },
+    credits: { enabled: false },
     plotOptions: {
       map: {
         borderColor: "rgba(86,82,115,0.28)",
@@ -147,12 +147,10 @@ function chartOptions(data: RealtimeMapV5Data, basemapAvailable: boolean): Highc
     },
     series,
     credits: {
-      enabled: true,
-      text: "Highcharts.com",
+      enabled: false,
       // Attribution for both datasets is rendered as accessible links below.
       mapText: "",
       mapTextFull: "",
-      position: { align: "left", x: 8, y: -7 },
     },
     responsive: {
       rules: [{ condition: { maxWidth: 400 }, chartOptions: { legend: { symbolWidth: 100 } } }],

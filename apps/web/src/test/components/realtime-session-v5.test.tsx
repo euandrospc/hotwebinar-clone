@@ -96,6 +96,29 @@ describe("realtime session strip", () => {
     expect(stage("Pitch").getByText("Per viewer")).toBeInTheDocument();
     expect(stage("Offer").getByText("Per viewer")).toBeInTheDocument();
     expect(stage("End").getByText("01:00:00")).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-available]')).toHaveLength(0);
+  });
+
+  it("advances the time rail from Start to Pitch and begins the next segment at the deadline", async () => {
+    render(<RealtimeSessionV5 {...props} updatedAt="2026-11-17T18:14:59.000Z" />);
+    const startFill = document.querySelector('[data-milestone="start"] [data-available] > span') as HTMLElement;
+    const pitchFill = document.querySelector('[data-milestone="pitch"] [data-available] > span') as HTMLElement;
+    expect(startFill.style.transform).not.toBe("scaleX(1)");
+    expect(pitchFill.style.transform).toBe("scaleX(0)");
+    await advance(1_000);
+    expect(startFill.style.transform).toBe("scaleX(1)");
+    expect(pitchFill.style.transform).toBe("scaleX(0)");
+    await advance(30_000);
+    expect(pitchFill.style.transform).toBe("scaleX(0.1)");
+  });
+
+  it("does not imply progress through disabled or out-of-order milestone connections", () => {
+    render(<RealtimeSessionV5 {...props} schedule={{ ...schedule, pitchAtSec: 3000, offerShowAtSec: 2700 }} />);
+    expect(document.querySelector('[data-milestone="pitch"] [data-available]')).toBeNull();
+    cleanup();
+    render(<RealtimeSessionV5 {...props} schedule={{ ...schedule, offerDisabled: true }} />);
+    expect(document.querySelector('[data-milestone="pitch"] [data-available]')).toBeNull();
+    expect(document.querySelector('[data-milestone="offer"] [data-available]')).toBeNull();
   });
 
   it("removes its interval and foreground listeners on unmount", () => {

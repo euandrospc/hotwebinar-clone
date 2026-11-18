@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 
-/** Presence means an authenticated, visible Attendance tab, not a recent login. */
+/** Presence means an authenticated, open Attendance tab with a fresh heartbeat. */
 export function useStaffPresenceV5() {
   useEffect(() => {
     const tabId = crypto.randomUUID();
-    let active = !document.hidden;
+    let active = true;
     let revision = 0;
     let writing = false;
     let disposed = false;
@@ -33,19 +33,21 @@ export function useStaffPresenceV5() {
       } finally { writing = false; }
     }
 
-    const visibility = () => { active = !disposed && !document.hidden; revision += 1; void sync(); };
+    // Background tabs still serve Attendance; only a page lifecycle exit releases them.
+    const visibility = () => { if (active && !disposed) { revision += 1; void sync(); } };
     const leave = () => { active = false; revision += 1; void sync(); };
-    if (active) void sync();
+    const restore = () => { if (!disposed) { active = true; revision += 1; void sync(); } };
+    void sync();
     const interval = window.setInterval(() => { if (active && !writing) void sync(); }, 15_000);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("pagehide", leave);
-    window.addEventListener("pageshow", visibility);
+    window.addEventListener("pageshow", restore);
     return () => {
       disposed = true;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("pagehide", leave);
-      window.removeEventListener("pageshow", visibility);
+      window.removeEventListener("pageshow", restore);
       leave();
     };
   }, []);
