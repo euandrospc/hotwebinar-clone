@@ -28,10 +28,21 @@ interface HlsPlayerProps {
 
 export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayBadge, className }: HlsPlayerProps) {
   const ref = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [muted, setMuted] = useState(true);
   const [needsUnmute, setNeedsUnmute] = useState(true);
   const [volume, setVolume] = useState(1);
+  // Fullscreen is offered on touch devices only (desktop keeps the original lock-down).
+  const [isTouch, setIsTouch] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia("(pointer: coarse)").matches);
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
 
   useEffect(() => {
     const video = ref.current;
@@ -101,6 +112,20 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
     void v.play();
   }
 
+  function toggleFullscreen() {
+    const el = containerRef.current;
+    const v = ref.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (!el || !v) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else if (el.requestFullscreen) {
+      void el.requestFullscreen().catch(() => undefined);
+    } else if (v.webkitEnterFullscreen) {
+      // iPhone Safari has no element fullscreen, only the native video one.
+      v.webkitEnterFullscreen();
+    }
+  }
+
   function changeVolume(value: number) {
     const v = ref.current;
     if (!v) return;
@@ -114,7 +139,7 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
   }
 
   return (
-    <div className={cn("relative aspect-video w-full overflow-hidden rounded-lg bg-black", className)}>
+    <div ref={containerRef} className={cn("relative aspect-video w-full overflow-hidden rounded-lg bg-black", className)}>
       <video
         ref={ref}
         playsInline
@@ -167,6 +192,23 @@ export function HlsPlayer({ src, startOffsetSec, onTimeUpdate, onEnded, overlayB
           aria-label="Volume"
           className="h-1 w-24 cursor-pointer accent-white"
         />
+        {isTouch ? (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            className="ml-auto text-white hover:bg-white/10"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {isFullscreen ? (
+                <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+              ) : (
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              )}
+            </svg>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
