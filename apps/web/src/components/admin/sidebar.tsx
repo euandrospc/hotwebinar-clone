@@ -66,7 +66,7 @@ export function Sidebar({ collapsed = false, navigationId, onToggle }: { collaps
           <motion.span aria-hidden={collapsed} initial={false} animate={{ opacity: collapsed ? 0 : 1, x: reduceMotion ? 0 : collapsed ? -4 : inspected ? 2 : 0 }} transition={{ ...transition, duration: reduceMotion ? 0 : 0.16 }} className="pointer-events-none absolute left-[39px] right-2.5 truncate">{label}</motion.span>
         </Link>
         </TooltipTrigger>
-        {collapsed && <TooltipPortal><TooltipContent side="right" sideOffset={14} className="rounded-lg border-[#E2E9DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#244F37] shadow-[0_4px_16px_-4px_rgba(24,48,33,0.16)] dark:border-[#334533] dark:bg-[#19221B] dark:text-[#D0EBB7]">{label}</TooltipContent></TooltipPortal>}
+        {collapsed && <TooltipPortal><TooltipContent side="right" sideOffset={14} className={cn(styles.tooltip, "rounded-lg border-[#E2E9DD] bg-white px-2.5 py-1.5 text-[12px] font-medium text-[#244F37] shadow-[0_4px_16px_-4px_rgba(24,48,33,0.16)] dark:border-[#334533] dark:bg-[#19221B] dark:text-[#D0EBB7]")}>{label}</TooltipContent></TooltipPortal>}
         </Tooltip>
       );
     });
@@ -77,7 +77,7 @@ export function Sidebar({ collapsed = false, navigationId, onToggle }: { collaps
     <aside className="flex min-h-0 w-full flex-1 flex-col">
       <div className="relative flex h-16 shrink-0 items-center">
         <motion.div initial={false} animate={{ opacity: collapsed ? 0 : 1, x: collapsed && !reduceMotion ? -6 : 0 }} transition={{ ...transition, duration: reduceMotion ? 0 : 0.16 }} className={cn("absolute left-5", collapsed && "pointer-events-none")}>
-        <Link href="/dashboard" aria-label="Bravy Lives — Dashboard" aria-hidden={collapsed} tabIndex={collapsed ? -1 : undefined} className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#83B94D] focus-visible:ring-offset-4 dark:focus-visible:ring-offset-background">
+        <Link href="/dashboard" aria-label="Bravy Lives — Dashboard" aria-hidden={collapsed} tabIndex={collapsed ? -1 : undefined} className={cn(styles.brand, "flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#83B94D] focus-visible:ring-offset-4 dark:focus-visible:ring-offset-background")}>
           <span className="[&_svg]:h-auto [&_svg]:w-[92px] [&_svg]:text-[#064B3C] dark:[&_svg]:text-[#C5E99D]"><Logo /></span>
           <span className="text-xs tracking-wide text-[#6C7771] dark:text-muted-foreground">lives</span>
         </Link>

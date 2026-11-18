@@ -13,6 +13,7 @@ import { Send, ArrowLeft, ArrowRight, Clock, MessageSquare, ChevronDown, Phone, 
 import { signOut } from "@/lib/auth-client";
 import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { useRealtimeChannel } from "@/lib/hooks/use-realtime-channel";
+import { useStaffPresenceV5 } from "@/lib/hooks/use-staff-presence-v5";
 import { mergeLeadMessages } from "@/app/[slug]/_lib/merge-lead-messages";
 import type { PlayerLeadMsg } from "@/app/[slug]/_lib/public-types";
 
@@ -75,6 +76,7 @@ function formatCountdown(startIso: string | null, nowMs: number): string {
 }
 
 export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false }: InboxProps) {
+  useStaffPresenceV5();
   const searchParams = useSearchParams();
   const urlLeadId = searchParams.get("leadId");
   const [linkedConversation, setLinkedConversation] = useState<Conversation | null>(null);

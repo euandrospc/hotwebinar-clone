@@ -1,0 +1,74 @@
+.card {
+  width: 100%;
+  max-width: 840px;
+  min-width: 0;
+  margin-top: 12px;
+  padding: 10px 14px 12px;
+  border: 1px solid #e3e5eb;
+  border-radius: 14px;
+  background: #fff;
+  color: #202329;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 18px;
+}
+
+.title {
+  margin: 0;
+  color: #373e4c;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 18px;
+}
+
+.period {
+  color: #757b87;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.percent { color: #757b87; font-size: 11px; line-height: 14px; font-variant-numeric: tabular-nums; }
+
+.viewport {
+  margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.content { min-width: 560px; }
+.chart { position: relative; min-width: 0; height: 140px; }
+.chart:focus-within { outline: 2px solid #535bff; outline-offset: -2px; border-radius: 6px; }
+.svg { display: block; width: 100%; height: 140px; }
+.targets { position: absolute; inset: 0 4px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.target { min-width: 0; border: 0; border-radius: 5px; padding: 0; background: transparent; cursor: default; -webkit-tap-highlight-color: transparent; }
+.target:focus { outline: none; }
+.target:focus-visible { box-shadow: inset 0 0 0 1px #535bff80; }
+.tooltip { position: absolute; z-index: 1; top: 8px; display: flex; flex-direction: column; gap: 2px; max-width: 210px; border: 1px solid #e3e5eb; border-radius: 8px; padding: 7px 9px; background: #fff; color: #373e4c; font-size: 11px; line-height: 15px; pointer-events: none; }
+.tooltipLabel { font-weight: 550; }
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0 4px;
+  list-style: none;
+}
+
+.stage { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.label { color: #757b87; font-size: 11px; line-height: 14px; }
+.count { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 18px; letter-spacing: -0.1px; }
+.empty, .unavailable { display: flex; align-items: center; justify-content: center; margin: 0; color: #757b87; font-size: 12px; line-height: 18px; }
+.empty { height: 140px; }
+.unavailable { min-height: 120px; }
+
+:global(.dark) .card { border-color: #2b2d34; background: #151619; color: #f2f3f6; }
+:global(.dark) .title { color: #d6d9e1; }
+:global(.dark) .tooltip { border-color: #373a44; background: #202126; color: #d6d9e1; }
+:global(.dark) .label { color: #989eab; }
+:global(.dark) .period, :global(.dark) .percent, :global(.dark) .empty, :global(.dark) .unavailable { color: #989eab; }

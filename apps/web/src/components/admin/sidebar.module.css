@@ -51,6 +51,100 @@
   box-shadow: inset 0 0 0 1px rgb(183 221 137 / 6%);
 }
 
+/* The v5 marker scopes this palette, including Radix portals outside the shell. */
+:global(body:has([data-realtime-version="v5"])) :is(.surface, .tooltip, .accountMenu, .mobileTrigger) {
+  --sidebar-v5-surface: #fff;
+  --sidebar-v5-border: #e3e5eb;
+  --sidebar-v5-text: #373e4c;
+  --sidebar-v5-muted: #757b87;
+  --sidebar-v5-accent: #535bff;
+  --sidebar-v5-selected: #eef0ff;
+  --sidebar-v5-hover: #f5f5fb;
+  --sidebar-v5-outline: #dce0ff;
+}
+
+:global(.dark body:has([data-realtime-version="v5"])) :is(.surface, .tooltip, .accountMenu, .mobileTrigger) {
+  --sidebar-v5-surface: #151619;
+  --sidebar-v5-border: #2b2d34;
+  --sidebar-v5-text: #d6d9e1;
+  --sidebar-v5-muted: #989eab;
+  --sidebar-v5-accent: #a6aaff;
+  --sidebar-v5-selected: #262840;
+  --sidebar-v5-hover: #202127;
+  --sidebar-v5-outline: #383b60;
+}
+
+:global(body:has([data-realtime-version="v5"])) .surface {
+  border-color: var(--sidebar-v5-border);
+  background: var(--sidebar-v5-surface);
+  color: var(--sidebar-v5-text);
+  box-shadow: 0 2px 5px rgb(20 22 35 / 3%), 0 16px 40px -20px rgb(20 22 35 / 12%);
+}
+
+:global(body:has([data-realtime-version="v5"])) .activeItem {
+  background: var(--sidebar-v5-selected);
+  box-shadow: inset 0 0 0 1px var(--sidebar-v5-outline);
+}
+
+:global(body:has([data-realtime-version="v5"])) .hoverItem {
+  background: var(--sidebar-v5-hover);
+  box-shadow: none;
+}
+
+:global(body:has([data-realtime-version="v5"])) :is(.link, .toggle) {
+  color: var(--sidebar-v5-muted);
+}
+
+:global(body:has([data-realtime-version="v5"])) .link:is([aria-current="page"], :hover, :focus-visible),
+:global(body:has([data-realtime-version="v5"])) .link[aria-current="page"] svg {
+  color: var(--sidebar-v5-accent);
+}
+
+:global(body:has([data-realtime-version="v5"])) :is(.toggle, .accountTrigger):hover,
+:global(body:has([data-realtime-version="v5"])) .accountTrigger:is(:active, [data-state="open"]) {
+  background: var(--sidebar-v5-hover);
+  color: var(--sidebar-v5-accent);
+  box-shadow: none;
+}
+
+:global(body:has([data-realtime-version="v5"])) :is(.link, .toggle, .brand, .accountTrigger, .mobileTrigger):focus-visible {
+  --tw-ring-color: var(--sidebar-v5-accent);
+  --tw-ring-offset-color: var(--sidebar-v5-surface);
+}
+
+:global(body:has([data-realtime-version="v5"])) .brand svg,
+:global(body:has([data-realtime-version="v5"])) .accountTrigger [data-sidebar-name] {
+  color: var(--sidebar-v5-text);
+}
+
+:global(body:has([data-realtime-version="v5"])) .brand > span,
+:global(body:has([data-realtime-version="v5"])) .accountTrigger :is([data-sidebar-meta], svg) {
+  color: var(--sidebar-v5-muted);
+}
+
+:global(body:has([data-realtime-version="v5"])) .accountTrigger [data-sidebar-avatar] {
+  background: var(--sidebar-v5-selected);
+  color: var(--sidebar-v5-accent);
+  box-shadow: inset 0 0 0 1px var(--sidebar-v5-outline);
+}
+
+:global(body:has([data-realtime-version="v5"])) :is(.tooltip, .accountMenu, .mobileTrigger) {
+  border-color: var(--sidebar-v5-border);
+  background: var(--sidebar-v5-surface);
+  color: var(--sidebar-v5-text);
+  box-shadow: 0 4px 18px -4px rgb(20 22 35 / 16%);
+}
+
+:global(body:has([data-realtime-version="v5"])) .accountMenuItem {
+  color: var(--sidebar-v5-text);
+}
+
+:global(body:has([data-realtime-version="v5"])) .accountMenuItem:is(:focus, :active),
+:global(body:has([data-realtime-version="v5"])) .mobileTrigger:hover {
+  background: var(--sidebar-v5-selected);
+  color: var(--sidebar-v5-accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .link, .toggle { transition: none; }
   .link:active, .toggle:active { transform: none; }

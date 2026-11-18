@@ -23,7 +23,7 @@ export function MobileNav({ name, email }: { name: string; email: string }) {
   }, []);
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild><Button variant="outline" size="icon" className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 rounded-xl border-[#E3E9E3] bg-white text-[#064B3C] shadow-[0_2px_12px_rgba(16,40,30,0.10)] hover:bg-[#F7F9F6] dark:border-border dark:bg-card dark:text-foreground md:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></Button></Dialog.Trigger>
+      <Dialog.Trigger asChild><Button variant="outline" size="icon" className={`${styles.mobileTrigger} fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-40 h-11 w-11 rounded-xl border-[#E3E9E3] bg-white text-[#064B3C] shadow-[0_2px_12px_rgba(16,40,30,0.10)] hover:bg-[#F7F9F6] dark:border-border dark:bg-card dark:text-foreground md:hidden`} aria-label="Abrir menu"><Menu className="h-5 w-5" /></Button></Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/35 backdrop-blur-[2px]" />
         <Dialog.Content asChild>

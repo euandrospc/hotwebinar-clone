@@ -16,6 +16,7 @@ vi.mock("@/lib/hooks/use-realtime-channel", () => ({
   }
 }));
 vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn() }));
+vi.mock("@/lib/hooks/use-staff-presence-v5", () => ({ useStaffPresenceV5: () => {} }));
 
 const conversations = [
   { leadId: "ana", leadName: "Ana", leadPhone: null, webinarId: "webinar", webinarTitle: "Aula", webinarPhase: "open", webinarStartDate: null, lastText: "Conversa da Ana", lastAt: "2026-10-30T20:00:00Z", pending: true, online: true },

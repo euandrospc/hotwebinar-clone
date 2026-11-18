@@ -1,0 +1,63 @@
+.card {
+  container: realtime-session / inline-size;
+  width: 100%;
+  max-width: 840px;
+  min-width: 0;
+  margin-top: 12px;
+  padding: 10px 14px 12px;
+  border: 1px solid #e3e5eb;
+  border-radius: 14px;
+  background: #fff;
+  color: #202329;
+}
+
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 18px; }
+.heading { display: flex; align-items: center; gap: 12px; }
+.title { margin: 0; color: #373e4c; font-size: 13px; font-weight: 550; line-height: 18px; }
+.phase { display: inline-flex; align-items: center; gap: 5px; color: #757b87; font-size: 10px; line-height: 16px; }
+.phaseDot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.phase[data-phase="live"] { color: #535bff; }
+.nextLabel { color: #757b87; font-size: 10px; line-height: 16px; }
+.nextLabel > span { margin: 0 4px; }
+.nextLabel > strong { color: #535bff; font-weight: 550; }
+
+.timeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 10px 0 0; padding: 0; list-style: none; }
+.milestone { position: relative; min-width: 0; }
+.milestone:not(:last-child)::after { position: absolute; content: ""; height: 1px; top: 3px; left: 7px; right: -12px; background: #e3e5eb; }
+.milestone[data-state="reached"]:has(+ .milestone[data-state="reached"])::after { background: #c9ccff; }
+.trigger { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-width: 0; border-radius: 6px; background: transparent; text-align: left; padding: 0; }
+.trigger:focus-visible { outline: 2px solid #535bff; outline-offset: 5px; }
+.marker { z-index: 1; display: flex; align-items: center; justify-content: center; width: 7px; height: 7px; margin-bottom: 2px; border: 1px solid #cbd0db; border-radius: 50%; background: #fff; color: #7d83a9; font-size: 6px; line-height: 1; }
+.label { color: #757b87; font-size: 11px; line-height: 14px; }
+.value { min-height: 18px; color: #757b87; font-size: 12px; font-weight: 400; line-height: 18px; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.1px; }
+.value[data-countdown] { color: #373e4c; font-size: 14px; font-weight: 500; }
+.milestone[data-next] .marker { border-color: #535bff; background: #535bff; box-shadow: 0 0 0 3px #535bff18; }
+.milestone[data-next] .label { color: #535bff; }
+.milestone[data-next] .value { color: #535bff; font-size: 14px; font-weight: 500; letter-spacing: -0.1px; }
+.milestone[data-state="reached"] .marker { border-color: #b7bce7; background: #eef0ff; }
+.milestone[data-state="disabled"] .marker, .milestone[data-state="unavailable"] .marker, .milestone[data-state="per-viewer"] .marker { border-style: dashed; }
+.card[data-motion] .phase, .card[data-motion] .label, .card[data-motion] .value { transition: color 200ms ease; }
+.card[data-motion] .marker { transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease; }
+
+.popover { width: 260px; max-width: calc(100vw - 32px); border-color: #e3e5eb; border-radius: 10px; padding: 12px 14px; background: #fff; color: #373e4c; }
+.detailLabel { margin: 0; font-size: 12px; line-height: 18px; font-weight: 550; }
+.absoluteTime { display: block; margin-top: 5px; font-size: 12px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.detail { margin: 5px 0 0; color: #757b87; font-size: 11px; line-height: 17px; }
+
+:global(.dark) .card { border-color: #2b2d34; background: #151619; color: #f2f3f6; }
+:global(.dark) .title, :global(.dark) .value[data-countdown] { color: #d6d9e1; }
+:global(.dark) .phase, :global(.dark) .nextLabel, :global(.dark) .label, :global(.dark) .value { color: #989eab; }
+:global(.dark) .phase[data-phase="live"], :global(.dark) .nextLabel > strong, :global(.dark) .milestone[data-next] .label, :global(.dark) .milestone[data-next] .value { color: #9298ff; }
+:global(.dark) .milestone:not(:last-child)::after { background: #30333d; }
+:global(.dark) .milestone[data-state="reached"]:has(+ .milestone[data-state="reached"])::after { background: #464a7b; }
+:global(.dark) .marker { border-color: #4b5060; background: #151619; }
+:global(.dark) .milestone[data-next] .marker { border-color: #9298ff; background: #9298ff; box-shadow: 0 0 0 3px #9298ff1a; }
+:global(.dark) .milestone[data-state="reached"] .marker { border-color: #62699e; background: #282c46; color: #a4aada; }
+:global(.dark) .popover { border-color: #373a44; background: #202126; color: #d6d9e1; }
+:global(.dark) .detail { color: #989eab; }
+
+@container realtime-session (max-width: 460px) {
+  .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .milestone:nth-child(2)::after { display: none; }
+  .milestone:not(:last-child)::after { right: -16px; }
+}

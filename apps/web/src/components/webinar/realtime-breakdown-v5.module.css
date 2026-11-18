@@ -1,0 +1,121 @@
+.card {
+  container: realtime-breakdown / inline-size;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  height: 100%;
+  padding: 10px 14px 12px;
+  border: 1px solid #e3e5eb;
+  border-radius: 14px;
+  background: #fff;
+  color: #202329;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 18px;
+}
+
+.title {
+  margin: 0;
+  color: #373e4c;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 18px;
+}
+
+.period {
+  color: #757b87;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.body {
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.chartWrap {
+  position: relative;
+  min-width: 0;
+  height: 184px;
+}
+
+.chart {
+  width: 100%;
+  height: 184px;
+}
+
+.chart:focus-within {
+  outline: 2px solid #535bff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.total {
+  position: absolute;
+  inset: 6px 0 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.totalValue {
+  color: #373e4c;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.totalLabel {
+  color: #757b87;
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.state, .empty, .unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: #757b87;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.state {
+  position: absolute;
+  inset: 0 0 18px;
+}
+
+.empty {
+  height: 166px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.unavailable { min-height: 192px; }
+
+.footer {
+  margin: 6px 0 0;
+  color: #757b87;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+:global(.dark) .card { border-color: #2b2d34; background: #151619; color: #f2f3f6; }
+:global(.dark) .title, :global(.dark) .totalValue { color: #d6d9e1; }
+:global(.dark) .period,
+:global(.dark) .footer,
+:global(.dark) .totalLabel, :global(.dark) .state, :global(.dark) .unavailable { color: #989eab; }
