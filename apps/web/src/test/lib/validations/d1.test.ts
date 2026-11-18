@@ -20,7 +20,7 @@ const step3Base = {
   loginButtonText: "Entrar", loginButtonColor: "#16a34a",
   nameEnabled: true, nameRequired: true, namePlaceholder: "Nome",
   emailEnabled: true, emailRequired: true, emailPlaceholder: "Email",
-  phoneEnabled: true, phoneRequired: false, phonePlaceholder: "Tel",
+  phoneEnabled: true, phoneRequired: false, phonePlaceholder: "Tel", phoneDefaultCountry: "BR",
   loginLogoAlign: "CENTER" as const,
   progressEnabled: false, progressStartPct: 50,
   progressBarColor: "#dc2626", progressTextColor: "#ffffff",
