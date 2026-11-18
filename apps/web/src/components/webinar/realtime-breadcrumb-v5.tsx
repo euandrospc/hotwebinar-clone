@@ -25,7 +25,7 @@ export function RealtimeBreadcrumbV5({ webinarId, webinarTitle, webinars = [] }:
     if (pending || id === webinarId || !options.some(webinar => webinar.id === id)) return;
     const query = searchParams.toString();
     startTransition(() => {
-      router.push(`/dashboard/webinars/${encodeURIComponent(id)}/realtime-v5${query ? `?${query}` : ""}`, { scroll: false });
+      router.push(`/dashboard/webinars/${encodeURIComponent(id)}/v5${query ? `?${query}` : ""}`, { scroll: false });
     });
   }
 

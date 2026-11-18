@@ -34,7 +34,7 @@ describe("v5 webinar breadcrumb", () => {
       fireEvent.keyDown(next, { key: "Enter" });
     });
 
-    expect(navigation.push).toHaveBeenCalledWith("/dashboard/webinars/next%20webinar/realtime-v5?demo=0", { scroll: false });
+    expect(navigation.push).toHaveBeenCalledWith("/dashboard/webinars/next%20webinar/v5?demo=0", { scroll: false });
     expect(screen.getByRole("link", { name: "Webinars" })).toHaveAttribute("href", "/dashboard/webinars");
   });
 

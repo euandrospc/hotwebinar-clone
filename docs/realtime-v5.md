@@ -5,7 +5,7 @@ A v5 foi preparada em 18/11/2026 para avaliação em produção sem substituir o
 ## Rotas e isolamento
 
 - Atual: `/dashboard/webinars/[id]/realtime` e `/api/webinars/[id]/realtime`. Página, API, componentes e cálculo preservados.
-- V5: `/dashboard/webinars/[id]/realtime-v5` e `/api/webinars/[id]/realtime-v5`. O seletor do breadcrumb mantém essa rota ao trocar de webinar.
+- V5: `/dashboard/webinars/[id]/v5` e `/api/webinars/[id]/realtime-v5`. O seletor do breadcrumb mantém essa rota ao trocar de webinar. O endereço anterior `/dashboard/webinars/[id]/realtime-v5` redireciona permanentemente para `/v5`, preservando os parâmetros.
 - Produção usa Prisma e Redis da própria aplicação, com autorização por sessão e escopo do webinar.
 - Demo existe somente em desenvolvimento/loopback com `?demo=1`; nunca substitui dados de produção.
 - O adapter opcional de leitura remota só funciona em desenvolvimento/loopback. Suas credenciais não fazem parte do repositório.

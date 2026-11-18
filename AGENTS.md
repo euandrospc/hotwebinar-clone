@@ -39,6 +39,6 @@
 
 ## Realtime v5 — publicação paralela em 18/11/2026
 
-- JP autorizou publicar a nova v5 para testar ambas as versões em produção. A v5 fica em `/dashboard/webinars/[id]/realtime-v5`, com endpoint próprio `/api/webinars/[id]/realtime-v5`. Preservar a página, a API, os componentes e o cálculo do realtime existente em `/realtime`.
+- JP autorizou publicar a nova v5 para testar ambas as versões em produção. A v5 fica em `/dashboard/webinars/[id]/v5`, com endpoint próprio `/api/webinars/[id]/realtime-v5`. Preservar a página, a API, os componentes e o cálculo do realtime existente em `/realtime`.
 - A v5 mantém labels em inglês, layout compacto azul/violeta, seletor de webinar no breadcrumb e dados reais em produção. Demo somente em desenvolvimento/loopback com `?demo=1`. Não publicar v3/v4 nem outras alterações locais.
 - A presença dos atendentes usa heartbeat independente do Inbox, namespace Redis próprio, sem modificar mensagens ou contagens legadas. Ausência de coleta deve ser explícita, nunca apresentada como zero confirmado.
