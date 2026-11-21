@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { TvMinimalPlay } from "@/components/icons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { sortWebinarOptions } from "@/lib/webinar-options";
 
 interface WebinarOption {
   id: string;
@@ -47,7 +48,7 @@ export function DashboardWebinarPicker({ webinars, selectedId, compact = false }
           <SelectTrigger aria-label="Webinar analisado" className={cn("h-9 w-auto min-w-0 max-w-[min(480px,calc(100vw-7rem))] gap-3 rounded-lg border-border/70 bg-card text-sm font-medium", compact && "h-10 max-w-[min(260px,calc(100vw-3rem))] rounded-xl text-xs shadow-none")}><SelectValue /></SelectTrigger>
           <SelectContent className="max-w-[calc(100vw-2rem)] rounded-xl">
             <SelectItem value="all">Todos</SelectItem>
-            {webinars.map((webinar) => (
+            {sortWebinarOptions(webinars).map((webinar) => (
               <SelectItem key={webinar.id} value={webinar.id} textValue={webinar.title}>
                 <span className="block max-w-[min(400px,calc(100vw-5rem))] truncate" title={webinar.title}>{webinar.title}</span>
               </SelectItem>

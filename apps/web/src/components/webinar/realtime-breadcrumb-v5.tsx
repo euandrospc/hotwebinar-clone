@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight } from "@/components/icons";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { RealtimeWebinarOption } from "@/lib/webinar-realtime-v5";
+import { sortWebinarOptions } from "@/lib/webinar-options";
 import styles from "./realtime-dashboard-v5.module.css";
 
 export function RealtimeBreadcrumbV5({ webinarId, webinarTitle, webinars = [] }: {
@@ -17,9 +18,9 @@ export function RealtimeBreadcrumbV5({ webinarId, webinarTitle, webinars = [] }:
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const title = webinarTitle || webinars.find(webinar => webinar.id === webinarId)?.title;
-  const options = webinarId && title && !webinars.some(webinar => webinar.id === webinarId)
+  const options = sortWebinarOptions(webinarId && title && !webinars.some(webinar => webinar.id === webinarId)
     ? [{ id: webinarId, title }, ...webinars]
-    : webinars;
+    : webinars);
 
   function switchWebinar(id: string) {
     if (pending || id === webinarId || !options.some(webinar => webinar.id === id)) return;
