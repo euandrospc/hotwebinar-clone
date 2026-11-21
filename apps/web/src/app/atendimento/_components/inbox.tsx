@@ -35,6 +35,7 @@ interface Conversation {
   leadPhone: string | null;
   webinarId: string;
   webinarTitle: string;
+  webinarName?: string | null;
   webinarPhase: string;
   webinarStartDate: string | null;
   lastText: string;
@@ -44,6 +45,11 @@ interface Conversation {
 }
 
 type ThreadMessage = PlayerLeadMsg;
+
+/** Staff tell rooms apart by the internal name; the public title can repeat across rooms. */
+function roomLabel(c: Pick<Conversation, "webinarTitle" | "webinarName">): string {
+  return c.webinarName?.trim() || c.webinarTitle;
+}
 
 interface InboxProps {
   attendantName: string;
@@ -397,7 +403,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
   const webinars = useMemo(() => {
     const map = new Map<string, { id: string; title: string; phase: string }>();
     for (const c of conversations) {
-      if (!map.has(c.webinarId)) map.set(c.webinarId, { id: c.webinarId, title: c.webinarTitle, phase: c.webinarPhase });
+      if (!map.has(c.webinarId)) map.set(c.webinarId, { id: c.webinarId, title: roomLabel(c), phase: c.webinarPhase });
     }
     return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [conversations]);
@@ -507,7 +513,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
                   {c.leadPhone && <span className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--inbox-muted)]"><Phone className="h-2.5 w-2.5" />{c.leadPhone}</span>}
                   <span className={styles.webinar}>
                     <span className={`h-1 w-1 shrink-0 rounded-full ${c.webinarPhase === "before" ? "bg-amber-500" : "bg-[#83B94D]"}`} />
-                    <span className="truncate">{c.webinarTitle}</span>
+                    <span className="truncate" title={c.webinarTitle}>{roomLabel(c)}</span>
                   </span>
                   {c.webinarPhase === "before" ? <span className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400"><Clock className="h-3 w-3" />começa em {formatCountdown(c.webinarStartDate, nowMs)}</span>
                     : <p className={styles.preview}>{c.lastText}</p>}
@@ -534,7 +540,7 @@ export function Inbox({ attendantName, attendantId, initialDate, isAdmin = false
               <div className={styles.chatIdentity}>
                 <p>{selectedConversation.leadName}</p>
                 <div className={styles.contactMeta}>
-                  <span className="truncate">{selectedConversation.webinarTitle}</span>
+                  <span className="truncate" title={selectedConversation.webinarTitle}>{roomLabel(selectedConversation)}</span>
                   {selectedConversation.leadPhone && <a href={`tel:${selectedConversation.leadPhone}`} className={styles.contactPhone}><Phone />{selectedConversation.leadPhone}</a>}
                 </div>
               </div>

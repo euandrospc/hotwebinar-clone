@@ -258,3 +258,27 @@ it("copies only the selected conversation and disables duplicate captures while 
   await act(async () => finish());
   expect(busyActions.getByRole("menuitem", { name: "Copiar print" })).not.toHaveAttribute("aria-disabled", "true");
 });
+
+it("labels rooms that share a public title by their internal name", async () => {
+  vi.mocked(fetch).mockImplementation(async (url) => {
+    if (String(url).includes("conversations")) return response({ conversations: [
+      { ...conversations[0], webinarId: "classic", webinarTitle: "Dominando Claude Code 10h", webinarName: "Aula Claude Code · 10h" },
+      { ...conversations[1], webinarId: "mh", webinarTitle: "Dominando Claude Code 10h", webinarName: "Aula Claude Code · MH 10h" }
+    ], onlineTotal: 2 });
+    return response({ messages: [] });
+  });
+  render(<Inbox attendantName="Equipe" />);
+  await screen.findByText("Conversa da Ana");
+  const ana = screen.getByRole("button", { name: /^A Ana / });
+  const bruno = screen.getByRole("button", { name: /^B Bruno / });
+  expect(within(ana).getByText("Aula Claude Code · 10h")).toHaveAttribute("title", "Dominando Claude Code 10h");
+  expect(within(bruno).getByText("Aula Claude Code · MH 10h")).toBeInTheDocument();
+  await select("Bruno");
+  expect(within(screen.getByRole("region", { name: "Área de atendimento" })).getByText("Aula Claude Code · MH 10h")).toBeInTheDocument();
+});
+
+it("falls back to the public title when the room has no internal name", async () => {
+  render(<Inbox attendantName="Equipe" />);
+  await screen.findByText("Conversa da Ana");
+  expect(within(screen.getByRole("button", { name: /^A Ana / })).getByText("Aula")).toBeInTheDocument();
+});

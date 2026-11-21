@@ -81,6 +81,8 @@ export async function loadConversations(range: { gte: Date; lt: Date }, webinarI
         leadPhone: l.phone,
         webinarId: l.webinarId,
         webinarTitle: l.webinar.title || l.webinar.name || "Webinar",
+        // Internal room name, for staff only: rooms can share the public title (aula-10h x aula-mh-10h).
+        webinarName: l.webinar.name?.trim() || null,
         webinarPhase: phase,
         webinarStartDate: occ.startDate ? occ.startDate.toISOString() : null,
         lastText: last?.text ?? "",
