@@ -7,21 +7,63 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AnimatedCharactersLoginPage } from "@/components/ui/animated-characters-login-page";
 
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
+import { sameOriginPath } from "@/lib/sso-redirect";
 import { AdminAuthFrame } from "@/components/admin/admin-auth-frame";
 import styles from "@/components/admin/admin-auth-frame.module.css";
 
-export function LoginClient({ brandName }: { brandName: string }) {
+// Codes Better Auth appends as ?error= when the Bravy ID callback fails
+const SSO_ERRORS: Record<string, string> = {
+  signup_disabled: "Seu Bravy ID ainda não tem acesso aqui. Peça a um administrador para criar seu usuário com este e-mail.",
+  account_not_linked: "Já existe um usuário com este e-mail, mas o Bravy ID não confirmou o e-mail. Entre com e-mail e senha.",
+  unable_to_link_account: "Não foi possível vincular o Bravy ID ao seu usuário.",
+  email_not_found: "O Bravy ID não informou um e-mail.",
+  access_denied: "Acesso negado no Bravy ID."
+};
+
+function ssoErrorMessage(code: string | undefined) {
+  if (!code) return null;
+  return SSO_ERRORS[code] ?? "Não foi possível entrar com Bravy ID. Tente novamente.";
+}
+
+function BravyIdButton({ callbackURL, onError }: { callbackURL: () => string; onError: (message: string) => void }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <button
+      type="button"
+      className={styles.sso}
+      disabled={loading}
+      onClick={async () => {
+        setLoading(true);
+        // On success the browser is already on its way to Bravy ID
+        const { error } = await authClient.signIn.social({ provider: "bravy-id", callbackURL: callbackURL(), errorCallbackURL: ADMIN_LOGIN_PATH });
+        if (error) {
+          setLoading(false);
+          onError("Não foi possível abrir o Bravy ID. Tente novamente.");
+        }
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="https://iam.bravy.com.br/static/mark-bravy.svg" alt="" width={15} height={15} />
+      {loading ? "Redirecionando…" : "Entrar com Bravy ID"}
+    </button>
+  );
+}
+
+export function LoginClient({ brandName, ssoError }: { brandName: string; ssoError?: string }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => ssoErrorMessage(ssoError));
   const [challenge, setChallenge] = useState(false);
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function loginTarget() {
+    return sameOriginPath(new URLSearchParams(window.location.search).get("from"), window.location.origin);
+  }
+
   function finishLogin() {
-    const raw = new URLSearchParams(window.location.search).get("from");
-    const target = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
-    router.push(target);
+    router.push(loginTarget());
     router.refresh();
   }
 
@@ -76,6 +118,10 @@ export function LoginClient({ brandName }: { brandName: string }) {
       onSubmit={onSubmit}
       error={error}
       loading={loading}
+      beforeForm={<>
+        <BravyIdButton callbackURL={loginTarget} onError={setError} />
+        <div className={styles.divider}>ou</div>
+      </>}
     />
   );
 }

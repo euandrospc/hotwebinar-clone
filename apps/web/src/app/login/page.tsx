@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `Entrar | ${await getLoginBrandName()}` };
 }
 
-export default async function LoginPage() {
-  const brandName = await getLoginBrandName();
-  return <LoginClient brandName={brandName} />;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const [brandName, { error }] = await Promise.all([getLoginBrandName(), searchParams]);
+  return <LoginClient brandName={brandName} ssoError={error} />;
 }

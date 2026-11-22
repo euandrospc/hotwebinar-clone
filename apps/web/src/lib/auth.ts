@@ -1,4 +1,4 @@
-import { twoFactor } from "better-auth/plugins";
+import { genericOAuth, twoFactor } from "better-auth/plugins";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "db";
@@ -23,7 +23,24 @@ if (secret.length < 32) {
 if (!baseURL) throw new Error("Missing env: BETTER_AUTH_URL");
 
 export const auth = betterAuth({
-  plugins: [twoFactor({ issuer: "Bravy Lives" })],
+  plugins: [
+    twoFactor({ issuer: "Bravy Lives" }),
+    genericOAuth({
+      config: [
+        {
+          // Registered as a social provider. Callback: {BETTER_AUTH_URL}/api/auth/callback/bravy-id
+          providerId: "bravy-id",
+          discoveryUrl: "https://iam.bravy.com.br/.well-known/openid-configuration",
+          clientId: process.env.BRAVY_ID_CLIENT_ID ?? "",
+          clientSecret: process.env.BRAVY_ID_CLIENT_SECRET,
+          scopes: ["openid", "profile", "email"],
+          pkce: true,
+          // Same rule as email signup: Bravy ID only signs in users that already exist here
+          disableSignUp: true
+        }
+      ]
+    })
+  ],
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   user: {
     additionalFields: {

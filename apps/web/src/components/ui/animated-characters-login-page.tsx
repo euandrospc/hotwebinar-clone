@@ -18,13 +18,16 @@ export interface AnimatedCharactersLoginPageProps {
   onSubmit: (email: string, password: string) => Promise<void> | void;
   error?: string | null;
   loading?: boolean;
+  /** Rendered above the email form, e.g. single sign-on buttons. */
+  beforeForm?: React.ReactNode;
 }
 
-export function AnimatedCharactersLoginPage({ title = "Bem-vindo de volta", subtitle = "Entre com seus dados", submitLabel = "Entrar", loadingLabel = "Entrando...", onSubmit, error = null, loading = false }: AnimatedCharactersLoginPageProps) {
+export function AnimatedCharactersLoginPage({ title = "Bem-vindo de volta", subtitle = "Entre com seus dados", submitLabel = "Entrar", loadingLabel = "Entrando...", onSubmit, error = null, loading = false, beforeForm }: AnimatedCharactersLoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   return <AdminAuthFrame title={title} description={subtitle}>
+    {beforeForm}
     <form onSubmit={async event => { event.preventDefault(); await onSubmit(email, password); }} className={styles.form}>
       <div className={styles.field}>
         <Label htmlFor="email" className={styles.label}>Email</Label>

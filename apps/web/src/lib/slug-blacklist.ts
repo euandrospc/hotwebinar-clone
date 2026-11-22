@@ -2,6 +2,7 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   "login",
   "webinars",
   "acesso-painel",
+  "sso",
   "dashboard",
   "api",
   "ab",
