@@ -56,6 +56,6 @@ export async function POST(request: Request) {
     : `offer/${webinarId}/${kind}.${ext}`;
   const uploadUrl = await presignPut(HLS_BUCKET, key, mimeType, 15 * 60);
   const publicBase = process.env.S3_PUBLIC_BASE_URL ?? "";
-  const publicUrl = `${publicBase}/${HLS_BUCKET}/${key}`;
+  const publicUrl = `${publicBase}/${key}`;
   return NextResponse.json({ uploadUrl, publicUrl, key });
 }

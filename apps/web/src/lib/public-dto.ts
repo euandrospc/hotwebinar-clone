@@ -113,15 +113,14 @@ export type PublicVideo = {
 };
 
 /**
- * Rewrite MinIO HLS-bucket URL to authenticated proxy `/api/hls/<key>` so
+ * Rewrite HLS-bucket public URL to authenticated proxy `/api/hls/<key>` so
  * direct-bucket downloads are blocked. EXTERNAL hlsUrls (not under HLS bucket)
  * pass through unchanged.
  */
 export function proxifyHlsUrl(url: string | null): string | null {
   if (!url) return null;
   const publicBase = process.env.S3_PUBLIC_BASE_URL ?? "";
-  const hlsBucket = process.env.S3_BUCKET_HLS ?? process.env.NEXT_PUBLIC_S3_BUCKET_HLS ?? "hls-public";
-  const prefix = `${publicBase}/${hlsBucket}/`;
+  const prefix = `${publicBase}/`;
   if (publicBase && url.startsWith(prefix)) {
     return `/api/hls/${url.slice(prefix.length)}`;
   }

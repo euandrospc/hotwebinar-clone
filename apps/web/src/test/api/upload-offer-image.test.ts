@@ -13,7 +13,7 @@ vi.mock("@/lib/storage/presign", () => ({
 vi.mock("@/lib/storage/buckets", () => ({ HLS_BUCKET: "hls-public" }));
 
 beforeEach(async () => {
-  process.env.S3_PUBLIC_BASE_URL = "http://localhost:9000";
+  process.env.S3_PUBLIC_BASE_URL = "http://localhost:9000/hls-public";
   await prisma.webinar.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.account.deleteMany({});

@@ -32,10 +32,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_mime", message: "MIME deve ser video/*" }, { status: 400 });
   }
 
-  const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 10 * 1024 * 1024 * 1024);
+  const maxBytes = Number(process.env.MAX_UPLOAD_BYTES ?? 5_000_000_000);
   if (sizeBytes > maxBytes) {
     return NextResponse.json(
-      { error: "too_large", maxBytes, sizeBytes, message: `Arquivo > ${(maxBytes / (1024 ** 3)).toFixed(1)} GiB` },
+      { error: "too_large", maxBytes, sizeBytes, message: `Arquivo > ${(maxBytes / 1e9).toFixed(1)} GB` },
       { status: 413 }
     );
   }

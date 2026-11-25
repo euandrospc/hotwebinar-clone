@@ -26,7 +26,7 @@ export function UploadDropzone({ onReady }: UploadDropzoneProps) {
   return (
     <div className={styles.dropzone}>
       <span className={styles.iconBadge}><Upload aria-hidden="true" /></span>
-      <p className="text-sm text-muted-foreground">Selecione um arquivo de vídeo (até 10 GiB)</p>
+      <p className="text-sm text-muted-foreground">Selecione um arquivo de vídeo (até 5 GB)</p>
       <Button className={styles.primaryButton} type="button" onClick={pickFile} disabled={state.status !== "idle" && state.status !== "failed" && state.status !== "ready"}>
         Escolher arquivo
       </Button>

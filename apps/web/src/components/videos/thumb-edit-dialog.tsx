@@ -36,11 +36,10 @@ export function ThumbEditDialog({
       const { uploadUrl, key } = (await initRes.json()) as { uploadUrl: string; key: string };
       const put = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
       if (!put.ok) throw new Error(`upload failed (${put.status})`);
-      // Compute public URL using S3_PUBLIC_BASE_URL via server action
+      // NEXT_PUBLIC_S3_PUBLIC_BASE_URL points at the HLS bucket root (R2 custom domain).
       const publicBaseUrl = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL ?? "";
-      const hlsBucket = process.env.NEXT_PUBLIC_S3_BUCKET_HLS ?? "hls-public";
-      // Cache-bust: same key overwrites previous file in MinIO; append ?v= so browser refetches
-      const customThumbUrl = `${publicBaseUrl}/${hlsBucket}/${key}?v=${Date.now()}`;
+      // Cache-bust: same key overwrites the previous file; append ?v= so browsers refetch
+      const customThumbUrl = `${publicBaseUrl}/${key}?v=${Date.now()}`;
       const r = await setCustomThumb(videoId, customThumbUrl);
       if ("ok" in r) {
         toast.success("Thumbnail atualizada");

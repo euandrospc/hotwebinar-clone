@@ -11,7 +11,7 @@ import { selectLadder } from "./_lib/ladder";
 
 function publicUrl(key: string): string {
   const cfg = getTriggerConfig();
-  return `${cfg.s3PublicBaseUrl}/${cfg.s3BucketHls}/${key}`;
+  return `${cfg.s3PublicBaseUrl}/${key}`;
 }
 
 async function setProgress(videoId: string, pct: number) {
