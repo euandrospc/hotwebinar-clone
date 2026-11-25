@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$COOLIFY_DEPLOY_TOKEN"
-          curl --fail-with-body --silent --show-error --max-time 60 \
+          curl --fail-with-body --silent --show-error --max-time 60 --request POST \
             --header "Authorization: Bearer $COOLIFY_DEPLOY_TOKEN" \
             'http://189.24.14.177:8000/api/v1/deploy?uuid=1vk7sr8jq9uldrm6mai7abl2&force=false' \
             --output response.json
