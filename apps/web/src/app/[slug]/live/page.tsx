@@ -20,9 +20,9 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  if (isReservedSlug(slug)) return { title: "Webinar" };
+  if (isReservedSlug(slug)) return { title: "Live" };
   const w = await prisma.webinar.findUnique({ where: { slug }, select: { title: true, name: true } });
-  const title = w?.title || w?.name || "Webinar";
+  const title = w?.title || w?.name || "Live";
   return { title };
 }
 

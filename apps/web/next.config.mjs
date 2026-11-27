@@ -9,6 +9,10 @@ const nextConfig = {
   serverExternalPackages: ["bullmq", "ioredis"],
   experimental: {
     serverActions: { bodySizeLimit: "5mb" }
+  },
+  async redirects() {
+    // The public list used to live at /webinars; keep old links working.
+    return [{ source: "/webinars", destination: "/lives", permanent: false }];
   }
 };
 

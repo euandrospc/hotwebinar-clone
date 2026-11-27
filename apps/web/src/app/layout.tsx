@@ -11,8 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bravy Lives",
-  description: "Webinars automáticos simulando ao vivo"
+  title: "Bravy Lives"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

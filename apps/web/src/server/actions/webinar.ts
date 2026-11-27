@@ -123,7 +123,7 @@ export async function updateWebinarStep2(id: string, input: Step2Input): Promise
   });
   revalidatePath(`/dashboard/webinars/${id}`);
   revalidatePath("/dashboard/webinars");
-  revalidatePath("/webinars");
+  revalidatePath("/lives");
   return { ok: true };
 }
 
